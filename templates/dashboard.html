@@ -1,0 +1,2384 @@
+{% extends "base.html" %}
+{% block title %}Logsy{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+<style>
+    /* New styling for the dashboard cards */
+    .dashboard-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); /* Tighter minmax */
+        gap: 16px; /* OLD: 20px */
+        margin-bottom: 20px; /* OLD: 25px */
+    }
+    .dashboard-card {
+        background: #161d27;
+        border: 1px solid #232c3a;
+        border-radius: 12px; /* OLD: 16px */
+        padding: 16px; /* OLD: 18px */
+        box-shadow: 0 8px 15px rgba(0,0,0,.15); /* Softer shadow */
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        transition: transform 0.2s ease, box-shadow 0.2s ease; /* Hover Effect */
+    }
+    .dashboard-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 20px rgba(0,0,0,.2);
+    }
+    .dashboard-card.pending {
+        background: #fff8e1;
+        border-color: #f0bf1f;
+        color: #333;
+    }
+    .dashboard-card .title {
+        font-size: 14px; /* OLD: 16px */
+        font-weight: 600;
+        color: #e7ecf2;
+        margin-bottom: 8px; /* OLD: 10px */
+    }
+    .dashboard-card .title .fa { /* Icon style */
+        margin-right: 8px;
+        color: var(--primary);
+    }
+    .dashboard-card.pending .title .fa { /* Pending Icon style */
+        color: #795548;
+    }
+    .dashboard-card.pending .title {
+        color: #795548;
+    }
+    .dashboard-card .main-value {
+        font-size: 28px; /* OLD: 32px */
+        font-weight: 800;
+        letter-spacing: -0.5px; /* Tighter */
+        color: #fff;
+    }
+    .dashboard-card.pending .main-value {
+        color: #ff9800;
+    }
+    .dashboard-card .subtitle {
+        font-size: 13px; /* OLD: 14px */
+        font-weight: 500;
+        margin-top: 4px;
+    }
+    .dashboard-card .subtitle.positive {
+        color: #2ecc71;
+    }
+    .dashboard-card .subtitle.negative {
+        color: #e74c3c;
+    }
+    .dashboard-card .details {
+        font-size: 13px; /* OLD: 14px */
+        color: #9fb0c6;
+        margin-top: 6px; /* OLD: 8px */
+    }
+    .dashboard-card.pending .details {
+        color: #a1887f;
+    }
+    .pending-button {
+        background: #ff9800;
+        color: #fff;
+        border: none;
+        padding: 10px 18px; /* OLD: 12px 20px */
+        border-radius: 8px;
+        font-weight: 700;
+        font-size: 14px; /* OLD: 15px */
+        cursor: pointer;
+        margin-top: 12px; /* OLD: 15px */
+        box-shadow: 0 4px 10px rgba(0,0,0,.1);
+    }
+    .pending-button:hover {
+        background: #fb8c00;
+    }
+    .pending-icon {
+        color: #ff9800 !important; /* Overriding other .fa rules */
+        margin-left: auto;
+        font-size: 16px;
+    }
+    /* NEW: Progress Bar Styles */
+    .dashboard-card {
+        flex-direction: column;
+        justify-content: flex-start;
+        align-items: flex-start;
+    }
+    .dashboard-card .main-value {
+        margin-bottom: 5px;
+    }
+    .progress-bar-container {
+        width: 100%;
+    }
+    .progress-bar-label {
+        font-size: 12px; /* OLD: 13px */
+        font-weight: 600;
+        color: var(--accent);
+        margin-bottom: 4px; /* OLD: 5px */
+        text-align: right;
+    }
+    .progress-bar-bg {
+        height: 6px; /* OLD: 8px */
+        background: #2a3240;
+        border-radius: 3px; /* OLD: 4px */
+        overflow: hidden;
+    }
+    .progress-bar-fg {
+        height: 100%;
+        background: var(--accent);
+        transition: width 0.5s ease-in-out;
+        border-radius: 3px; /* OLD: 4px */
+    }
+    /* NEW: Quick Add Button Style */
+    .quick-preset-btn {
+        background: #2a3240;
+        color: var(--text);
+        border: 1px solid #374151;
+        font-weight: 500;
+        padding: 8px 12px; /* OLD: 10px 15px */
+        border-radius: 8px;
+        cursor: pointer;
+        transition: background-color 0.1s;
+    }
+    .quick-preset-btn:hover {
+        background: #374151;
+    }
+    /* END NEW */
+    
+    /* NEW: Calendar Styling */
+    .calendar-box {
+        padding: 16px; /* OLD: 20px 24px */
+        background: #10151c;
+        border: 1px solid #232c3a;
+        border-radius: 10px; /* Added radius to match box */
+    }
+    .calendar-box h2 {
+        font-size: 16px; /* OLD: 18px */
+        margin-bottom: 12px; /* OLD: 15px */
+        color: #e7ecf2;
+    }
+    .calendar-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px; /* OLD: 15px */
+        padding: 0 2px; /* OLD: 0 4px */
+        font-weight: 700;
+    }
+    .month-year-label {
+        font-size: 16px; /* OLD: 18px */
+        color: #fff;
+        letter-spacing: 0.5px;
+    }
+    .team-label {
+        font-size: 12px; /* OLD: 13px */
+        color: var(--muted);
+        font-weight: 500;
+    }
+    .calendar-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        text-align: center;
+        gap: 5px 0; /* OLD: 10px 0 */
+    }
+    .day-label {
+        font-size: 11px; /* OLD: 12px */
+        font-weight: 600;
+        color: var(--muted);
+        padding-bottom: 4px; /* OLD: 5px */
+    }
+    .date-cell, .empty-cell {
+        padding: 4px 0; /* OLD: 8px 0 */
+        font-size: 13px; /* OLD: 14px */
+        font-weight: 500;
+        color: var(--text);
+        cursor: pointer;
+        border-radius: 4px;
+        transition: background-color 0.1s;
+    }
+    .empty-cell {
+        cursor: default;
+    }
+    .date-cell:hover {
+        background: #18212e;
+    }
+    .date-cell.current-day {
+        border: 2px solid #fff;
+        background: transparent;
+        font-weight: 700;
+    }
+    .date-cell.selected-date {
+        background: var(--accent);
+        color: #fff;
+        font-weight: 700;
+        border-radius: 50%;
+        width: 26px; /* OLD: 30px */
+        height: 26px; /* OLD: 30px */
+        line-height: 18px; /* Adjusted for new size */
+        margin: auto;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+    
+    /* NEW: Calendar Nav Button Style */
+    .cal-nav-btn {
+        background: #2a3240;
+        color: var(--text);
+        border: 1px solid #374151;
+        border-radius: 50%;
+        width: 26px;
+        height: 26px;
+        font-weight: 700;
+        cursor: pointer;
+        line-height: 24px;
+        padding: 0;
+        text-align: center;
+    }
+    .cal-nav-btn:hover { background: #374151; }
+    .cal-nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+
+    /* Existing styles remain here */
+    .footer {
+    margin-top: 20px;
+    padding: 15px 0;
+    text-align: center;
+    font-size: 13px; /* OLD: 14px */
+    color: #fff;
+    }
+    .footer p {
+    margin:0;
+    font-weight:500;
+    letter-spacing:0.5px;
+    }
+    :root{
+    --primary:#ffd24d; --primary-hover:#ffdf85;
+    --accent:#2ecc71;--danger:#e74c3c;
+    --bg:#0e1319; --surface:#161d27; --panel:#111722;
+    --text:#e7ecf2;--muted:#9fb0c6; --line:#232c3a;
+
+    /* Sidebar-aware layout */
+    --sbw: 0px;
+    --page-pad: 14px;
+    }
+
+    html,body{height:100%;}
+    body{
+    margin:0;
+    margin-left: var(--sbw);
+    transition: margin-left .18s ease;
+    padding:0;
+    font-family: system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+    background:var(--bg); color:var(--text); line-height:1.45;
+    overflow:auto;
+    }
+
+    /* Wrapper */
+    .wrap {
+    width: 100vw !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 10px;
+    box-sizing: border-box;
+    }
+
+    /* REMOVED: This rule was shrinking the content when the sidebar was open */
+    /* body.sidebar-open .card{ transform:scale(.995); transition:transform .18s ease; transform-origin:left center; } */
+
+    /* Card + Layout */
+    .card{
+    border:1px solid var(--line); background:var(--surface);
+    border-radius: 12px; /* OLD: 16px */
+    overflow:hidden;
+    box-shadow:0 10px 25px rgba(0,0,0,.25); /* OLD: 0 14px 30px */
+    margin: 14px 0; /* OLD: 18px */
+    }
+    .card-head{ padding: 14px 16px; /* OLD: 16px 18px */
+    border-bottom:1px solid var(--line);
+    background:linear-gradient(180deg,#1a2230,#151c27);
+    }
+    .card-head h1{ margin:0; font-size: 20px; /* OLD: 22px */
+    letter-spacing:.2px; font-weight:800; color:#eaf4ff; }
+    
+    .card-body{ padding: 16px 18px; /* OLD: 18px 0 */ }
+    
+    /* NEW: 20/50/30 Top Layout Grid */
+    .top-layout-grid {
+        display: grid;
+        grid-template-columns: 2fr 5fr 3fr; /* 20% 50% 30% */
+        gap: 16px;
+        margin: 14px 0; /* Replaces card margin */
+        align-items: start; /* Align tops */
+    }
+    @media (max-width:1200px){ .top-layout-grid { grid-template-columns: 1fr; } }
+    @media (max-width:820px){  .top-layout-grid { grid-template-columns: 1fr; } }
+
+
+    .box{
+        border:1px solid var(--line); background:var(--panel);
+        border-radius: 10px; /* OLD: 12px */
+        padding: 14px; /* OLD: 16px */
+        height: 100%; /* Make boxes fill grid cell */
+    }
+    .box h2{ margin:0 0 10px; /* OLD: 12px */
+        font-size: 14px; /* OLD: 15px */
+        color:#cfe1ff; letter-spacing:.15px; font-weight:700;
+    }
+    .box h2 .fa { /* Icon in box header */
+        margin-right: 8px;
+        color: var(--primary);
+    }
+
+    .form-row{
+        display:grid;
+        grid-template-columns: 120px 1fr; /* OLD: 100px */
+        gap: 8px; /* OLD: 10px */
+        align-items:center;
+        margin-bottom: 10px; /* OLD: 12px */
+    }
+    .form-row:last-child{ margin-bottom:0; }
+    .form-row label{
+        color:var(--muted);
+        font-size: 12.5px; /* OLD: 13px */
+        text-align: left; /* OLD: right */
+        padding-right: 0;
+        display: flex; /* For icon alignment */
+        align-items: center;
+    }
+    .form-row label .fa { /* Icon in form label */
+        margin-right: 8px;
+        color: var(--muted);
+        width: 14px;
+        text-align: center;
+    }
+
+    input,select{
+    width:100%;
+    padding: 8px 10px; /* OLD: 10px 12px */
+    border-radius: 8px; border:1px solid #2a3240;
+    background:#0f1520; color:#e7ecf2;
+    font-size: 13.5px; /* OLD: 14px */
+    }
+    input[readonly], select[disabled]{ background:#101726; opacity:.95; }
+
+    .helper{ font-size: 11px; /* OLD: 12px */
+        color:var(--muted); margin-top:5px; /* OLD: 6px */
+    }
+    .inline{ display:flex; gap: 8px; /* OLD: 10px */
+        align-items:center;
+    }
+    .inline button{
+    padding: 8px 10px; /* OLD: 10px 12px */
+    border:none; border-radius:8px; font-weight:700; cursor:pointer;
+    background:var(--accent); color:#061016;
+    }
+    .inline button:hover{ filter:brightness(1.05); }
+
+    .actions{
+    display:flex; justify-content:center; padding:12px; /* OLD: 14px */
+    gap:10px;
+    border-top:1px solid var(--line); background:#131a25;
+    }
+    .primary{
+    background:var(--primary); color:#101010; border:none; border-radius:10px;
+    font-weight:800; padding: 10px 20px; /* OLD: 12px 22px */
+    cursor:pointer;
+    box-shadow:0 6px 15px rgba(255,210,77,.18); /* OLD: 0 8px 20px */
+    transition: all 0.2s ease; /* Hover effect */
+    }
+    .primary:hover{
+        background:var(--primary-hover);
+        transform: translateY(-2px);
+        box-shadow: 0 10px 20px rgba(255,210,77,.25);
+    }
+    .primary:disabled{ opacity:.45; cursor:not-allowed; transform: none; box-shadow: 0 6px 15px rgba(255,210,77,.18); }
+    .primary .fa { /* Icon in button */
+        margin-left: 8px;
+    }
+
+    .flash{ margin:10px 0 14px; }
+    .flash .msg{
+    background:#0f1520; border:1px dashed #334155; color:#cfe6ff;
+    padding:10px 12px; border-radius:10px; font-size:13px; /* OLD: 13.5px */
+    }
+    .flash .msg.success{ border-color: #2ecc71; color: #b7e8c8; background: #132a1e; }
+    .flash .msg.error{ border-color: #e74c3c; color: #ffd1d1; background: #351a1a; }
+    .flash .msg.info{ border-color: #0ea5e9; color: #bfe8ff; background: #122137; }
+
+
+    /* ===== Table ===== */
+    .table-card { border: 1px solid var(--line); background: #0f1520; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.35); }
+    .table-head { padding: 8px 12px; border-bottom: 1px solid var(--line); background: #131a25; color: #cfe6ff; font-weight: 700; font-size: 13px; }
+    .table-wrap { overflow-x: auto; max-height: none; }
+    table { width: 100%; border-collapse: collapse; font-size: 12.5px; min-width: 800px; }
+    th, td {
+        padding: 6px 8px; /* OLD: 2px 2px. This was too tight. */
+        border-bottom: 1px solid #1f2937;
+        text-align: left;
+        vertical-align: middle; /* NEAT: Align vertically */
+    }
+    thead th {
+        background: linear-gradient(180deg,#ffd24d,#ffecae); color: #121212;
+        font-weight: 800; position: sticky; top: 0; z-index: 3;
+        font-size: 12.5px; /* OLD: 13px */
+    }
+    thead .filters th { background: #182131; position: sticky; top: 30px; /* Adjusted for new padding */ z-index: 2; }
+    thead .filters select {
+        width: 100%;
+        padding: 4px 6px; /* OLD: 2px 4px */
+        font-size: 12px; border-radius: 6px; background: #0f1520;
+        color: #e7ecf2; border: 1px solid #2a3240;
+    }
+    tbody tr:nth-child(even) { background: #122034; }
+    tbody tr:hover { background: #18283e; }
+    .no-data { color: #8fa5bf; text-align: center; padding: 10px 0; font-size: 13px; }
+
+    /* Edit modal */
+    .edit-btn {
+        padding: 3px 6px; /* OLD: 4px 8px */
+        font-size: 12px; /* OLD: 12.5px */
+        border-radius: 6px; /* OLD: 8px */
+        border: 1px solid #3a4557;
+        background: #192231;
+        color: #e7ecf2;
+        cursor: pointer;
+        transition: all 0.2s ease; /* Added hover transition */
+    }
+    .edit-btn:hover{
+        background:#2a3b53;
+        border-color: #4f607a;
+    }
+    
+    /* REMOVED Delete Button Style */
+    
+    .modal-backdrop{ display:none; position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:50; }
+    .modal{ position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); width:min(500px,92vw); /* OLD: 520px */
+    background:#121a26; border:1px solid #2a3444; border-radius:12px; padding:16px; z-index:60; display:none; }
+    .modal h3{ margin:0 0 10px; font-size:16px; color:#eaf4ff; }
+    .modal h3 .fa { margin-right: 8px; } /* Icon in modal title */
+    
+    .modal .row{ display:grid; grid-template-columns: 110px 1fr; /* OLD: 130px */
+        gap:10px; margin-bottom:10px; align-items:center;
+    }
+    .modal input, .modal select{ padding: 8px 10px; /* OLD: 9px 10px */ }
+    .modal .m-actions{ display:flex; justify-content:flex-end; gap:10px; margin-top: 15px; /* Added margin */ }
+    .btn{ padding: 8px 12px; /* OLD: 9px 14px */
+        border-radius:8px; border:1px solid #374151; background:#0f1520; color:#e7ecf2; cursor:pointer;
+    }
+    .btn.primary{ background:var(--primary); color:#111; border:none; font-weight:800; }
+    .btn.danger{ background:var(--danger); color:#fff; border:none; font-weight:800; } /* For delete modal */
+
+    /* ===== 7-DAY HORIZONTAL CHIPS ===== */
+    .strip7{ 
+        display:flex; 
+        gap: 8px; /* OLD: 12px */
+        align-items:stretch; 
+        flex-wrap:nowrap; 
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        /* Padding is now handled by .card-body */
+    }
+    .chip7{
+    flex: 1 1 150px; /* OLD: 160px */
+    min-width: 150px; /* OLD: 160px */
+    height: 70px; /* OLD: 76px */
+    background:#101824; 
+    border:1px solid #243040; 
+    border-radius: 10px; /* OLD: 14px */
+    display:flex; 
+    flex-direction:column; 
+    justify-content:center; 
+    align-items:center;
+    box-shadow:0 4px 15px rgba(0,0,0,.25); /* OLD: 0 6px 20px */
+    position:relative; 
+    transition: transform 0.2s ease; /* Hover */
+    }
+    .chip7:hover {
+        transform: translateY(-3px);
+    }
+    .chip7 .wday{ font-weight:700; font-size: 12px; /* OLD: 12.5px */
+        color:#cfe1ff; letter-spacing:.2px;
+    }
+    .chip7 .date{ font-size: 11px; /* OLD: 12px */
+        color:#8ea4bf; margin-top:2px;
+    }
+    .chip7 strong{ margin-top: 6px; /* OLD: 8px */
+        font-size: 15px; /* OLD: 16px */
+        color:#fff; letter-spacing:.3px;
+    }
+    .chip7 strong.leave{ color:#ff2d2d; } /* Leave red */
+    .chip7.today::after{
+    content:"Today"; position:absolute; top:5px; right:6px; /* OLD: 6px 8px */
+    font-size: 9px; /* OLD: 10px */
+    background:#0ea5e9; color:#081018;
+    padding: 2px 5px; /* OLD: 2px 6px */
+    border-radius:999px; font-weight:800;
+    }
+    .total-chip7{ background:var(--primary); color:#111; border:none; }
+    .total-chip7 .wday, .total-chip7 strong{ color:#111; }
+
+    @media (max-width:1100px){
+    .wrap{ width: calc(100vw - var(--sbw) - var(--page-pad)*2); padding:0 var(--page-pad); }
+    }
+</style>
+
+<div class="wrap">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="flash">
+                {% for cat, msg in messages %}
+                    <div class="msg {{ cat }}">{{ msg }}</div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <div class="card-head" style="border-radius: 12px 12px 0 0; margin-top: 14px;">
+        <h1>
+            <i class="fa fa-clock" style="margin-right: 10px; color: var(--primary);"></i>Logsy
+            <span id="today-logged-time" style="font-size: 14px; font-weight: 500; margin-left: 20px; padding: 5px 10px; background: #374151; border-radius: 6px; color: #ffd24d; vertical-align: middle;">
+                Loading...
+            </span>
+        </h1>
+    </div>
+    
+    <!-- NEW 20/50/30 Layout -->
+    <form method="POST" action="/start" autocomplete="off">
+        <div class="top-layout-grid">
+            
+            <!-- Column 1: Select Date (20%) -->
+            <div class="box calendar-box">
+                <h2>Select Date</h2>
+                <input type="hidden" name="date" id="selected-date-input" value="{{ today }}" required>
+
+                <div class="calendar-header">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <button type="button" id="cal-prev" class="cal-nav-btn">‹</button>
+                        <span class="month-year-label" id="calendar-month-year">
+                            <span id="current-month-placeholder">{{ today.split('-')[1] }}</span>
+                            <span id="current-year-placeholder">{{ today.split('-')[0] }}</span>
+                        </span>
+                        <button type="button" id="cal-next" class="cal-nav-btn">›</button>
+                    </div>
+                </div>
+                
+                <div class="team-label" title="Your assigned team" style="background: #374151; color: var(--primary); padding: 3px 8px; border-radius: 6px; display: inline-block; margin-top: 5px;">
+                    Team: {% if user_team %}{{ user_team }}{% else %}<span style="color: var(--primary);">N/A</span>{% endif %}
+                </div>
+
+                <div class="calendar-grid" id="main-calendar-grid" style="margin-top: 10px;">
+                    <span class="day-label">Sun</span>
+                    <span class="day-label">Mon</span>
+                    <span class="day-label">Tue</span>
+                    <span class="day-label">Wed</span>
+                    <span class="day-label">Thu</span>
+                    <span class="day-label">Fri</span>
+                    <span class="day-label">Sat</span>
+                    
+                    <div class="helper" style="grid-column: 1/span 7; text-align: center;">Loading calendar...</div>
+                </div>
+                
+                {% if user_team %}
+                    <input type="hidden" name="team" value="{{ user_team }}">
+                {% endif %}
+            </div>
+
+            <!-- Column 2: Project, Process & Time (50%) -->
+            <div class="box">
+                <h2><i class="fa fa-tasks"></i> Project, Process & Time</h2>
+                
+                {% set pc_count = user_project_codes|length %}
+                
+                {% if pc_count == 0 %}
+                    <div class="form-row">
+                        <label><i class="fa fa-briefcase"></i> Project</label>
+                        <div>
+                            <input type="text" value="No assigned WIP project" readonly>
+                            <div class="helper">Contact admin to assign a WIP project.</div>
+                        </div>
+                    </div>
+                {% elif pc_count == 1 %}
+                    <div class="form-row">
+                        <label><i class="fa fa-briefcase"></i> Project</label>
+                        <div>
+                            <input type="text" value="{{ user_project_codes[0].code }}" readonly>
+                            <input type="hidden" name="project" value="{{ user_project_codes[0].code }}">
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="form-row">
+                        <label for="project"><i class="fa fa-briefcase"></i> Project</label>
+                        <div>
+                            <select name="project" id="project" required>
+                                <option disabled selected>Select Project</option>
+                                {% for p in user_project_codes %}
+                                    <option value="{{ p.code }}">{{ p.code }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                {% endif %}
+                
+                <div class="form-row">
+                    <label for="process"><i class="fa fa-cogs"></i> Process</label>
+                    <select id="process" name="process" required>
+                        <option value="">Select Process</option>
+                    </select>
+                </div>
+                
+                <div class="form-row">
+                    <label for="sub_process"><i class="fa fa-code-branch"></i> Sub-Process</label>
+                    <select id="sub_process" name="sub_process" required>
+                        <option value="">Select Sub-Process</option>
+                    </select>
+                </div>
+                
+                <div class="form-row" style="margin-top: 15px;"> <!-- OLD: 20px -->
+                    <label for="start_time"><i class="fa fa-play-circle"></i> Start Time</label>
+                    <div class="inline">
+                        <input type="time" name="start_time" id="start_time" required>
+                        <button type="button" onclick="setCurrentTime('start_time')">Start</button>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <label for="end_time"><i class="fa fa-stop-circle"></i> End Time</label>
+                    <div class="inline">
+                        <input type="time" name="end_time" id="end_time" required>
+                        <button type="button" onclick="setCurrentTime('end_time')">End</button>
+                    </div>
+                </div>
+
+                <div class="actions" style="border-top: none; background: transparent; padding: 12px 0 0;"> <!-- OLD: 14px -->
+                    <button class="primary" type="submit" style="width: 100%;" {% if pc_count == 0 %}disabled title="No assigned WIP project"{% endif %}>
+                        Submit Time Entry <i class="fa fa-paper-plane"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Column 3: Dashboard Stats (30%) -->
+            <div style="display: flex; flex-direction: column; gap: 16px;">
+                <div class="dashboard-card">
+                    <span class="title"><i class="fa fa-chart-pie"></i> Total working hours</span>
+                    <span class="main-value" id="total-this-month-hms">Loading...</span>
+                    <span class="subtitle" id="percent-change"></span>
+                </div>
+                <div class="dashboard-card">
+                    <span class="title"><i class="fa fa-calendar-week"></i> Weekly working hours</span>
+                    <span class="main-value" id="weekly-hours">Loading...</span>
+                    <span class="details" id="weekly-target">Target: 45h</span>
+                    <div class="progress-bar-container" style="margin-top: 12px;"> <!-- OLD: 15px -->
+                        <div class="progress-bar-label">
+                            <span id="weekly-percentage"></span>
+                        </div>
+                        <div class="progress-bar-bg">
+                            <div class="progress-bar-fg" id="weekly-progress-bar" style="width: 0;"></div>
+                        </div>
+                    </div>
+                </div>
+                <!-- PENDING CARD REMOVED FROM HERE -->
+            </div>
+
+        </div> <!-- /top-layout-grid -->
+    </form>
+    <!-- End NEW 20/50/30 Layout -->
+
+    <!-- NEW 60/20/20 Layout for Quick Add, Pending & Compensation -->
+    <div class="dashboard-grid" style="grid-template-columns: 6fr 2fr 2fr; margin-bottom: 14px; align-items: stretch;">
+        <!-- Column 1: Quick Add (60%) -->
+        <div class="card" id="quick-add-panel" style="margin: 0; height: 100%;">
+            <div class="card-head">
+                <h1 style="display:flex; justify-content:space-between; align-items:center;">
+                    Quick Add / Timer
+                    <button class="btn" style="padding: 6px 12px; font-size: 13px; font-weight: 500;"
+                            onclick="showManagePresets()">
+                        <i class="fa fa-plus"></i> Manage Presets
+                    </button>
+                </h1>
+            </div>
+            <div class="card-body" style="padding: 16px 18px;">
+                <div id="quick-presets-container" style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px;">
+                    {% for preset in quick_presets %}
+                    <button class="btn quick-preset-btn" 
+                            data-id="{{ preset.id }}" 
+                            data-name="{{ preset.name }}" 
+                            data-project="{{ preset.project }}" 
+                            data-process="{{ preset.process }}" 
+                            data-sub="{{ preset.sub_process }}">
+                        {{ preset.name }}
+                    </button>
+                    {% endfor %}
+                    {% if not quick_presets %}
+                    <div class="helper">No Quick Add presets found. Click 'Manage Presets' to add one.</div>
+                    {% endif %}
+                </div>
+                
+                <div id="active-timer-display" style="display:none; border:1px solid var(--accent); background:#1e382b; border-radius:12px; padding:15px; display:flex; align-items:center; justify-content:space-between;">
+                    <div style="display:flex; gap:10px; align-items:center;">
+                        <span style="height:10px; width:10px; background:var(--accent); border-radius:50%; animation: pulse 1.5s infinite;"></span>
+                        <style>@keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }</style>
+                        <div>
+                            <div id="timer-preset-name" style="font-weight:600; font-size:15px; color: #cfe1ff;"></div>
+                            <div id="elapsed-time" style="font-size:18px; font-weight:700; color:#fff;">00:00:00</div>
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:10px;">
+                        <button class="btn" onclick="showStopConfirmation()" style="background:var(--danger); color:#fff; border:none; padding:10px 15px;">Stop & Log</button>
+                    </div>
+                </div>
+                
+                <div style="text-align:center; margin-top:16px;">
+                    <button class="primary" onclick="document.querySelector('form').scrollIntoView({behavior: 'smooth'})" style="width:100%; display: none;">
+                        Add Manual Entry
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Column 2: Pending Hours (20%) -->
+        <div class="dashboard-card pending" style="margin: 0; justify-content: center; height: 100%; padding: 12px;">
+            <span class="title" style="font-size: 13px;"><i class="fa fa-hourglass-half"></i> Pending</span>
+            <span class="main-value" id="pending-hours-value" style="font-size: 26px;">Loading...</span> <!-- OLD: 24px -->
+        </div>
+        
+        <!-- Column 3: Compensation (20%) -->
+        <div class="dashboard-card" style="margin: 0; background: #10151c; height: 100%; justify-content: space-between; padding: 12px;">
+            <div>
+                <span class="title" style="color: var(--primary); font-size: 13px;"><i class="fa fa-balance-scale"></i> Compensation</span>
+                <div style="display: grid; grid-template-columns: auto 1fr; gap: 4px 8px; align-items: center; margin-top: 8px;">
+                    <span style="font-size: 12px; color: var(--muted);">Permission:</span>
+                    <span style="font-size: 13px; font-weight: 700; text-align: right;" id="permission-total-hms">0h 0m</span>
+                    
+                    <span style="font-size: 13px; color: var(--muted);">Compensated:</span>
+                    <span style="font-size: 13px; font-weight: 700; text-align: right;" id="compensation-total-hms">0h 0m</span>
+                    
+                    <span style="font-size: 13px; color: var(--text); font-weight: 700;">Balance:</span>
+                    <span style="font-size: 20px; font-weight: 800; text-align: right;" id="compensation-balance-hms">0h 0m</span> <!-- OLD: 16px -->
+                </div>
+            </div>
+            <span class="details" id="compensation-message" style="text-align: center; font-size: 12px; margin-top: 8px; padding-top: 6px; border-top: 1px dashed #2a3240;">
+                Loading balance...
+            </span>
+        </div>
+    </div>
+    <!-- END NEW 60/20/20 Layout -->
+
+
+    <div class="card-body" style="padding: 0 18px 16px 18px;"> <!-- Modified padding -->
+        <h2 style="display:flex;align-items:center;gap:8px; padding: 0;"> <!-- Removed internal padding -->
+            My 7-Day Hours
+            <small id="last7-window" class="helper" style="margin-left:auto"></small>
+        </h2>
+        <div class="strip7" id="weekStrip7" aria-live="polite" style="margin-top: 12px;"> <!-- Added margin-top -->
+            <div class="helper">Loading…</div>
+        </div>
+        <!-- REMOVED the "Tip: Leave..." helper text as requested -->
+    </div>
+
+    <div class="table-card">
+        <div class="table-head">Recent Entries</div>
+        <div class="table-wrap">
+            <table id="log-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Day</th>
+                        <th>Project</th>
+                        <th>Project Type </th>
+                        <th>Process</th>
+                        <th>Sub-process</th>
+                        <th>Start Time</th>
+                        <th>End Time</th>
+                        <th>Duration (h)</th>
+                        <th>Actions</th>
+                    </tr>
+                    <tr class="filters">
+                        {% for i in range(9) %}
+                            <th><select data-col="{{i}}"><option value="">All</option></select></th>
+                        {% endfor %}
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% if entries %}
+                    {% for row in entries %}
+                        <tr data-id="{{ row[-1] }}">
+                            <td>{{ row[1] }}</td>
+                            <td>{{ row[2] }}</td>
+                            <td>{{ row[3] }}</td>
+                            <td>{{ row[13] }}</td>
+                            <td>{{ row[6] }}</td>
+                            <td>{{ row[7] }}</td>
+                            <td>{{ row[8] }}</td>
+                            <td>{{ row[9] }}</td>
+                            <td>{{ row[10] }}</td>
+                            <td>
+                                <button type="button" class="edit-btn">Edit</button>
+                                <!-- DELETE BUTTON REMOVED -->
+                            </td>
+                        </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr><td colspan="10" class="no-data">No data found</td></tr>
+                {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<footer class="footer">
+    <p>© Datasolve Analytics Pvt Ltd 2025.</p>
+</footer>
+
+<!-- Edit Modal -->
+<div class="modal-backdrop" id="mb"></div>
+<div class="modal" id="mm">
+    <h3>Edit Entry</h3>
+    <form id="edit-form" method="POST" action="/update-entry" autocomplete="off">
+        <input type="hidden" name="entry_id" id="m_entry_id">
+        <input type="hidden" name="project" id="m_project_hidden"> 
+        
+        <input type="hidden" name="project_type_mc" id="m_project_type_mc_hidden">
+        <input type="hidden" name="disease" id="m_disease_hidden"> 
+        <input type="hidden" name="country" id="m_country_hidden">
+
+        <div class="row"><label>Project Code</label>
+            <input type="text" id="m_project_code_display" readonly style="background:#161d27; opacity:1; cursor:default;">
+        </div>
+        <div class="row"><label>Project Type</label>
+            <input type="text" id="m_project_type_display" readonly style="background:#161d27; opacity:1; cursor:default;">
+        </div>
+        <div class="row"><label>Process</label>
+            <select name="process" id="m_process" required>
+                <option value="">Select Process</option>
+            </select>
+        </div>
+        <div class="row"><label>Sub-Process</label>
+            <select name="sub_process" id="m_sub" required>
+                <option value="">Select Sub-Process</option>
+            </select>
+        </div>
+        <div class="row"><label>Start Time</label><input type="time" name="start_time" id="m_start" required></div>
+        <div class="row"><label>End Time</label><input type="time" name="end_time" id="m_end" required></div>
+        <div class="m-actions"><button type="button" class="btn" id="m_close">Cancel</button><button type="submit" class="btn primary">Save</button></div>
+    </form>
+</div>
+
+<!-- Preset Modal -->
+<div class="modal-backdrop" id="preset-mb"></div>
+<div class="modal" id="preset-mm">
+    <div id="modal-content-container">
+        <div id="manage-presets-content">
+            <h3><span id="preset-modal-title"><i class="fa fa-cogs"></i> Manage Presets</span></h3>
+            <div id="preset-list-container" style="max-height: 250px; overflow-y: auto; margin-bottom: 15px; padding: 5px 0;">
+            </div>
+            <form id="preset-form" onsubmit="savePreset(event)" autocomplete="off">
+                <input type="hidden" name="preset_id" id="p_preset_id">
+                <div class="row"><label>Preset Name</label><input type="text" name="name" id="p_name" required></div>
+                <div class="row"><label>Project</label>
+                    <select name="project" id="p_project" required>
+                        <option value="" disabled selected>Select Project</option>
+                        {% for p in user_project_codes %}
+                            <option value="{{ p.code }}">{{ p.code }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="row"><label>Process</label>
+                    <select name="process" id="p_process" required>
+                        <option value="" disabled selected>Select Process</option>
+                    </select>
+                </div>
+                <div class="row"><label>Sub-Process</label>
+                    <select name="sub_process" id="p_sub" required>
+                        <option value="" disabled selected>Select Sub-Process</option>
+                    </select>
+                </div>
+                <div class="m-actions" style="margin-top: 20px;">
+                    <button type="button" class="btn" onclick="closePresetModal()">Close</button>
+                    <button type="button" id="p_delete_btn" class="btn"
+                        style="background:var(--danger); color:#fff; display:none;" onclick="deletePreset()">Delete</button>
+                    <button type="submit" class="btn primary" id="p_save_btn">Add Preset</button>
+                </div>
+            </form>
+        </div>
+
+        <div id="start-confirmation-content" style="display:none;">
+            <h3 style="color:#ffd24d;"><i class="fa fa-play-circle"></i> Start Timer Confirmation</h3>
+            <p style="font-size:16px; margin-bottom: 20px;">Do you want to **START** the timer for preset: <strong><span
+                        id="start-confirm-name"></span></strong>?</p>
+            <p style="font-size:14px; color:var(--muted);">Project: <span id="start-confirm-project"></span> | Process:
+                <span id="start-confirm-process"></span></p>
+            <div class="m-actions" style="margin-top: 20px;">
+                <button type="button" class="btn" onclick="closePresetModal()">Cancel</button>
+                <button type="button" class="btn primary" id="start-confirm-btn">Start Timer</button>
+            </div>
+        </div>
+        
+        <div id="stop-confirmation-content" style="display:none;">
+            <h3 style="color:var(--danger);"><i class="fa fa-stop-circle"></i> Stop Timer Confirmation</h3>
+            <p style="font-size:16px; margin-bottom: 20px;">The timer has been running for <strong id="stop-confirm-elapsed">00:00</strong>.</p>
+            <p style="font-size:14px; color:var(--muted);">Do you want to **STOP** the timer and log this entry?</p>
+            <div class="m-actions" style="margin-top: 20px;">
+                <button type="button" class="btn" onclick="closePresetModal()">Cancel</button>
+                <button type="button" class="btn primary" id="stop-confirm-btn" style="background:var(--danger); border:none;">Stop & Log</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- DELETE MODAL REMOVED -->
+
+
+<script>
+    // Global variable for the timer interval
+    let timerInterval = null;
+    let timerStartTime = null;
+    const allPresets = {{ quick_presets|tojson }};
+    const allEntries = {{ entries|tojson }};
+    let currentPresetToStart = null; // Global to hold the preset data for confirmation
+    const TODAY_DATE_STRING = new Date().toISOString().split('T')[0];
+    let currentCalDate = new Date(new Date().toISOString().split('T')[0] + 'T00:00:00');
+    
+    // 🚀 PUTHU VARIABLE: Manual form live timer-oda DB ID-a save panna
+    let activeManualEntryID = null; 
+    
+    // Fallback/Placeholder for Month Name filter
+    const monthNames = [
+        "January", "February", "March", "April", "May", "June", 
+        "July", "August", "September", "October", "November", "December"
+    ];
+
+    /* Helper function to convert seconds to h m format */
+    function _sec_to_hm(seconds) {
+        if (seconds === 0) return '0h 0m';
+        const hours = Math.floor(seconds / 3600);
+        const minutes = Math.floor((seconds % 3600) / 60);
+        return `${hours}h ${minutes}m`;
+    }
+
+    /* Helper function to update the progress bar */
+    function updateProgressBar(percentage, targetId, textId) {
+        const normalizedPercentage = Math.min(percentage, 100);
+        document.getElementById(targetId).style.width = `${normalizedPercentage}%`;
+        document.getElementById(textId).textContent = `${Math.round(percentage)}% Complete`;
+    }
+
+    // --- Sidebar Sizing and Time Helpers ---
+    (function sidebarAware(){
+        const sidebarSelectors = ['#sidebar','.sidebar','.side','.leftbar','.side-nav','.sidenav'];
+        let sidebarEl = null;
+        function findSidebar(){ for (const sel of sidebarSelectors){ const el = document.querySelector(sel); if (el) { sidebarEl = el; break; } } }
+        function updateWidth(){
+            if (!sidebarEl){ findSidebar(); }
+            const rect = sidebarEl ? sidebarEl.getBoundingClientRect() : {width:0};
+            const w = rect.width > 1 ? rect.width : 0;
+            document.documentElement.style.setProperty('--sbw', w + 'px');
+            document.body.classList.toggle('sidebar-open', w > 1);
+        }
+        findSidebar(); updateWidth();
+        window.addEventListener('resize', updateWidth);
+        if (sidebarEl){
+            const mo = new MutationObserver(updateWidth);
+            mo.observe(sidebarEl, {attributes:true, attributeFilter:['class','style']});
+        }
+        document.addEventListener('click', (e)=>{
+            if (['#sidebarToggle','.sidebar-toggle','#sideToggle','.side-toggle-btn','.hamburger','.menu-btn'].some(sel => e.target.closest(sel))) {
+                setTimeout(updateWidth, 0);
+            }
+        });
+        document.addEventListener('sidebar:changed', updateWidth);
+    })();
+
+    // --- 🚀 START: MODIFIED SECTION (Locking Logic) ---
+
+    /* Find the elements ONCE */
+    const mainForm = document.querySelector('form[action="/start"]');
+    const startTimeInput = document.getElementById('start_time');
+    const endTimeInput = document.getElementById('end_time');
+    const projectSelect = document.getElementById('project'); // Might be null
+    // 🚀 Puthu: Project value-a edukka oru helper
+    const projectInput = document.querySelector('input[name="project"]'); 
+    const processSelect = document.getElementById('process');
+    const subProcessSelect = document.getElementById('sub_process');
+    const submitButton = document.querySelector('button.primary[type="submit"]');
+    
+    // Find buttons by their onclick attribute and add an ID
+    const allButtons = document.querySelectorAll('.inline button');
+    let startButton = null;
+    let endButton = null;
+
+    allButtons.forEach(btn => {
+        const onclickAttr = btn.getAttribute('onclick');
+        if (onclickAttr === "setCurrentTime('start_time')") {
+            startButton = btn;
+            startButton.id = 'start-time-btn';
+            // 🚀 PUTHU: Onclick-a maathurom
+            startButton.setAttribute('onclick', 'startManualLiveTimer()');
+        } else if (onclickAttr === "setCurrentTime('end_time')") {
+            endButton = btn;
+            endButton.id = 'end-time-btn';
+            // 🚀 PUTHU: Onclick-a simple-ah maathurom
+            endButton.setAttribute('onclick', "fillCurrentTime('end_time')");
+        }
+    });
+
+    // 🚀 PUTHU LOGIC: Reset button-a create panni, hide panrom
+    let resetButton = null;
+    if (endButton) {
+        resetButton = document.createElement('button');
+        resetButton.type = 'button';
+        resetButton.textContent = 'Reset';
+        resetButton.id = 'reset-form-btn';
+        resetButton.style.marginLeft = '8px'; // Add some space
+        resetButton.style.background = '#e74c3c'; // Red color
+        resetButton.style.color = 'white';
+        resetButton.style.border = 'none';
+        resetButton.onclick = resetManualForm; // Assign new function
+        resetButton.style.display = 'none'; // 🚀 Hide panni vai
+        endButton.parentNode.appendChild(resetButton);
+    }
+
+    /* 🚀 PUTHU LOGIC: Simple time filler (helper) */
+    function fillCurrentTime(id){
+        const n = new Date();
+        const timeString = String(n.getHours()).padStart(2,'0') + ':' + String(n.getMinutes()).padStart(2,'0');
+        document.getElementById(id).value = timeString;
+    }
+
+    /* 🚀 PUTHU LOGIC: Manual form-la "Start" click panna */
+    async function startManualLiveTimer() {
+        // 1. Vera timer odutha-nu check pannu
+        if (activeManualEntryID) {
+            showFlashMessage('Error: A manual timer is already running. Click Reset to cancel it.', 'error');
+            return;
+        }
+
+        // 2. Form-la data irukka-nu check pannu
+        const projectValue = projectSelect ? projectSelect.value : projectInput.value;
+        const processValue = processSelect.value;
+        const subProcessValue = subProcessSelect.value;
+        const dateValue = document.getElementById('selected-date-input').value;
+
+        if (!projectValue || !processValue || !subProcessValue) {
+             showFlashMessage('Error: Please select Project, Process, and Sub-Process before starting.', 'error');
+             window.scrollTo(0,0);
+             return;
+        }
+
+        // 3. Start time-a fill pannu
+        fillCurrentTime('start_time');
+        const startTimeValue = startTimeInput.value;
+
+        // 4. API-ku data-va anupu
+        try {
+            const res = await fetch('/api/manual/start', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    project: projectValue,
+                    process: processValue,
+                    sub_process: subProcessValue,
+                    start_time: startTimeValue,
+                    date: dateValue
+                })
+            });
+            
+            const data = await res.json();
+            if (data.success) {
+                activeManualEntryID = data.db_id; // 🚀 DB ID-a save pannu
+
+                // 5. Form-a LOCK pannu
+                if (projectSelect) projectSelect.disabled = true;
+                if (projectInput) projectInput.disabled = true;
+                processSelect.disabled = true;
+                subProcessSelect.disabled = true;
+                startTimeInput.disabled = true; // Start time-ayum lock pannu
+                if (startButton) startButton.style.display = 'none'; // Start button-a hide pannu
+                
+                // 6. Mathathatha kaattu
+                if(resetButton) resetButton.style.display = 'inline-block';
+                endTimeInput.disabled = false;
+                if (endButton) endButton.disabled = false;
+                submitButton.disabled = false;
+                
+                showFlashMessage('Timer started! Your admin can see you now.', 'success');
+                endTimeInput.focus();
+            } else {
+                showFlashMessage(`Error: ${data.message}`, 'error');
+            }
+        } catch (e) {
+            showFlashMessage('Network error. Could not start timer.', 'error');
+        }
+    }
+
+    /* 🚀 PUTHU LOGIC: Reset button function (ithu ippo CANCEL/DELETE pannum) */
+    async function resetManualForm() {
+        if (!activeManualEntryID) {
+            // Timer start pannala, simple reset
+            if (projectSelect) projectSelect.disabled = false;
+            processSelect.disabled = false;
+            subProcessSelect.disabled = false;
+            startTimeInput.value = '';
+            endTimeInput.value = '';
+            return;
+        }
+
+        if (!confirm('This will CANCEL and DELETE your live timer. Are you sure?')) {
+            return;
+        }
+        
+        // Timer oduthu, so API call panni DELETE pannanum
+        try {
+            const res = await fetch('/api/manual/cancel', { method: 'POST' });
+            const data = await res.json();
+            
+            if (data.success) {
+                showFlashMessage('Live timer canceled.', 'info');
+            } else {
+                showFlashMessage(`Error: ${data.message}`, 'error');
+                // Even if API fails, unlock the form
+            }
+        } catch (e) {
+             showFlashMessage('Network error. Unlocking form.', 'error');
+        }
+        
+        // 🚀 Form-a unlock pannu
+        activeManualEntryID = null;
+        if (projectSelect) projectSelect.disabled = false;
+        if (projectInput) projectInput.disabled = false;
+        processSelect.disabled = false;
+        subProcessSelect.disabled = false;
+        startTimeInput.disabled = false;
+        startTimeInput.value = '';
+        endTimeInput.value = '';
+        if (startButton) startButton.style.display = 'inline-block';
+        if(resetButton) resetButton.style.display = 'none';
+        
+    }
+
+    // --- 🚀 END: MODIFIED SECTION ---
+
+
+    /* master: { Team: { Process: [Sub1,Sub2...] } } */
+    const master    = {{ team_json|tojson }};
+    const userTeam = {{ user_team|tojson }};
+
+    window.addEventListener('load', () => {
+        const processSel = document.getElementById('process');
+        const subSel     = document.getElementById('sub_process');
+        // teamSel is not used for selection here but might be needed elsewhere
+        // const teamSel  = document.getElementById('team'); 
+
+        function fillProcesses(team) {
+            processSel.length = 1; subSel.length = 1;
+            if (!team || !master[team]) return;
+            Object.keys(master[team]).forEach(proc => processSel.add(new Option(proc, proc)));
+        }
+        processSel.onchange = () => {
+            subSel.length = 1;
+            // Since there is no team selection dropdown in the main form now, we rely on userTeam
+            const tVal = userTeam || '';
+            if (!processSel.value || !tVal) return;
+            (master[tVal][processSel.value] || []).forEach(sp => subSel.add(new Option(sp, sp)));
+        };
+        // The team is either fixed or not used for this logic now
+        if (userTeam) {
+            fillProcesses(userTeam);
+        }
+    });
+
+    /* Table filters */
+    (function initFilters(){
+        const table = document.getElementById('log-table');
+        const tbody = table.querySelector('tbody');
+        if (!tbody) return; // Guard clause if table is empty
+        const rows  = Array.from(tbody.querySelectorAll('tr'));
+        if (rows.length === 0 || (rows.length === 1 && rows[0].querySelector('.no-data'))) return; // No data to filter
+        
+        const filters = Array.from(table.querySelectorAll('thead .filters select'));
+        filters.forEach(sel => {
+            const col = parseInt(sel.dataset.col,10);
+            const values = new Set();
+            rows.forEach(r => {
+                if (r.classList.contains('no-data')) return;
+                const cell = r.children[col];
+                if (!cell) return;
+                const v = (cell.textContent || '').trim();
+                if (v) values.add(v);
+            });
+            // Clear previous options except 'All'
+            sel.length = 1;
+            Array.from(values).sort().forEach(v => sel.add(new Option(v, v)));
+            sel.addEventListener('change', applyFilter);
+        });
+        function applyFilter(){
+            const active = filters.map(s => s.value);
+            let visibleCount = 0;
+            rows.forEach(r => {
+                if (r.querySelector('.no-data')) return; // Always skip the original no-data row
+                
+                let visible = true;
+                for (let i=0;i<active.length;i++){
+                    if (!filters[i].value) continue;
+                    const v = (r.children[i].textContent || '').trim();
+                    if (v !== active[i]) { visible = false; break; }
+                }
+                r.style.display = visible ? '' : 'none';
+                if (visible) visibleCount++;
+            });
+            
+            // Handle no-data message
+            let noDataRow = tbody.querySelector('.no-data-filter');
+            if (visibleCount === 0) {
+                if (!noDataRow) {
+                    noDataRow = document.createElement('tr');
+                    noDataRow.className = 'no-data-filter';
+                    noDataRow.innerHTML = `<td colspan="${filters.length + 1}" class="no-data">No matching entries found</td>`;
+                    tbody.appendChild(noDataRow);
+                }
+                noDataRow.style.display = '';
+            } else if (noDataRow) {
+                noDataRow.style.display = 'none';
+            }
+        }
+    })();
+
+
+    /* Enable Edit only for last 3 days */
+    (function enableEditForRecent(){
+        const today = new Date("{{ today | default(TODAY_DATE_STRING) }}"); // Fallback for today
+        const rows  = Array.from(document.querySelectorAll('#log-table tbody tr'));
+        rows.forEach(r => {
+            if (r.classList.contains('no-data') || r.classList.contains('no-data-filter')) return; // Skip no-data row
+            const dateText = r.children[0]?.textContent?.trim();
+            const editBtn = r.querySelector('.edit-btn');
+            
+            if (!editBtn || !dateText) return;
+            
+            const d = new Date(dateText);
+            const diffDays = (today - d)/(1000*60*60*24);
+            
+            if (isNaN(diffDays) || diffDays > 3 || diffDays < 0){
+                editBtn.style.display = 'none';
+                return;
+            }
+            // Add listeners if buttons are active
+            editBtn.addEventListener('click', () => openEditModal(r));
+        });
+    })();
+    /* Helper to set up process and sub-process dropdowns for the modal/presets */
+function initProcessSubDropdowns(processSel, subSel, initialProcess, initialSub) {
+    processSel.length = 0;
+    processSel.add(new Option("Select Process", "", true, false));
+    subSel.length = 0;
+    subSel.add(new Option("Select Sub-Process", "", true, false));
+    
+    // Fill Process options
+    if (userTeam && master[userTeam]) {
+        Object.keys(master[userTeam]).forEach(proc => 
+            processSel.add(new Option(proc, proc))
+        );
+    }
+
+    // Set initial Process value and manually fire change event
+    if (initialProcess) {
+        processSel.value = initialProcess;
+        // Manually trigger the fill for the sub-process dropdown
+        fillSubProcessDropdown(processSel.value, subSel, initialSub);
+    }
+
+    // Event listener for Process change
+    processSel.onchange = () => {
+        fillSubProcessDropdown(processSel.value, subSel);
+    };
+}
+
+/* Helper to fill the sub-process dropdown for a given process */
+function fillSubProcessDropdown(selectedProcess, subSel, initialSub = null) {
+    subSel.length = 0;
+    subSel.add(new Option("Select Sub-Process", "", true, false));
+
+    if (!userTeam || !selectedProcess || !master[userTeam] || !master[userTeam][selectedProcess]) return;
+    
+    (master[userTeam][selectedProcess] || []).forEach(sp => 
+        subSel.add(new Option(sp, sp))
+    );
+    
+    // Set initial Sub-Process value
+    if (initialSub) {
+        subSel.value = initialSub;
+    }
+}
+
+// --- Edit Modal Logic ---
+const mb = document.getElementById('mb');
+const mm = document.getElementById('mm');
+const mClose = document.getElementById('m_close');
+const mProcessSel = document.getElementById('m_process');
+const mSubSel = document.getElementById('m_sub');
+
+function openEditModal(row){
+    // 1. Get current values from the table row
+    // The columns are: Date[0], Day[1], Project Code[2], Project Type[3], Process[4], Sub-process[5], Start Time[6], End Time[7], Duration[8], Edit[9]
+    const projectCode = row.children[2]?.textContent?.trim() || ''; 
+    const projectType = row.children[3]?.textContent?.trim() || ''; 
+    const processVal = row.children[4]?.textContent?.trim() || '';
+    const subVal = row.children[5]?.textContent?.trim() || '';
+    const startVal = row.children[6]?.textContent?.trim() || '';
+    const endVal = row.children[7]?.textContent?.trim() || '';
+
+    // 2. Populate hidden inputs (for backend logic)
+    document.getElementById('m_entry_id').value = row.dataset.id || '';
+    document.getElementById('m_project_hidden').value = projectCode; // This maps to the 'project' field in Flask
+
+    // Populate display fields
+    document.getElementById('m_project_code_display').value = projectCode;
+    document.getElementById('m_project_type_display').value = projectType;
+    
+    // CRITICAL FIX: Populate the new hidden field for Project Type (ptmc)
+    document.getElementById('m_project_type_mc_hidden').value = projectType;
+    // NOTE: disease and country are not available in the table, relying on the server fix to re-derive/fetch them.
+
+    // 3. Populate Time inputs
+    document.getElementById('m_start').value = startVal;
+    document.getElementById('m_end').value = endVal;
+
+    // 4. Initialize Process & Sub-Process dropdowns and set current values
+    initProcessSubDropdowns(mProcessSel, mSubSel, processVal, subVal);
+
+    // 5. Show modal
+    mb.style.display = 'block';
+    mm.style.display = 'block';
+    document.getElementById('m_process').focus();
+    document.body.style.overflow = 'hidden';
+}
+function closeModal(){
+    mb.style.display = 'none';
+    mm.style.display = 'none';
+    document.body.style.overflow = '';
+}
+mClose.addEventListener('click', closeModal);
+mb.addEventListener('click', closeModal);
+document.addEventListener('keydown', (e)=>{ if(e.key==='Escape'){ closeModal(); } });
+
+// --- DELETE MODAL LOGIC REMOVED ---
+
+
+    // --- Timer UI/Logic (MODIFIED to use modal) ---
+
+    function updateElapsedTime() {
+        if (!timerStartTime) return;
+        const now = new Date();
+        const elapsedSeconds = (now - timerStartTime) / 1000;
+
+        const h = Math.floor(elapsedSeconds / 3600);
+        const m = Math.floor((elapsedSeconds % 3600) / 60);
+        const s = Math.floor(elapsedSeconds % 60);
+
+        const elapsedFormatted = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+        
+        const elTime = document.getElementById('elapsed-time');
+        if(elTime) elTime.textContent = elapsedFormatted;
+        
+        // Update elapsed time in the stop confirmation modal (HH:MM only)
+        const stopConfirmEl = document.getElementById('stop-confirm-elapsed');
+        if(stopConfirmEl) stopConfirmEl.textContent = elapsedFormatted.substring(0, elapsedFormatted.lastIndexOf(':'));
+    }
+
+    /* MODIFIED: Shows Start Confirmation Modal */
+    function showStartConfirmation(presetData) {
+        if (timerInterval || activeManualEntryID) {
+            showFlashMessage("Please stop or reset your current timer before starting a new one.", 'info');
+            return;
+        }
+
+        currentPresetToStart = presetData;
+        
+        // Hide all modal content, show only the start confirmation
+        document.getElementById('manage-presets-content').style.display = 'none';
+        document.getElementById('stop-confirmation-content').style.display = 'none';
+        document.getElementById('start-confirmation-content').style.display = 'block';
+
+        // Fill confirmation details
+        document.getElementById('start-confirm-name').textContent = presetData.name;
+        document.getElementById('start-confirm-project').textContent = presetData.project;
+        document.getElementById('start-confirm-process').textContent = presetData.process + ' / ' + presetData.sub_process;
+
+        // Show modal
+        p_mb.style.display = 'block';
+        p_mm.style.display = 'block';
+        document.body.style.overflow = 'hidden';
+
+        // Set the actual API call on the confirmation button click
+        document.getElementById('start-confirm-btn').onclick = () => {
+            closePresetModal(); 
+            _startTimerApi(presetData.id, presetData.name);
+        };
+    }
+
+    /* NEW: Actual API call for starting timer */
+    async function _startTimerApi(id, name) {
+        try {
+            const res = await fetch('/api/timer/start', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: id })
+            });
+            const data = await res.json();
+            if (data.success) {
+                // Update UI for active timer
+                timerStartTime = new Date(data.timer.start_time);
+                document.getElementById('timer-preset-name').textContent = name;
+                document.getElementById('active-timer-display').style.display = 'flex';
+                document.getElementById('quick-presets-container').style.display = 'none';
+
+                // Start the counter
+                if (!timerInterval) { // Check if a timer is already running
+                     timerInterval = setInterval(updateElapsedTime, 1000);
+                }
+                updateElapsedTime();
+                
+                showFlashMessage(`Timer started for **${name}**! (Live Dashboard updated)`, 'success'); 
+            } else {
+                showFlashMessage(`Error starting timer: ${data.message}`, 'error');
+            }
+        } catch (e) {
+            console.error(e);
+            showFlashMessage('Failed to start timer due to a network error.', 'error');
+        }
+    }
+
+    /* MODIFIED: Shows Stop Confirmation Modal */
+    function showStopConfirmation() {
+        if (!timerInterval) return;
+
+        // Hide all modal content, show only the stop confirmation
+        document.getElementById('manage-presets-content').style.display = 'none';
+        document.getElementById('start-confirmation-content').style.display = 'none';
+        document.getElementById('stop-confirmation-content').style.display = 'block';
+
+        // Fill confirmation details (elapsed time is updated by updateElapsedTime)
+        updateElapsedTime(); 
+
+        // Show modal
+        p_mb.style.display = 'block';
+        p_mm.style.display = 'block';
+        document.body.style.overflow = 'hidden';
+
+        // Set the actual API call on the confirmation button click
+        document.getElementById('stop-confirm-btn').onclick = () => {
+            closePresetModal(); 
+            _stopTimerApi();
+        };
+    }
+
+    /* MODIFIED: Actual API call for stopping timer */
+    async function _stopTimerApi() {
+        clearInterval(timerInterval);
+        timerInterval = null;
+        timerStartTime = null;
+
+        try {
+            const res = await fetch('/api/timer/stop', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+            const data = await res.json();
+            if (data.success) {
+                document.getElementById('active-timer-display').style.display = 'none';
+                document.getElementById('quick-presets-container').style.display = 'flex';
+                
+                showFlashMessage(`Timer stopped. Logged **${data.log_entry.duration}h** for **${data.log_entry.project}**. Reloading...`, 'success');
+
+                // Delay the reload slightly to let the flash message be seen
+                setTimeout(() => { window.location.reload(); }, 1500); 
+            } else {
+                showFlashMessage(`Error stopping timer: ${data.message}`, 'error');
+            }
+        } catch (e) {
+            console.error(e);
+            showFlashMessage('Failed to stop timer due to a network error.', 'error');
+        }
+    }
+
+    /* NEW: Custom Flash Message Helper */
+    function showFlashMessage(message, category) {
+        const wrapEl = document.querySelector('.wrap');
+        if (!wrapEl) return;
+        
+        let flashDiv = wrapEl.querySelector('.flash');
+        if (!flashDiv) {
+            flashDiv = document.createElement('div');
+            flashDiv.className = 'flash';
+            // Insert after the wrap's first child (which is the h1 in the card)
+            const firstCard = wrapEl.querySelector('.card-head'); // Changed to card-head
+            if (firstCard) {
+                firstCard.before(flashDiv);
+            } else {
+                wrapEl.prepend(flashDiv);
+            }
+        }
+        
+        // Remove existing message if present
+        flashDiv.innerHTML = '';
+        
+        const msgEl = document.createElement('div');
+        msgEl.className = `msg ${category}`;
+        msgEl.innerHTML = message.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>'); // Basic markdown for bold
+        flashDiv.appendChild(msgEl);
+        
+        // Scroll to top to see message
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        
+        // Auto-remove after a few seconds
+        setTimeout(() => {
+             if (msgEl) msgEl.style.opacity = '0';
+             setTimeout(() => { if (flashDiv) flashDiv.innerHTML = ''; }, 500);
+        }, 4500);
+    }
+
+
+    async function checkTimerStatus() {
+        try {
+            const res = await fetch('/api/timer/status', {headers: {'Accept': 'application/json'}, cache: 'no-store'});
+            if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+            const data = await res.json();
+            
+            if (data.active) {
+                
+                // 🚀 PUTHU CHECK: Ithu manual timer-ah?
+                if (data.timer.is_manual) {
+                    // Yes, ithu manual timer
+                    activeManualEntryID = data.timer.db_id;
+
+                    // Form-a LOCK pannu
+                    if (projectSelect) { projectSelect.value = data.timer.project; projectSelect.disabled = true; }
+                    if (projectInput) { projectInput.value = data.timer.project; projectInput.disabled = true; }
+                    
+                    // Note: We can't fill process/sub-process without a full page load, but we can lock them.
+                    processSelect.disabled = true;
+                    subProcessSelect.disabled = true;
+                    startTimeInput.disabled = true; // Start time-ayum lock pannu
+                    
+                    // Start button-a hide pannu
+                    if (startButton) startButton.style.display = 'none';
+                    
+                    // Mathathatha kaattu
+                    if(resetButton) resetButton.style.display = 'inline-block';
+                    endTimeInput.disabled = false;
+                    if (endButton) endButton.disabled = false;
+                    submitButton.disabled = false;
+                    
+                    // We don't know the exact start time, so we hide it
+                    startTimeInput.value = '??:??';
+                    
+                } else {
+                    // No, ithu Quick Add timer
+                    timerStartTime = new Date(data.timer.start_time);
+                    document.getElementById('timer-preset-name').textContent = data.timer.name;
+                    document.getElementById('elapsed-time').textContent = data.timer.elapsed_time;
+                    
+                    // Start the counter
+                    if (!timerInterval) {
+                        timerInterval = setInterval(updateElapsedTime, 1000);
+                    }
+                    document.getElementById('active-timer-display').style.display = 'flex';
+                    document.getElementById('quick-presets-container').style.display = 'none';
+                }
+                
+            } else {
+                // No active timer
+                activeManualEntryID = null; // Clear manual ID
+                clearInterval(timerInterval);
+                timerInterval = null;
+                document.getElementById('active-timer-display').style.display = 'none';
+                document.getElementById('quick-presets-container').style.display = 'flex';
+                // Make sure manual form is unlocked
+                if (projectSelect) projectSelect.disabled = false;
+                if (projectInput) projectInput.disabled = false;
+                processSelect.disabled = false;
+                subProcessSelect.disabled = false;
+                startTimeInput.disabled = false;
+                if (startButton) startButton.style.display = 'inline-block';
+                if(resetButton) resetButton.style.display = 'none';
+            }
+        } catch (e) {
+            console.error('Error checking timer status:', e);
+            // Don't show a flash message here, as it's a background check
+        }
+    }
+    
+    // --- Preset Modal Logic (Modified) ---
+    const p_mb = document.getElementById('preset-mb');
+    const p_mm = document.getElementById('preset-mm');
+    const p_form = document.getElementById('preset-form');
+
+    // Get the select elements for preset management
+    const p_processSel = document.getElementById('p_process');
+    const p_subSel     = document.getElementById('p_sub');
+    
+    function resetProcessSubDropdowns(initialProcessValue = null) {
+        // Reset process
+        p_processSel.length = 0;
+        p_processSel.add(new Option("Select Process", "", true, false));
+        
+        // Reset sub-process
+        p_subSel.length = 0;
+        p_subSel.add(new Option("Select Sub-Process", "", true, false));
+        
+        if (!userTeam || !master[userTeam]) return;
+        
+        // Fill Process dropdown with processes for the user's team
+        Object.keys(master[userTeam]).forEach(proc => 
+            p_processSel.add(new Option(proc, proc))
+        );
+        
+        // If an initial value is provided (i.e., when editing), set it and fire change event
+        if (initialProcessValue) {
+            p_processSel.value = initialProcessValue;
+            p_processSel.dispatchEvent(new Event('change'));
+        }
+    }
+    
+    // Auto-fill Sub-Process dropdown when Process changes in the modal
+    p_processSel.onchange = () => {
+        p_subSel.length = 0; // Reset Sub-Process
+        p_subSel.add(new Option("Select Sub-Process", "", true, false));
+
+        const selectedProcess = p_processSel.value;
+        if (!userTeam || !selectedProcess || !master[userTeam] || !master[userTeam][selectedProcess]) return;
+        
+        // Fill Sub-Process dropdown
+        (master[userTeam][selectedProcess] || []).forEach(sp => 
+            p_subSel.add(new Option(sp, sp))
+        );
+    };
+
+
+    function showManagePresets() {
+        // Reset to "Add Preset" state
+        document.getElementById('preset-modal-title').innerHTML = '<i class="fa fa-cogs"></i> Manage Presets';
+        document.getElementById('p_preset_id').value = '';
+        p_form.reset();
+        document.getElementById('p_delete_btn').style.display = 'none';
+        document.getElementById('p_save_btn').textContent = 'Add Preset';
+        
+        // Show the manage presets content, hide confirmations
+        document.getElementById('manage-presets-content').style.display = 'block';
+        document.getElementById('start-confirmation-content').style.display = 'none';
+        document.getElementById('stop-confirmation-content').style.display = 'none';
+
+        // 1. Fill the list of existing presets
+        document.getElementById('preset-list-container').innerHTML = renderPresetList();
+        
+        // 2. Fill the Process/Sub-Process dropdowns (resets them first)
+        resetProcessSubDropdowns(); 
+
+        p_mb.style.display = 'block';
+        p_mm.style.display = 'block';
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closePresetModal() {
+        p_mb.style.display = 'none';
+        p_mm.style.display = 'none';
+        document.body.style.overflow = '';
+
+        // Reset to default (Manage Presets) view
+        document.getElementById('manage-presets-content').style.display = 'block';
+        document.getElementById('start-confirmation-content').style.display = 'none';
+        document.getElementById('stop-confirmation-content').style.display = 'none';
+    }
+    p_mb.addEventListener('click', closePresetModal);
+
+
+    function renderPresetList() {
+        if (allPresets.length === 0) {
+            return '<div class="helper" style="text-align: center; font-size: 13px;">No saved presets.</div>';
+        }
+        
+        let html = '<ul style="list-style: none; padding: 0; border-top: 1px dashed #2a3240;">';
+        allPresets.forEach(p => {
+            html += `
+                <li style="display: flex; justify-content: space-between; align-items: center; padding: 8px 5px; border-bottom: 1px dashed #2a3240;">
+                    <div>
+                        <span style="font-weight: 600; font-size: 14px;">${p.name}</span>
+                        <span style="font-size: 11px; color: var(--muted); display: block;">${p.project} / ${p.process} / ${p.sub_process}</span>
+                    </div>
+                    <button type="button" class="btn" style="padding: 4px 10px; font-size: 12px; margin-left: 10px;" 
+                            onclick="fillPresetForm(${p.id})">Edit</button>
+                </li>
+            `;
+        });
+        html += '</ul>';
+        return html;
+    }
+    
+    function fillPresetForm(presetId) {
+        const preset = allPresets.find(p => p.id === presetId);
+        if (!preset) return;
+        
+        // 1. Reset form state
+        p_form.reset();
+        
+        // 2. Fill basic values
+        document.getElementById('p_preset_id').value = preset.id;
+        document.getElementById('p_name').value = preset.name;
+        document.getElementById('p_project').value = preset.project;
+        
+        // 3. Setup and set Process/Sub-Process
+        resetProcessSubDropdowns(preset.process); 
+        
+        // Now that the Process dropdown is filled and the value is set, the change event fired
+        // will have loaded the Sub-Process options. Set the sub-process value now.
+        // Use a slight delay to ensure the DOM update is complete before setting sub value
+        setTimeout(() => {
+            document.getElementById('p_sub').value = preset.sub_process;
+        }, 50); 
+        
+        document.getElementById('p_save_btn').textContent = 'Update Preset';
+        document.getElementById('p_delete_btn').style.display = 'inline-block';
+        document.getElementById('preset-modal-title').innerHTML = '<i class="fa fa-pencil-alt"></i> Edit Preset';
+    }
+
+
+    async function savePreset(e) {
+        e.preventDefault();
+        const form = e.target;
+        const presetId = form.p_preset_id.value;
+        
+        const payload = {
+            name: form.p_name.value,
+            project: form.p_project.value,
+            process: form.p_process.value,
+            sub_process: form.p_sub.value,
+        };
+        
+        if (!presetId) { // Add new
+            try {
+                const res = await fetch('/api/quick-presets/add', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showFlashMessage("Preset added successfully!", 'success');
+                    window.location.reload(); 
+                } else {
+                    showFlashMessage(`Failed to add preset: ${data.message}`, 'error');
+                }
+            } catch(e) { showFlashMessage("Network error adding preset.", 'error'); }
+        } else { // Update existing
+            try {
+                const res = await fetch(`/api/quick-presets/update/${presetId}`, { // Assuming a PUT or POST to /update/:id
+                    method: 'POST', // Or 'PUT'
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showFlashMessage("Preset updated successfully!", 'success');
+                    window.location.reload(); 
+                } else {
+                    showFlashMessage(`Failed to update preset: ${data.message}`, 'error');
+                }
+            } catch(e) { showFlashMessage("Network error updating preset.", 'error'); }
+        }
+    }
+
+    async function deletePreset() {
+        const presetId = document.getElementById('p_preset_id').value;
+        if (!presetId) return;
+
+        // Use a custom, non-blocking confirmation
+        const preset = allPresets.find(p => p.id === parseInt(presetId));
+        const name = preset ? `<strong>${preset.name}</strong>` : 'this preset';
+        
+        showFlashMessage(`Are you sure you want to delete ${name}? <button class='btn' onclick='_confirmDelete(${presetId})' style='margin-left: 10px; background: var(--danger); color: #fff;'>Yes, Delete</button>`, 'error');
+    }
+
+    async function _confirmDelete(presetId) {
+        if (!presetId) return;
+        try {
+            const res = await fetch(`/api/quick-presets/delete/${presetId}`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'}
+            });
+            const data = await res.json();
+            if (data.success) {
+                showFlashMessage("Preset deleted successfully!", 'success');
+                window.location.reload(); 
+            } else {
+                showFlashMessage(`Failed to delete preset: ${data.message}`, 'error');
+            }
+        } catch(e) { showFlashMessage("Network error deleting preset.", 'error'); }
+    }
+
+
+
+    /* === 7-day horizontal chips === */
+    async function renderLast7(){
+        const wrap = document.getElementById('weekStrip7');
+        const meta = document.getElementById('last7-window');
+        // const todayTimeEl = document.getElementById('today-logged-time'); // Moved inside the form
+
+        if (!wrap) return;
+
+        function chip({wday, sub, val, today=false, total=false}){
+            const d = document.createElement('div');
+            d.className = 'chip7' + (total ? ' total-chip7' : '');
+            if (today && !total) d.classList.add('today');
+            d.innerHTML = `
+                <div class="wday">${total ? 'Total Hours' : wday}</div>
+                <div class="date">${sub}</div>
+                <strong>${val}</strong>
+            `;
+            return d;
+        }
+
+        try{
+            const res = await fetch('/api/my-7day-hours',{headers:{'Accept':'application/json'}, cache:'no-store'});
+            if(!res.ok) throw new Error('API error');
+            const js = await res.json();
+
+            // Updated reference for todayTimeEl
+            const todayTimeEl = document.getElementById('today-logged-time');
+            const todayEntry = js.by_day.find(d => d.date === js.end_date);
+            if (todayEntry && todayTimeEl) {
+                todayTimeEl.textContent = `Today: ${todayEntry.hours_hms}h`;
+            } else if (todayTimeEl) {
+                todayTimeEl.textContent = `Today: 00:00h`;
+            }
+
+            const entriesWithHours = js.by_day.filter(d => d.hours_hms && d.hours_hms !== '00:00');
+            
+            if (entriesWithHours.length === 0) {
+                wrap.innerHTML = '<div class="helper" style="padding: 0 18px;">No entries with logged hours in the last 7 days.</div>';
+            } else {
+                wrap.innerHTML = ''; // Clear loading
+                entriesWithHours.forEach(d => {
+                    const dt = new Date(d.date+'T00:00:00');
+                    const wday = dt.toLocaleDateString(undefined,{weekday:'short'});
+                    const sub  = dt.toLocaleDateString(undefined,{month:'short', day:'2-digit'});
+                    const display = d.hours_hms || d.hours_decimal;
+                    wrap.appendChild(chip({ wday, sub, val: display, today: d.date===js.end_date }));
+                });
+            }
+
+            const sLbl = new Date(js.start_date+'T00:00:00').toLocaleDateString(undefined,{month:'short', day:'2-digit'});
+            const eLbl = new Date(js.end_date  +'T00:00:00').toLocaleDateString(undefined,{month:'short', day:'2-digit'});
+            const totalDisplay = js.total_hours_hms || (js.total_hours_decimal??0).toFixed(2);
+            wrap.appendChild(chip({ wday:'Total Hours', sub:`${sLbl}–${eLbl}`, val: totalDisplay, total:true }));
+
+            meta.textContent = `Window: ${js.start_date} — ${js.end_date}`;
+        }catch(e){
+            wrap.innerHTML = '<div class="helper">Couldn’t load 7-day hours.</div>';
+            const todayTimeEl = document.getElementById('today-logged-time');
+            if (todayTimeEl) todayTimeEl.textContent = 'Error';
+            console.error(e);
+        }
+    };
+
+    /* === Fetch and display dashboard stats === */
+    async function renderDashboardStats(){
+        const WEEKLY_TARGET_HOURS = 40;    // weekly target
+        const DAILY_TARGET_HOURS  = 8;     // pending calc → 8 hours target
+
+        // helpers
+        function parseHmsToSeconds(hms) {
+            if (!hms) return 0;
+            const p = hms.split(':').map(Number);
+            if (p.length === 3) return (p[0]||0)*3600 + (p[1]||0)*60 + (p[2]||0);
+            if (p.length === 2) return (p[0]||0)*3600 + (p[1]||0)*60;
+            return 0;
+        }
+        function toHM(sec){
+            if (sec === 0) return '0h 0m';
+            
+            const sign = sec < 0 ? '-' : '';
+            const absSec = Math.abs(sec);
+            
+            const h = Math.floor(absSec / 3600);
+            const m = Math.floor((absSec % 3600) / 60);
+            
+            return `${sign}${h}h ${m}m`;
+        }
+        // Mon–Sat = 1..6
+        function isWeekdayOrSat(dateStr){
+            const [y,m,d] = dateStr.split('-').map(Number);
+            const dt = new Date(y, (m-1), d);
+            const wd = dt.getDay(); // 0=Sun ... 6=Sat
+            return wd >= 1 && wd <= 6;
+        }
+
+        try {
+            // ----- Monthly -----
+            const monthlyRes = await fetch('/api/my-monthly-hours', {headers: {'Accept': 'application/json'}, cache: 'no-store'});
+            if (!monthlyRes.ok) throw new Error('Monthly API error');
+            const monthlyData = await monthlyRes.json();
+
+            document.getElementById('total-this-month-hms').textContent = monthlyData.total_hours_hms || '0h 0m';
+
+            const pctEl = document.getElementById('percent-change');
+            pctEl.classList.remove('positive','negative');
+            const change = parseFloat(monthlyData.percent_change) || 0;
+            if (change > 0) {
+                pctEl.textContent = `+${change.toFixed(1)}% from last month`;
+                pctEl.classList.add('positive');
+            } else if (change < 0) {
+                pctEl.textContent = `${change.toFixed(1)}% from last month`;
+                pctEl.classList.add('negative');
+            } else {
+                pctEl.textContent = `0% change`;
+            }
+
+            // ----- Weekly (Mon–Sat) -----
+            const weeklyRes = await fetch('/api/my-7day-hours', {headers: {'Accept': 'application/json'}, cache: 'no-store'});
+            if (!weeklyRes.ok) throw new Error('Weekly API error');
+            const weeklyData = await weeklyRes.json();
+
+            let totalWeekSeconds = 0;
+            weeklyData.by_day.forEach(day => {
+                if (!isWeekdayOrSat(day.date)) return;
+                let secs = 0;
+                if (typeof day.hours_hms === 'string' && day.hours_hms) {
+                    secs = parseHmsToSeconds(day.hours_hms);
+                } else if (typeof day.hours_decimal === 'number') {
+                    secs = Math.round(day.hours_decimal * 3600);
+                }
+                totalWeekSeconds += secs;
+            });
+
+            document.getElementById('weekly-hours').textContent = toHM(totalWeekSeconds);
+            const weeklyPct = (totalWeekSeconds / (WEEKLY_TARGET_HOURS * 3600)) * 100;
+            updateProgressBar(weeklyPct, 'weekly-progress-bar', 'weekly-percentage');
+
+            const targetEl = document.getElementById('weekly-target');
+            if (targetEl) targetEl.textContent = `Target: ${WEEKLY_TARGET_HOURS}h`;
+
+            // ----- Pending (today, 8-hour target) -----
+            const today = new Date().toISOString().split('T')[0];
+            const todayRow = weeklyData.by_day.find(d => d.date === today);
+            let todaySecs = 0;
+            if (todayRow) {
+                if (typeof todayRow.hours_hms === 'string' && todayRow.hours_hms) {
+                    todaySecs = parseHmsToSeconds(todayRow.hours_hms);
+                } else if (typeof todayRow.hours_decimal === 'number') {
+                    todaySecs = Math.round(todayRow.hours_decimal * 3600);
+                }
+            }
+            
+            // Also add active timer to todaySecs if running
+            if (timerStartTime && new Date(timerStartTime).toISOString().split('T')[0] === today) {
+                 const elapsedSeconds = (new Date() - timerStartTime) / 1000;
+                 todaySecs += elapsedSeconds;
+            }
+            
+            const pendingSecs = Math.max(0, Math.round(DAILY_TARGET_HOURS*3600 - todaySecs));
+            document.getElementById('pending-hours-value').textContent = pendingSecs > 0 ? toHM(pendingSecs) : 'completed!';
+
+            // --- NEW: Compensation Calculation ---
+            const todayForComp = new Date();
+            const currentMonthStr = `${todayForComp.getFullYear()}-${String(todayForComp.getMonth() + 1).padStart(2, '0')}`; // "YYYY-MM"
+            let permissionSecs = 0;
+            let compensationSecs = 0;
+            
+            // -- FIX: Corrected indexes to match allEntries array --
+            // allEntries[1] is Date
+            // allEntries[6] is Process
+            // allEntries[10] is Duration (float)
+            const dateColIndex = 1;
+                      const processColIndex = 6;
+                      const durationColIndex = 10; 
+
+            allEntries.forEach(entry => {
+                const entryDate = entry[dateColIndex]; // Use entry[1]
+                if (entryDate && entryDate.startsWith(currentMonthStr)) {
+                    const process = entry[processColIndex]; // Use entry[6]
+                    
+                    // Python: [row.id, row.date, row.day, row.project, row.project_type, row.team, row.process, row.sub_process, row.start_time, row.end_time, row.duration, row.disease, row.country, row.project_type_mc]
+                    // JS `allEntries` indexes:
+                    // 0: id
+                    // 1: date
+                    // 2: day
+                    // 3: project
+                    // 4: project_type
+                    // 5: team
+                    // 6: process
+                    // 7: sub_process
+                    // 8: start_time
+                    // 9: end_time
+                    // 10: duration (float)
+                    // ...
+                    
+                    // Table display indexes:
+                    // 0: row[1] (Date)
+                    // 1: row[2] (Day)
+                    // 2: row[3] (Project)
+                    // 3: row[13] (Project Type)
+                    // 4: row[6] (Process)
+                    // 5: row[7] (Sub-process)
+                    // 6: row[8] (Start Time)
+                    // 7: row[9] (End Time)
+                    // 8: row[10] (Duration (h))
+                    
+                    // So, the JS `allEntries` array has:
+                    // Date at index 1
+                    // Process at index 6
+                    // Duration (float) at index 10
+                    
+                    // const durationHours = parseFloat(entry[durationColIndex] || 0); // BUG: This parses "1:30" as 1
+                    // const durationSecs = durationHours * 3600;
+
+                    // NEW FIX: Parse HH:MM string from entry[10]
+                    const durationStr = entry[durationColIndex] || "0:0"; // e.g., "1:30" or "0:26"
+                    const parts = durationStr.split(':').map(Number);
+                    let durationSecs = 0;
+                    if (parts.length === 2) {
+                        // Format is HH:MM  l
+                        durationSecs = (parts[0] * 3600) + (parts[1] * 60);
+                    } else if (parts.length === 1) {
+                        // Fallback for float string (e.g., "1.5")
+                        const durationHours = parseFloat(durationStr);
+                        durationSecs = durationHours * 3600;
+                    }
+                    
+                    if (process === 'Permission') {
+                        permissionSecs += durationSecs;
+                    } else if (process === 'Compensation') {
+                        compensationSecs += durationSecs;
+                    }
+                }
+            });
+
+            const balanceSecs = permissionSecs - compensationSecs;
+            document.getElementById('permission-total-hms').textContent = toHM(permissionSecs);
+            document.getElementById('compensation-total-hms').textContent = toHM(compensationSecs);
+            
+            const balanceEl = document.getElementById('compensation-balance-hms');
+            const messageEl = document.getElementById('compensation-message');
+            
+            const balanceText = toHM(balanceSecs);
+            balanceEl.textContent = balanceText;
+
+            if (balanceSecs > 0) {
+                balanceEl.style.color = 'var(--danger)'; // Red for pending
+                messageEl.textContent = 'You still need to compensate ' + balanceText + '.';
+                messageEl.style.color = 'var(--danger)';
+            } else if (balanceSecs < 0) {
+                balanceEl.style.color = 'var(--accent)'; // Green for surplus
+                const surplusText = toHM(Math.abs(balanceSecs)); // Show positive value
+                messageEl.textContent = surplusText + ' You have already compensated the surplus.';
+                messageEl.style.color = 'var(--accent)';
+            } else { // balanceSecs === 0
+                balanceEl.style.color = 'var(--accent)'; // Green for complete
+                messageEl.textContent = 'Current month compensation complete.';
+                messageEl.style.color = 'var(--accent)';
+            }
+            // --- END: Compensation Calculation ---
+
+        } catch (e) {
+            console.error('Error fetching dashboard stats:', e);
+            document.getElementById('total-this-month-hms').textContent = 'Error';
+            document.getElementById('weekly-hours').textContent = 'Error';
+            document.getElementById('pending-hours-value').textContent = 'Error';
+            document.getElementById('compensation-balance-hms').textContent = 'Error';
+        }
+    };
+    
+    // --- NEW: Calendar Rendering and Interaction Logic ---
+    function getMonthName(monthIndex) {
+        // monthIndex is 0-based for JS (0=Jan, 11=Dec)
+        return monthNames[monthIndex]; 
+    }
+    
+    function renderCalendar(year, monthIndex, selectedDateStr, containerId) {
+        const firstDayOfMonth = new Date(year, monthIndex, 1);
+        const lastDayOfMonth = new Date(year, monthIndex + 1, 0);
+        const daysInMonth = lastDayOfMonth.getDate();
+        // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+        const startDayOfWeek = firstDayOfMonth.getDay(); 
+
+        const container = document.getElementById(containerId);
+        container.innerHTML = `
+            <span class="day-label">Sun</span>
+            <span class="day-label">Mon</span>
+            <span class="day-label">Tue</span>
+            <span class="day-label">Wed</span>
+            <span class="day-label">Thu</span>
+            <span class="day-label">Fri</span>
+            <span class="day-label">Sat</span>
+        `;
+        
+        // 1. Fill empty cells for days before the 1st
+        for (let i = 0; i < startDayOfWeek; i++) {
+            container.innerHTML += '<span class="empty-cell"></span>';
+        }
+
+        // 2. Fill day cells
+        for (let day = 1; day <= daysInMonth; day++) {
+            const dateStr = `${year}-${String(monthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            let classes = 'date-cell';
+
+            if (dateStr === selectedDateStr) {
+                classes += ' selected-date';
+            } else if (dateStr === TODAY_DATE_STRING) {
+                classes += ' current-day';
+            }
+            
+            container.innerHTML += `<span class="${classes}" data-date="${dateStr}">${day}</span>`;
+        }
+    }
+
+    // --- Initializers ---
+    document.addEventListener('DOMContentLoaded', () => {
+        
+        // *** MOVED ALL INIT CODE INSIDE DOMCONTENTLOADED ***
+        
+        // 1. Run all data-loading functions
+        checkTimerStatus(); // 💡 Ithu thaan page load aagum pothu form-a lock/unlock pannum
+        renderLast7();
+        renderDashboardStats();
+        
+        // 2. Attach click handlers to preset buttons
+        document.querySelectorAll('.quick-preset-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const presetData = {
+                    id: parseInt(btn.dataset.id),
+                    name: btn.dataset.name,
+                    project: btn.dataset.project,
+                    process: btn.dataset.process,
+                    sub_process: btn.dataset.sub,
+                };
+                showStartConfirmation(presetData); // Show confirmation modal instead of alert/API call
+            });
+        });
+
+        // 3. Initialize and handle calendar events
+        const selectedDateInput = document.getElementById('selected-date-input');
+        
+        // *** FIX: Add fallback for initialDate ***
+        let initialDate = selectedDateInput.value;
+        if (!initialDate) {
+            initialDate = TODAY_DATE_STRING;
+            selectedDateInput.value = initialDate;
+        }
+        
+        // Set the initial calendar view based on the selected date
+        currentCalDate = new Date(initialDate + 'T00:00:00'); 
+        
+        const calendarLabel = document.getElementById('calendar-month-year');
+        const calPrevBtn = document.getElementById('cal-prev');
+        const calNextBtn = document.getElementById('cal-next');
+        const calendarGrid = document.getElementById('main-calendar-grid');
+
+        function updateCalendarView() {
+            try {
+                const year = currentCalDate.getFullYear();
+                const monthIndex = currentCalDate.getMonth(); // 0-11
+                const selectedDateStr = selectedDateInput.value; // Always read the latest from input
+                
+                calendarLabel.textContent = `${getMonthName(monthIndex)} ${year}`;
+                renderCalendar(year, monthIndex, selectedDateStr, 'main-calendar-grid');
+                
+                // Disable 'next' button if viewing today's month or future
+                const today = new Date();
+                const isCurrentMonthOrFuture = currentCalDate.getFullYear() > today.getFullYear() || 
+                                              (currentCalDate.getFullYear() === today.getFullYear() && currentCalDate.getMonth() >= today.getMonth());
+                calNextBtn.disabled = isCurrentMonthOrFuture;
+            } catch (e) {
+                console.error("Error updating calendar view:", e);
+                calendarLabel.textContent = "Error";
+            }
+        }
+
+        calPrevBtn.addEventListener('click', () => {
+            currentCalDate.setDate(1); // Fix month-hopping bug
+            currentCalDate.setMonth(currentCalDate.getMonth() - 1);
+            updateCalendarView();
+        });
+
+        calNextBtn.addEventListener('click', () => {
+            if (calNextBtn.disabled) return;
+            currentCalDate.setDate(1); // Fix month-hopping bug
+            currentCalDate.setMonth(currentCalDate.getMonth() + 1);
+            updateCalendarView();
+        });
+
+        // Initial render
+        updateCalendarView();
+        
+        // Add event listener for date selection on the calendar
+        calendarGrid.addEventListener('click', (e) => {
+            if (e.target.classList.contains('date-cell')) {
+                // Remove previous selection
+                document.querySelectorAll('.date-cell.selected-date').forEach(cell => {
+                    cell.classList.remove('selected-date');
+                    // Re-apply 'current-day' class if it was the current day
+                    if (cell.dataset.date === TODAY_DATE_STRING) {
+                        cell.classList.add('current-day');
+                    }
+                });
+
+                // Set new selection
+                e.target.classList.add('selected-date');
+                e.target.classList.remove('current-day'); // Selected date takes precedence over current day visual
+                
+                // Update the hidden input field to be submitted
+                selectedDateInput.value = e.target.dataset.date;
+                
+                // Update the currentCalDate to match the selected date's month/year
+                // currentCalDate = new Date(e.target.dataset.date + 'T00:00:00');
+                // updateCalendarView(); // Re-render to show selection and update nav
+                // ^-- This was causing a re-render. Just update the input.
+            }
+        });
+    });
+function scheduleDailyRefresh(h = 7, m = 30) {
+  const now = new Date();
+  const next = new Date();
+  next.setHours(h, m, 0, 0);
+  if (next <= now) next.setDate(next.getDate() + 1); // tomorrow if time already passed
+  const timeout = next - now;
+  console.log(`Next refresh in ${Math.round(timeout / 1000 / 60)} minutes`);
+  setTimeout(() => location.reload(), timeout);
+}
+scheduleDailyRefresh();
+
+// --- 🚀 PUTHU SUBMIT LOGIC ---
+mainForm.addEventListener('submit', async function(event) {
+    
+    // 1. Timer odutha? (activeManualEntryID irukku)
+    if (activeManualEntryID) {
+        event.preventDefault(); // Normal submit-a thaduthudu
+        
+        // Fields-a unlock pannu
+        if (projectSelect) projectSelect.disabled = false;
+        if (projectInput) projectInput.disabled = false;
+        processSelect.disabled = false;
+        subProcessSelect.disabled = false;
+        startTimeInput.disabled = false;
+        
+        // Data-va FormData-la edu
+        const formData = new FormData(mainForm);
+        // Puthu DB ID-a add pannu
+        formData.append('active_db_id', activeManualEntryID);
+
+        // Form-a thirumba lock pannidu (response varra varaikum)
+        if (projectSelect) projectSelect.disabled = true;
+        if (projectInput) projectInput.disabled = true;
+        processSelect.disabled = true;
+        subProcessSelect.disabled = true;
+        startTimeInput.disabled = true;
+        
+        try {
+            // 2. Puthu STOP route-ku anupu
+            const res = await fetch('/api/manual/stop', {
+                method: 'POST',
+                body: formData
+            });
+            const data = await res.json();
+            
+            if (data.success) {
+                showFlashMessage('Timer stopped and entry updated!', 'success');
+                // Page-a reload pannu
+                setTimeout(() => window.location.reload(), 1000);
+            } else {
+                showFlashMessage(`Error: ${data.message}`, 'error');
+                // Error aana, form-a unlock pannu
+                resetManualForm(); // Ithu cancel pannidum, so user thirumba start pannanum
+            }
+        } catch (e) {
+            showFlashMessage('Network error. Could not stop timer.', 'error');
+            resetManualForm();
+        }
+
+    } else {
+        // 2. Timer odala (Normal entry)
+        
+        // Overlap check-a mattum pannu
+        const selectedDate = document.getElementById('selected-date-input').value;
+        const newStartTime = document.getElementById('start_time').value; // "HH:MM"
+        const newEndTime = document.getElementById('end_time').value;   // "HH:MM"
+
+        if (!selectedDate || !newStartTime || !newEndTime) return; 
+        
+        if (newStartTime >= newEndTime) {
+            event.preventDefault();
+            showFlashMessage('Error: Start time must be before end time.', 'error');
+            window.scrollTo(0, 0);
+            return;
+        }
+
+        let isOverlapping = false;
+        let overlappingEntry = "";
+
+        for (const entry of allEntries) {
+            const entryDate = entry[1];
+            if (entryDate !== selectedDate) continue; 
+
+            const existingStart = entry[8]; // start_time (HH:MM)
+            const existingEnd = entry[9];   // end_time (HH:MM)
+
+            if (newStartTime < existingEnd && newEndTime > existingStart) {
+                isOverlapping = true;
+                overlappingEntry = `${existingStart} - ${existingEnd}`;
+                break; 
+            }
+        }
+
+        if (isOverlapping) {
+            event.preventDefault(); 
+            showFlashMessage(`Error: New entry (${newStartTime} - ${newEndTime}) overlaps with an existing entry (${overlappingEntry}). Please check your times.`, 'error');
+            window.scrollTo(0, 0); 
+        }
+        // Overlap illana, form normal-ah submit aagum (/start route-ku)
+    }
+});
+        
+// --- 🚀 PUTHU Edit Modal Overlap Check ---
+const editForm = document.getElementById('edit-form');
+editForm.addEventListener('submit', function(event) {
+    const entryIdToEdit = document.getElementById('m_entry_id').value;
+    const newStartTime = document.getElementById('m_start').value; // "HH:MM"
+    const newEndTime = document.getElementById('m_end').value;   // "HH:MM"
+    
+    const entryToEdit = allEntries.find(e => e[0] == entryIdToEdit); // Entry ID is at index 0
+    if (!entryToEdit) return; 
+    
+    const selectedDate = entryToEdit[1]; // Date is at index 1
+
+    if (!selectedDate || !newStartTime || !newEndTime) return; 
+    
+    if (newStartTime >= newEndTime) {
+        event.preventDefault();
+        alert('Error: Start time must be before end time.'); // Modal can't use flash
+        return;
+    }
+
+    let isOverlapping = false;
+    let overlappingEntry = "";
+
+    for (const entry of allEntries) {
+        if (entry[0] == entryIdToEdit) continue; // Skip checking against itself
+        
+        const entryDate = entry[1];
+        if (entryDate !== selectedDate) continue; 
+
+        const existingStart = entry[8]; // start_time (HH:MM)
+        const existingEnd = entry[9];   // end_time (HH:MM)
+
+        if (newStartTime < existingEnd && newEndTime > existingStart) {
+            isOverlapping = true;
+            overlappingEntry = `${existingStart} - ${existingEnd}`;
+            break; 
+        }
+    }
+
+    if (isOverlapping) {
+        event.preventDefault(); 
+        alert(`Error: New time (${newStartTime} - ${newEndTime}) overlaps with an existing entry (${overlappingEntry}).`);
+    }
+});
+</script>
+{% endblock %}

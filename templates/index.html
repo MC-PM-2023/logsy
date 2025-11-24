@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+   <title>{% block title %}Logsy - Analytics{% endblock %}</title>
+  <link rel="icon" href="https://storage.googleapis.com/my-react-image-bucket-123/DS_Logos/Logsy_Favicon.png" type="image/x-icon">
+
+  <!-- Tailwind -->
+  <script>
+    window.tailwind = window.tailwind || {};
+    tailwind.config = { darkMode: false };
+  </script>
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Bootstrap Icons (for calendar/home icons) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"/>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+
+    :root{
+      --accent-50:#eef2ff;--accent-100:#e0e7ff;--accent-200:#c7d2fe;--accent-300:#a5b4fc;--accent-400:#818cf8;
+      --accent-500:#6366f1;--accent-600:#4f46e5;--accent-700:#4338ca;--accent-800:#3730a3;--accent-900:#312e81;
+
+      --bg:#f8fafc;--text:#0f172a;--muted:#334155;--card-bg:#ffffff;--card-border:#e5e7eb;
+      --table-head:var(--accent-50);--table-head-t:#111827;--scroll-track:#eef2ff;--scroll-thumb:#7577f1;
+
+      --project-50:#eff6ff; --project-500:#3b82f6; --project-600:#2563eb; --project-700:#1d4ed8;
+      --name-50:#f5f3ff; --name-500:#8b5cf6; --name-600:#7c3aed; --name-700:#6d28d9;
+      --process-50:#ecfdf5; --process-300:#6ee7b7; --process-500:#10b981; --process-600:#059669; --process-700:#047857;
+      --team-50:#fffbeb; --team-500:#f59e0b; --team-600:#d97706; --team-700:#b45309;
+    }
+
+    html,body{height:100%;overflow-x:hidden}
+    body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text)}
+    .text-default{color:var(--text)!important}.text-muted{color:var(--muted)!important}
+
+    #breakdown-row{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:1rem;overflow-x:hidden;width:100%}
+    .bd-card{min-width:0}
+    .bd-title{font-size:.9rem;line-height:1.1rem}
+    @media (min-width:768px){.bd-title{font-size:1rem}}
+    .bd-count{font-size:.65rem;opacity:.85}
+    .bd-row{font-size:.75rem;line-height:1rem}
+    .bd-row .label{min-width:0;display:inline-block;max-width:70%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .bd-row .bd-time{font-weight:700}
+    .bd-card{--c-base: var(--accent-600); --c-700: var(--accent-700); --c-50: var(--accent-50); --c-200: var(--accent-200); --c-400: var(--accent-400);}
+    .bd-card .bd-time{color:var(--c-400)}
+    .bd-card .bd-row:hover{background:var(--c-50);color:var(--c-700)!important}
+
+    .card{background:var(--card-bg);border:1px solid var(--card-border);border-radius:1rem;box-shadow:0 1px 2px rgba(16,24,40,.04),0 1px 3px rgba(16,24,40,.06)}
+    .surface{background:color-mix(in oklab,var(--card-bg) 92%,transparent);backdrop-filter:saturate(120%) blur(6px)}
+
+    .custom-scroll::-webkit-scrollbar{width:6px;height:6px}
+    .custom-scroll::-webkit-scrollbar-thumb{background:var(--scroll-thumb);border-radius:9px}
+    .custom-scroll::-webkit-scrollbar-track{background:var(--scroll-track)}
+
+    #loading-overlay{position:fixed;inset:0;display:none;z-index:50;background:rgba(255,255,255,.96)}
+    #loading-overlay.active{display:grid;place-items:center}
+
+    .modal{position:fixed;inset:0;z-index:40;display:none;background:rgba(15,23,42,.75);padding:1rem}
+    .modal.active{display:block}
+
+    .compact-label{font-size:.7rem}
+    .compact-field{height:2.2rem;padding:.3rem .5rem;font-size:.78rem}
+    .compact-gap{gap:.5rem}.compact-card-pad{padding:.75rem!important}
+
+    .date-field{max-width:150px}
+
+    .btn{appearance:none;display:inline-flex;align-items:center;justify-content:center;border-radius:.65rem;font-weight:600;line-height:1;cursor:pointer;transition:all .15s ease}
+    .btn:focus{outline:2px solid var(--accent-300);outline-offset:2px}
+    .btn--sm{padding:.45rem .7rem;font-size:.8rem}.btn--md{padding:.55rem .9rem;font-size:.9rem}
+    .btn-primary{background:var(--accent-600);color:#fff;border:1px solid var(--accent-700)}
+    .btn-primary:hover{background:var(--accent-700)}
+    .btn-ghost{background:var(--card-bg);color:var(--accent-700);border:1px solid color-mix(in oklab,var(--accent-200) 60%,var(--card-border))}
+    .btn-ghost:hover{background:var(--accent-50)}
+    .btn-danger{background:#e11d48;color:#fff;border:1px solid #be123c}
+    .btn-danger:hover{background:#be123c}
+
+    thead.theme-head{background:var(--table-head);color:var(--table-head-t)}
+
+    .filter-shell{border:1px solid var(--card-border);border-radius:.75rem;padding:.5rem;background:var(--card-bg)}
+    .filter-shell .compact-label{display:flex;align-items:center;gap:.5rem}
+    .dot{display:inline-block;width:.6rem;height:.6rem;border-radius:9999px}
+
+    .shell-project{border-left:4px solid var(--project-500)} .shell-project .compact-label{color:var(--project-700)} .shell-project .dot{background:var(--project-500)}
+    .shell-name{border-left:4px solid var(--name-500)} .shell-name .compact-label{color:var(--name-700)} .shell-name .dot{background:var(--name-500)}
+    .shell-process{border-left:4px solid var(--process-500)} .shell-process .compact-label{color:var(--process-700)} .shell-process .dot{background:var(--process-500)}
+    .shell-sub_process{border-left:4px solid var(--process-300)} .shell-sub_process .compact-label{color:var(--process-600)} .shell-sub_process .dot{background:var(--process-300)}
+
+    .cal-pop{position:absolute;z-index:30;top:100%;left:0;margin-top:.5rem;background:var(--card-bg);border:1px solid var(--card-border);border-radius:.75rem;box-shadow:0 10px 30px rgba(0,0,0,.08);width:280px;display:none}
+    .cal-pop.active{display:block}
+    .cal-head{display:flex;align-items:center;justify-content:space-between;padding:.5rem .75rem;border-bottom:1px solid var(--card-border)}
+    .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:.25rem;padding:.5rem}
+    .cal-day{font-size:.7rem;text-align:center;color:var(--muted)}
+    .cal-cell{padding:.35rem .25rem;text-align:center;border-radius:.5rem;cursor:pointer;font-size:.8rem}
+    .cal-cell:hover{background:var(--accent-50)}
+    .cal-cell.disabled{opacity:.35;pointer-events:none}
+    .cal-actions{display:flex;gap:.5rem;padding:.5rem .75rem;border-top:1px solid var(--card-border)}
+    .truncate-cell {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      /* whitespace-nowrap is already on the cell from JS */
+    }
+    .truncate-name { max-width: 180px; }
+    .truncate-project { max-width: 200px; }
+    .truncate-process { max-width: 160px; }
+    .truncate-sub_process { max-width: 160px; }
+    .truncate-project_type { max-width: 120px; }
+
+  </style>
+</head>
+<body class="text-slate-900">
+  <!-- LOADING -->
+  <div id="loading-overlay">
+    <div class="flex items-center gap-4">
+      <svg class="animate-spin h-8 w-8" style="color:var(--accent-600)" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg>
+      <div>
+        <p class="font-semibold" style="color:var(--accent-600)">Loading Logsy data…</p>
+        <p class="text-sm opacity-80">Please wait</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL -->
+  <div id="expanded-modal" class="modal">
+    <div class="mx-auto w-full max-w-7xl max-h-[95vh] card overflow-hidden">
+      <div class="flex items-center justify-between px-6 py-3 border-b" style="background:var(--table-head);border-color:var(--card-border)">
+        <h3 id="modal-title" class="text-lg md:text-xl font-extrabold" style="color:var(--accent-700)">Details</h3>
+        <button id="btn-modal-close" class="btn btn--sm btn-ghost" aria-label="Close">✕</button>
+      </div>
+      <div id="modal-content" class="p-6 custom-scroll overflow-y-auto max-h-[80vh]"></div>
+    </div>
+  </div>
+
+  <!-- HEADER -->
+  <header class="border-b surface">
+    <div class="mx-auto max-w-7xl px-4 md:px-8 py-3">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div class="flex items-center">
+          <a href="{{ url_for('dashboard') }}" class="inline-flex items-center gap-2" title="Logsy Home">
+            <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo" class="h-10 w-auto md:h-12"/>
+            <span class="sr-only">Logsy Analytics</span>
+          </a>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <a href="{{ url_for('dashboard') }}" class="btn btn--md btn-ghost" title="Home">
+            <i class="bi bi-house-door" style="font-size:1rem"></i>
+            <span class="ml-2">Home</span>
+          </a>
+
+          <!-- Team dropdown -->
+          <div class="relative">
+            <label for="choose-team" class="sr-only">Choose Team</label>
+            <select id="choose-team" class="compact-field rounded-lg border"
+              style="background:var(--card-bg);border-color:var(--card-border);color:var(--text);min-width:100px">
+              <option value="">All Teams</option>
+            </select>
+          </div>
+
+          <a href="{{ url_for('dashboard') }}"
+             target="_blank" rel="noopener"
+             class="inline-flex items-center gap-1 px-1 py-1 rounded-lg border"
+             style="border-color:var(--card-border); background:var(--card-bg)">
+            <img src="https://storage.googleapis.com/my-react-image-bucket-123/Logsy.gif"
+                 alt="Logsy Demo" class="h-10 w-auto rounded"/>
+          </a>
+        
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- TOOLBAR -->
+  <section class="border-b" style="background:var(--card-bg);border-color:var(--card-border)">
+    <div class="mx-auto max-w-7xl px-4 md:px-8 py-4">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-end">
+        <!-- Dates -->
+        <div class="lg:col-span-5 card compact-card-pad relative">
+          <div class="grid grid-cols-[1fr_auto_1fr_auto_auto] items-end compact-gap">
+            <label class="block">
+              <span class="block compact-label mb-1 text-muted">Start</span>
+              <input type="date" id="start_date" class="compact-field date-field w-full rounded-lg border"
+                     style="background:var(--card-bg);border-color:var(--card-border);color:var(--text)"/>
+            </label>
+
+            <span class="pb-2 text-center text-sm text-muted">--></span>
+
+            <label class="block">
+              <span class="block compact-label mb-1 text-muted">End</span>
+              <input type="date" id="end_date" class="compact-field date-field w-full rounded-lg border"
+                     style="background:var(--card-bg);border-color:var(--card-border);color:var(--text)"/>
+            </label>
+
+            <!-- Calendar trigger -->
+            <button id="btn-open-cal" class="btn btn--sm btn-ghost self-end" title="Calendar">
+              <i class="bi bi-calendar3"></i>
+            </button>
+
+            <div class="self-end">
+              <button id="btn-apply-dates" class="btn btn--sm btn-primary">Apply</button>
+            </div>
+          </div>
+
+          <div class="mt-2 flex flex-wrap gap-2">
+            <button id="btn-quick-7" class="btn btn--sm btn-ghost">Last 7d</button>
+            <button id="btn-quick-30" class="btn btn--sm btn-ghost">Last 30d</button>
+            <button id="btn-quick-mtd" class="btn btn--sm btn-ghost">MTD</button>
+            <!-- ✅ New Yesterday button -->
+            <button id="btn-quick-yesterday" class="btn btn--sm btn-ghost" title="Set both dates to yesterday">Yesterday</button>
+            <button id="btn-browser-refresh" class="btn btn--sm btn-ghost" title="Refresh & clear dates" aria-label="Refresh">
+              <i class="bi bi-arrow-clockwise" style="font-size:1rem"></i>
+            </button>
+          </div>
+
+          <!-- Calendar Popover -->
+          <div id="calendar-pop" class="cal-pop">
+            <div class="cal-head">
+              <button id="cal-prev" class="btn btn--sm btn-ghost" title="Prev month"><i class="bi bi-chevron-left"></i></button>
+              <div id="cal-title" class="font-semibold"></div>
+              <button id="cal-next" class="btn btn--sm btn-ghost" title="Next month"><i class="bi bi-chevron-right"></i></button>
+            </div>
+            <div class="cal-grid" id="cal-grid"></div>
+            <div class="cal-actions">
+              <button id="cal-last3" class="btn btn--sm btn-ghost w-full">Last 3 Months</button>
+              <button id="cal-close" class="btn btn--sm btn-ghost">Close</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="lg:col-span-7 card compact-card-pad">
+          <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 compact-gap">
+            <div id="filter-select-project"     class="filter-shell shell-project"></div>
+            <div id="filter-select-name"        class="filter-shell shell-name"></div>
+            <div id="filter-select-process"     class="filter-shell shell-process"></div>
+            <div id="filter-select-sub_process" class="filter-shell shell-sub_process"></div>
+          </div>
+
+          <div class="mt-2 flex items-center gap-2">
+            <div id="active-chips" class="hidden flex-wrap items-center gap-2"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MAIN -->
+  <main class="mx-auto max-w-7xl px-4 md:px-8 py-6 space-y-6">
+    <section class="space-y-3">
+      <div class="flex items-center justify-between">
+        <h2 class="text-lg md:text-xl font-bold text-default">Breakdowns</h2>
+        <span class="text-xs text-muted">Click an item to drill down</span>
+      </div>
+      <div id="breakdown-row"></div>
+    </section>
+
+    <section class="card p-0 overflow-hidden">
+      <div class="flex items-center justify-between px-5 py-3 border-b" style="border-color:var(--card-border)">
+        <h2 class="text-lg md:text-xl font-bold text-default">Detailed Logs</h2>
+        <div class="flex items-center gap-3 text-sm">
+          <span id="record-count" class="text-muted">Showing 0 records</span>
+          <button id="btn-condense" class="btn btn--sm btn-ghost">Compact</button>
+        </div>
+      </div>
+      <div class="max-h-[560px] custom-scroll overflow-y-auto">
+        <table class="min-w-full text-sm">
+          <thead class="theme-head sticky top-0 z-10">
+            <tr>
+              <th class="px-4 py-3 text-center font-semibold">ID</th>
+              <th class="px-4 py-3 text-left font-semibold">Name</th>
+              <th class="px-4 py-3 text-left font-semibold">Project</th>
+              <th class="px-4 py-3 text-left font-semibold">Process</th>
+              <th class="px-4 py-3 text-left font-semibold">Sub Process</th>
+              <th class="px-4 py-3 text-left font-semibold">Project Type</th>
+              <th class="px-4 py-3 text-center font-semibold">Date</th>
+              <th class="px-4 py-3 text-center font-semibold">Start Time</th>
+              <th class="px-4 py-3 text-center font-semibold">End Time</th>
+              <th class="px-4 py-3 text-center font-semibold">Duration</th>
+            </tr>
+          </thead>
+          <tbody id="logs-body" class="divide-y text-xs" style="border-color:var(--card-border)">
+            <tr><td colspan="8" class="p-8 text-center opacity-80">Select a primary filter above to view records here.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <footer class="py-5 text-center text-sm opacity-80 text-muted">© Logsy Analytics</footer>
+
+  <script>
+    // ⬇️ Inject from Flask
+    const FLASK_DEFAULT_START_DATE = '{{ default_start_date }}';
+    const FLASK_DEFAULT_END_DATE   = '{{ default_end_date }}';
+    const FLASK_USER_ROLE = '{{ user_role }}';     // 'superadmin' or 'admin'
+    const FLASK_USER_TEAM = '{{ user_team }}';     // e.g., 'MCTeam'
+
+    let allData = [];
+    let allFilters = {};
+    let overallTotals = {};
+    let currentFilterKey = null, currentFilterValue = null;
+    let isDataLoaded = false;
+
+    // team scope (role-aware)
+    let selectedTeam = '';
+
+    const COLUMNS = ['id','name','project','process','sub_process','project_type','date','start_time','end_time','duration_hhmmss'];
+    const BREAKDOWN_KEYS = ['project','name','process','sub_process','team'];
+
+    // modal state
+    let modalState = {
+      baseRows: [],
+      key: null,
+      value: null,
+      filters: { project:'', name:'', process:'', sub_process:'', team:'', q:'' },
+    };
+
+    const $  = (q)=>document.querySelector(q);
+    const $$ = (q)=>document.querySelectorAll(q);
+
+    const fmtSec = (s)=>{
+      if(s==null||isNaN(s)) return '00:00';
+      s=Math.round(s);
+      const h=Math.floor(s/3600);
+      const m=Math.floor((s%3600)/60);
+      const sec = s % 60; // Get the remaining seconds
+      return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+    };
+
+    const setLoading = (v)=> $('#loading-overlay').classList.toggle('active', !!v);
+    const toLocalYMD = (d)=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+
+    function themeFor(key){
+      switch(key){
+        case 'project':     return { base:'var(--project-500)', light:'var(--project-50)', dark:'var(--project-700)', mid:'var(--project-600)' };
+        case 'process':     return { base:'var(--process-500)', light:'var(--process-50)', dark:'var(--process-700)', mid:'var(--process-600)' };
+        case 'sub_process': return { base:'var(--process-300)', light:'var(--process-50)', dark:'var(--process-600)', mid:'var(--process-500)' };
+        case 'team':        return { base:'var(--team-500)',    light:'var(--team-50)',    dark:'var(--team-700)',    mid:'var(--team-600)' };
+        case 'name':        return { base:'var(--name-500)',    light:'var(--name-50)',    dark:'var(--name-700)',    mid:'var(--name-600)' };
+      }
+    }
+
+    function rowsByTeam(rows){
+      return selectedTeam ? rows.filter(r => r.team === selectedTeam) : rows;
+    }
+
+    function computeFilters(rows){
+      const keys = ['project','name','process','sub_process','team'];
+      const out = {};
+      keys.forEach(k=>{
+        const s = new Set();
+        rows.forEach(r=>{ if(r[k]) s.add(r[k]); });
+        out[k] = Array.from(s).sort((a,b)=> String(a).localeCompare(String(b)));
+      });
+      return out;
+    }
+
+    function buildSelect(containerId, key, label){
+      const c = document.getElementById(containerId); if(!c) return;
+      c.innerHTML = '';
+      const L = document.createElement('label');
+      L.className='block compact-label mb-1';
+      L.innerHTML = `<span class="dot"></span><span>${label}</span>`;
+      c.appendChild(L);
+
+      const sel = document.createElement('select');
+      sel.className='compact-field w-full rounded-lg border';
+      sel.style.background = 'var(--card-bg)';
+      sel.style.borderColor = 'var(--card-border)';
+      sel.style.color = 'var(--text)';
+      sel.dataset.filterKey=key; c.appendChild(sel);
+
+      const opt0 = document.createElement('option'); opt0.value=''; opt0.textContent = `All ${label}`; sel.appendChild(opt0);
+      (allFilters[key]||[]).forEach(v=>{ const o=document.createElement('option'); o.value=v; o.textContent=v; sel.appendChild(o); });
+      sel.onchange = (e)=> onFilterChange(key, e.target.value);
+    }
+
+    // 🔑 Role-aware team dropdown (in header)
+    function rebuildAllFiltersUI(){
+      const scoped = rowsByTeam(allData);
+      allFilters = computeFilters(scoped);
+
+      const teamSel = $('#choose-team');
+
+      if (FLASK_USER_ROLE === 'admin') {
+        selectedTeam = FLASK_USER_TEAM || '';
+        teamSel.innerHTML = `<option value="${selectedTeam}" selected>${selectedTeam || 'My Team'}</option>`;
+        teamSel.value = selectedTeam;
+        teamSel.setAttribute('disabled', 'disabled');
+      } else {
+        const options = ['<option value="">All Teams</option>']
+          .concat((allFilters.team||[]).map(t => `<option value="${String(t).replaceAll('"','&quot;')}" ${t===selectedTeam?'selected':''}>${t}</option>`));
+        teamSel.innerHTML = options.join('');
+        teamSel.removeAttribute('disabled');
+        teamSel.value = selectedTeam || '';
+      }
+
+      buildSelect('filter-select-project','project','Project');
+      buildSelect('filter-select-name','name','Name');
+      buildSelect('filter-select-process','process','Process');
+      buildSelect('filter-select-sub_process','sub_process','Sub Process');
+    }
+
+    function renderChips(){
+      const box = $('#active-chips'); box.innerHTML='';
+      if(selectedTeam){
+        const { base, light, dark } = themeFor('team');
+        const chip = document.createElement('div');
+        chip.className='inline-flex items-center gap-2 px-.2 py-.2 rounded-full text-sm';
+        chip.style.background = light;
+        chip.style.border = `1px solid ${base}`;
+        chip.style.color = dark;
+        chip.innerHTML = `<strong class="font-semibold">->Team</strong><span>${selectedTeam}</span>`;
+        if (FLASK_USER_ROLE !== 'admin') {
+          const x = document.createElement('button'); x.className='ml-1 rounded-full p-1'; x.style.background='transparent'; x.innerHTML='✕';
+          x.onclick = ()=> { selectedTeam=''; rebuildAllFiltersUI(); renderAll(); };
+          chip.appendChild(x);
+        }
+        box.appendChild(chip);
+      }
+
+      if(currentFilterKey && currentFilterValue){
+        const {base, light, dark} = themeFor(currentFilterKey);
+        const chip = document.createElement('div');
+        chip.className='inline-flex items-center gap-2 px-.2 py-.2 rounded-full text-sm';
+        chip.style.background = light;
+        chip.style.border = `1px solid ${base}`;
+        chip.style.color = dark;
+        chip.innerHTML = `<strong class="font-semibold">${currentFilterKey.replace('_',' ')}</strong><span>${currentFilterValue}</span>`;
+        const x = document.createElement('button'); x.className='ml-1 rounded-full p-1'; x.style.background='transparent'; x.innerHTML='✕';
+        x.onclick = ()=> resetPrimaryFilter();
+        chip.appendChild(x);
+        box.appendChild(chip);
+      }
+
+      box.classList.toggle('hidden', !selectedTeam && !(currentFilterKey && currentFilterValue));
+    }
+
+    function resetPrimaryFilter(){
+      $$('select[data-filter-key]').forEach(s=> s.value='');
+      currentFilterKey=null; currentFilterValue=null; renderAll();
+    }
+
+    function breakdownCard(title, entries, key){
+      const {base, light, dark, mid} = themeFor(key);
+      const card = document.createElement('div');
+      card.className='card bd-card p-4 flex flex-col';
+      card.style.setProperty('--c-50', light);
+      card.style.setProperty('--c-200', base);
+      card.style.setProperty('--c-400', mid);
+      card.style.setProperty('--c-700', dark);
+
+      const head = document.createElement('div'); head.className='flex items-center justify-between mb-2';
+      head.innerHTML = `<h4 class="font-semibold bd-title truncate" style="color:${dark}">${title}</h4><span class="bd-count text-muted">${entries.length} items</span>`;
+      card.appendChild(head);
+
+      const list = document.createElement('div'); list.className='space-y-1 max-h-[160px] overflow-y-auto custom-scroll flex-1';
+      if(entries.length===0){
+        const empty=document.createElement('div'); empty.className='text-xs py-2 text-muted'; empty.textContent='No data.'; list.appendChild(empty);
+      }else{
+        entries.forEach(({k,sec})=>{
+          const row=document.createElement('button');
+          row.type='button'; row.title = k;
+          row.className='bd-row w-full text-left flex justify-between items-center px-2 py-1.5 rounded';
+          row.style.color='inherit';
+          row.innerHTML=`<span class="label">${k}</span><span class="bd-time" style="color:${mid}">${fmtSec(sec)}</span>`;
+          row.onmouseenter = ()=> row.style.background = light;
+          row.onmouseleave = ()=> row.style.background = 'transparent';
+          row.onclick=()=> openModal(key,k);
+          list.appendChild(row);
+        });
+      }
+      card.appendChild(list); return card;
+    }
+
+   function renderBreakdowns(){
+      const host = $('#breakdown-row'); host.innerHTML='';
+      if(!isDataLoaded || allData.length===0) return;
+
+      let data = rowsByTeam(allData);
+      
+      // --- NEW CHANGE: Filter for MTD (Current Month Only) ---
+      // இப்போதைய மாதம் மற்றும் வருடத்தை எடுக்கிறோம்
+      const now = new Date();
+      const currentMonthPrefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+      // டேட்டாவில் உள்ள தேதி, இந்த மாதத்தில் இருந்தால் மட்டும் எடுத்துக்கொள்வோம்
+      data = data.filter(it => it.date && it.date.startsWith(currentMonthPrefix));
+      // -------------------------------------------------------
+
+      if(currentFilterKey && currentFilterValue){ data = data.filter(it=> it[currentFilterKey]===currentFilterValue); }
+
+      // If no data for this month, show a message or keep empty
+      if(data.length === 0) {
+          host.innerHTML = `<div class="col-span-5 text-center text-muted text-sm py-4">No data available for this month (${now.toLocaleString('default', { month: 'long' })}).</div>`;
+          return;
+      }
+
+      BREAKDOWN_KEYS.forEach(key=>{
+        const map = {}; data.forEach(it=>{ const k=it[key]||'N/A'; map[k]=(map[k]||0)+(it.duration_seconds||0); });
+        const entries = Object.entries(map).map(([k,sec])=>({k,sec})).sort((a,b)=>b.sec-a.sec);
+        const title = key.replace('_',' ').replace(/\b\w/g,c=>c.toUpperCase());
+        host.appendChild( breakdownCard(title, entries, key) );
+      });
+    }
+    const fmtTimeStr = (t) => {
+      if (!t || typeof t !== 'string') return t || '';
+      
+      // Step 1: Remove "0 days " from the beginning
+      let timeStr = t.replace(/^0 days /, ''); 
+      
+      // Step 2: Remove trailing ":00" if it exists
+      if (timeStr.endsWith(':00')) {
+        timeStr = timeStr.substring(0, timeStr.length - 3); // Removes the last 3 chars (":00")
+      }
+      
+      return timeStr;
+  };
+    function renderTable(rows){
+      const tb = $('#logs-body'); tb.innerHTML='';
+      if(!rows || rows.length===0){
+        tb.innerHTML = `<tr><td colspan="8" class="p-8 text-center text-muted">${!currentFilterKey? 'Select a primary filter above to view records here.' : 'No records found for this filter in the current date range.'}</td></tr>`;
+        $('#record-count').textContent='Showing 0 records';
+        return;
+      }
+      rows.forEach((it,i)=>{
+        const tr=document.createElement('tr');
+        tr.style.background = i%2? 'color-mix(in oklab, var(--card-bg) 92%, black 0%)' : 'var(--card-bg)';
+        tr.onmouseenter = ()=> tr.style.background = 'var(--accent-50)';
+        tr.onmouseleave = ()=> tr.style.background = i%2? 'color-mix(in oklab, var(--card-bg) 92%, black 0%)' : 'var(--card-bg)';
+       COLUMNS.forEach(k=>{
+        const td=document.createElement('td');
+        const left=['name','project','process','sub_process','project_type'].includes(k);
+        
+        // === Truncation Logic Start ===
+        // Basic classes-ஐ set pannurom
+        let baseClasses = `px-4 py-2 whitespace-nowrap ${left?'text-left':'text-center'}`;
+        
+        // Intha columns-ku mattum truncate rules apply aagum
+        const longTextCols = ['name', 'project', 'process', 'sub_process', 'project_type'];
+        
+        if (longTextCols.includes(k)) {
+          // CSS class-kalai serkkirom (e.g., "truncate-cell truncate-name")
+          baseClasses += ` truncate-cell truncate-${k}`; 
+          // Hover panna full text kaatta 'title' attribute serkkirom
+          td.title = it[k] || ''; 
+        }
+        
+        td.className = baseClasses; // Final classes-a set pannurom
+        // === Truncation Logic End ===
+        
+        if(['name','project','duration_hhmmss'].includes(k)) td.style.fontWeight='600';
+        
+        let val = it[k];
+          if (k === 'start_time' || k === 'end_time' || k === 'duration_hhmmss') {
+            val = fmtTimeStr(val);
+          }
+          td.textContent = val;
+          tr.appendChild(td);
+        });
+        tb.appendChild(tr);
+      })
+      $('#record-count').textContent = `Showing ${rows.length} records`;
+    }
+
+    function renderAll(){
+      let data = rowsByTeam(allData);
+      if(currentFilterKey && currentFilterValue){ data = data.filter(it=> it[currentFilterKey]===currentFilterValue); }
+      renderTable(currentFilterKey && currentFilterValue ? data : []);
+      renderChips();
+      renderBreakdowns();
+    }
+
+    // ===== Modal helpers =====
+    function getUnique(rows, key){
+      const s = new Set();
+      rows.forEach(r=>{ if(r[key]) s.add(r[key]); });
+      return Array.from(s).sort((a,b)=> String(a).localeCompare(String(b)));
+    }
+    function filterModalRows(){
+      const f = modalState.filters;
+      const q = (f.q || '').toLowerCase().trim();
+      return modalState.baseRows.filter(r=>{
+        if(selectedTeam && r.team !== selectedTeam) return false;
+        if(f.project && r.project !== f.project) return false;
+        if(f.name && r.name !== f.name) return false;
+        if(f.process && r.process !== f.process) return false;
+        if(f.sub_process && r.sub_process !== f.sub_process) return false;
+        if(f.team && r.team !== f.team) return false;
+        if(q){
+          const blob = `${r.id} ${r.name} ${r.project} ${r.process} ${r.sub_process} ${r.project_type} ${r.date}`.toLowerCase();
+          if(!blob.includes(q)) return false;
+        }
+        return true;
+      });
+    }
+    function modalTotals(rows){
+      const totalSec = rows.reduce((s,r)=> s + (r.duration_seconds||0), 0);
+      return { totalSec, hhmm: fmtSec(totalSec), count: rows.length };
+    }
+    function buildModalFiltersHTML(rows, lockedKey){
+      const parts = [];
+      const keys = ['project','name','process','sub_process','team'];
+      keys.forEach(k=>{
+        const values = getUnique(rows, k);
+        const forceLock = (k==='team' && selectedTeam);
+        const disabled = (k === lockedKey) || forceLock || (FLASK_USER_ROLE === 'admin' && k === 'team');
+        const current = forceLock ? selectedTeam : modalState.filters[k];
+        const options = ['<option value="">All</option>'].concat(values.map(v=>{
+          const sel = (current === v) ? ' selected' : '';
+          return `<option value="${String(v).replaceAll('"','&quot;')}"${sel}>${v}</option>`;
+        })).join('');
+        parts.push(`
+          <label class="block">
+            <span class="block compact-label mb-1 text-muted">${k.replace('_',' ')}</span>
+            <select data-modal-filter="${k}" class="compact-field w-full rounded-lg border" ${disabled?'disabled':''} style="background:var(--card-bg);border-color:var(--card-border);color:var(--text)">${options}</select>
+          </label>
+        `);
+      });
+
+      return `
+        <div class="card compact-card-pad mb-3">
+          <div class="grid grid-cols-2 md:grid-cols-6 gap-3 items-end">
+            ${parts.join('')}
+            <label class="block md:col-span-2">
+              <span class="block compact-label mb-1 text-muted">Search</span>
+              <input data-modal-filter="q" type="text" value="${modalState.filters.q||''}" placeholder="Type to search..." class="compact-field w-full rounded-lg border" style="background:var(--card-bg);border-color:var(--card-border);color:var(--text)"/>
+            </label>
+            <div class="flex gap-2 md:col-span-2">
+              <button id="btn-modal-clear" class="btn btn--sm btn-danger">Clear</button>
+              <button id="btn-modal-close2" class="btn btn--sm btn-ghost">Close</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+    function renderModalContent(){
+      const rowsFiltered = filterModalRows();
+      const { count, hhmm } = modalTotals(rowsFiltered);
+
+      let html = '';
+      html += `<p class="text-xs text-muted mb-3">Total: <strong style="color:var(--accent-700)">${hhmm}</strong> • Records: <strong id="modal-records">${count}</strong></p>`;
+      html += buildModalFiltersHTML(modalState.baseRows, modalState.key);
+
+      html += `<div class="border rounded-xl overflow-hidden" style="border-color:var(--card-border)">
+        <div class="max-h-[70vh] custom-scroll overflow-auto">
+          <table class="min-w-full text-xs">
+            <thead class="theme-head sticky top-0 z-10">
+              <tr>
+                <th class="px-3 py-2 text-left font-semibold">ID</th>
+                <th class="px-3 py-2 text-left font-semibold">Name</th>
+                <th class="px-3 py-2 text-left font-semibold">Project</th>
+                <th class="px-3 py-2 text-left font-semibold">Process</th>
+                <th class class="px-3 py-2 text-left font-semibold">Sub Process</th>
+                <th class="px-3 py-2 text-left font-semibold">Type</th>
+                <th class="px-3 py-2 text-left font-semibold">Date</th>
+                <th class="px-3 py-2 text-left font-semibold">Start Time</th>
+                <th class="px-3 py-2 text-left font-semibold">End Time</th>
+                <th class="px-3 py-2 text-left font-semibold">Duration</th>
+              </tr>
+            </thead>
+            <tbody id="modal-tbody">`;
+
+      if(rowsFiltered.length===0){
+        html += `<tr><td colspan="8" class="px-3 py-6 text-center text-muted">No rows for current filters.</td></tr>`;
+      } else {
+        rowsFiltered.forEach(r=>{
+          html += `<tr>
+            <td class="px-3 py-2 whitespace-nowrap">${r.id}</td>
+            <td class="px-3 py-2 whitespace-nowrap truncate-cell truncate-name" title="${r.name||''}">${r.name||''}</td>
+            <td class="px-3 py-2 whitespace-nowrap truncate-cell truncate-project" title="${r.project||''}">${r.project||''}</td>
+            <td class="px-3 py-2 whitespace-nowrap truncate-cell truncate-process" title="${r.process||''}">${r.process||''}</td>
+            <td class="px-3 py-2 whitespace-nowrap truncate-cell truncate-sub_process" title="${r.sub_process||''}">${r.sub_process||''}</td>
+            <td class="px-3 py-2 whitespace-nowrap truncate-cell truncate-project_type" title="${r.project_type||''}">${r.project_type||''}</td>
+            <td class="px-3 py-2 whitespace-nowrap">${r.date||''}</td>
+            <td class="px-3 py-2 whitespace-nowrap">${fmtTimeStr(r.start_time)}</td>
+            <td class="px-3 py-2 whitespace-nowrap">${fmtTimeStr(r.end_time)}</td>
+            <td class="px-3 py-2 whitespace-nowrap" style="font-weight:600">${fmtTimeStr(r.duration_hhmmss)}</td>
+          </tr>`;
+        });
+      }
+      html += `</tbody></table></div></div>`;
+
+      $('#modal-content').innerHTML = html;
+
+      $$('[data-modal-filter]').forEach(el=>{
+        el.oninput = el.onchange = ()=>{
+          const k = el.getAttribute('data-modal-filter');
+          modalState.filters[k] = el.value;
+          updateModalTableAndStats();
+        };
+      });
+
+      $('#btn-modal-clear').onclick = ()=>{
+        modalState.filters = { project:'', name:'', process:'', sub_process:'', team: (selectedTeam || ''), q:'' };
+        renderModalContent();
+      };
+      $('#btn-modal-close2').onclick = closeModal;
+    }
+    function updateModalTableAndStats(){
+      const rowsFiltered = filterModalRows();
+      const { count, hhmm } = modalTotals(rowsFiltered);
+      const p = $('#modal-content').querySelector('p.text-xs');
+      if(p) p.innerHTML = `Total: <strong style="color:var(--accent-700)">${hhmm}</strong> • Records: <strong id="modal-records">${count}</strong>`;
+      const tb = $('#modal-tbody');
+      if(!tb) return;
+      if(rowsFiltered.length===0){
+        tb.innerHTML = `<tr><td colspan="8" class="px-3 py-6 text-center text-muted">No rows for current filters.</td></tr>`;
+      }else{
+        tb.innerHTML = rowsFiltered.map(r=>`
+          <tr>
+            <td class="px-3 py-2 whitespace-nowrap">${r.id}</td>
+            <td class="px-3 py-2 whitespace-nowrap truncate-cell truncate-name" title="${r.name||''}">${r.name||''}</td>
+            <td class="px-3 py-2 whitespace-nowrap truncate-cell truncate-project" title="${r.project||''}">${r.project||''}</td>
+            <td class="px-3 py-2 whitespace-nowrap truncate-cell truncate-process" title="${r.process||''}">${r.process||''}</td>
+            <td class="px-3 py-2 whitespace-nowrap truncate-cell truncate-sub_process" title="${r.sub_process||''}">${r.sub_process||''}</td>
+            <td class="px-3 py-2 whitespace-nowrap truncate-cell truncate-project_type" title="${r.project_type||''}">${r.project_type||''}</td>
+            <td class="px-3 py-2 whitespace-nowrap">${r.date||''}</td>
+            <td class="px-3 py-2 whitespace-nowrap">${fmtTimeStr(r.start_time)}</td>
+            <td class="px-3 py-2 whitespace-nowrap">${fmtTimeStr(r.end_time)}</td>
+            <td class="px-3 py-2 whitespace-nowrap" style="font-weight:600">${fmtTimeStr(r.duration_hhmmss)}</td>
+          </tr>
+        `).join('');
+      }
+    }
+    function openModal(key, value){
+      let base = rowsByTeam(allData);
+      if(currentFilterKey && currentFilterValue){ base = base.filter(it=> it[currentFilterKey]===currentFilterValue); }
+      const rows = base.filter(it=> it[key]===value);
+
+      modalState.key = key;
+      modalState.value = value;
+      modalState.baseRows = rows.slice();
+      modalState.filters = { project:'', name:'', process:'', sub_process:'', team:(selectedTeam||''), q:'' };
+      if(['project','name','process','sub_process','team'].includes(key)){
+        modalState.filters[key] = value;
+      }
+
+      $('#modal-title').textContent = `Detailed Logs for ${key.replace('_',' ')}: ${value}`;
+      renderModalContent();
+      $('#expanded-modal').classList.add('active');
+    }
+    function closeModal(){ $('#expanded-modal').classList.remove('active'); }
+
+    function onFilterChange(key, value){
+      $$('select[data-filter-key]').forEach(s=>{ if(s.dataset.filterKey!==key) s.value=''; });
+      currentFilterKey = value? key : null;
+      currentFilterValue = value || null;
+      renderAll();
+    }
+
+    function resetFilters(){
+      $$('select[data-filter-key]').forEach(s=> s.value='');
+      currentFilterKey=null; currentFilterValue=null;
+      renderAll();
+    }
+
+    function refreshAndClearDates(){
+      const sEl = document.getElementById('start_date');
+      const eEl = document.getElementById('end_date');
+      sEl.value = '';
+      eEl.value = '';
+      resetFilters();
+      fetchData(FLASK_DEFAULT_START_DATE, FLASK_DEFAULT_END_DATE);
+    }
+
+    function quickRange(days){
+      const end = new Date(), start = new Date(); start.setDate(end.getDate()-(days-1));
+      document.getElementById('start_date').value=toLocalYMD(start);
+      document.getElementById('end_date').value=toLocalYMD(end);
+      applyDates();
+    }
+    function applyDates(){
+      const s=document.getElementById('start_date').value||FLASK_DEFAULT_START_DATE;
+      const e=document.getElementById('end_date').value||FLASK_DEFAULT_END_DATE;
+      resetFilters();
+      fetchData(s,e);
+    }
+
+    async function fetchData(start, end){
+      setLoading(true);
+      try{
+        const r = await fetch(`/admin/dashboard/api/data?start=${start}&end=${end}`); 
+        const j = await r.json();
+        if(r.status!==200 || j.error) throw new Error(j.error||'Server error');
+        allData = j.details||[];
+        overallTotals = j.overall_totals||{};
+        isDataLoaded=true;
+
+        // lock team immediately for admin
+        if (FLASK_USER_ROLE === 'admin') {
+          selectedTeam = FLASK_USER_TEAM || '';
+        }
+
+        rebuildAllFiltersUI();
+        renderAll();
+      }catch(err){
+        console.error(err); isDataLoaded=false; allData=[];
+        $('#logs-body').innerHTML = `<tr><td colspan="8" class="p-8 text-center" style="color:#e11d48">${err.message||'Failed to load data.'}</td></tr>`;
+      }
+      finally{ setLoading(false); }
+    }
+
+    /* ===== Mini Calendar ===== */
+    const cal = { cur: new Date() };
+
+    function openCalendar(){
+      const pop = $('#calendar-pop');
+      pop.classList.add('active');
+      renderCalendar();
+      setTimeout(()=>{
+        const handler = (e)=>{
+          if(!pop.contains(e.target) && e.target.id !== 'btn-open-cal'){ pop.classList.remove('active'); document.removeEventListener('click', handler); }
+        };
+        document.addEventListener('click', handler);
+      },0);
+    }
+    function renderCalendar(){
+      const y = cal.cur.getFullYear(), m = cal.cur.getMonth();
+      $('#cal-title').textContent = new Date(y,m,1).toLocaleString(undefined,{month:'long',year:'numeric'});
+      const first = new Date(y,m,1);
+      const startWeekday = (first.getDay()+6)%7; 
+      const daysInMonth = new Date(y,m+1,0).getDate();
+
+      $('#cal-grid').innerHTML = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(d=>`<div class="cal-day">${d}</div>`).join('');
+      const cells = [];
+      for(let i=0;i<startWeekday;i++) cells.push('<div></div>');
+      for(let d=1; d<=daysInMonth; d++){
+        cells.push(`<div class="cal-cell" data-day="${d}">${d}</div>`);
+      }
+      $('#cal-grid').insertAdjacentHTML('beforeend', cells.join(''));
+
+      $$('#cal-grid .cal-cell').forEach(el=>{
+        el.onclick = ()=>{
+          const day = Number(el.getAttribute('data-day'));
+          const chosen = new Date(y,m,day);
+          
+          // --- CHANGE HERE ---
+          // const start = new Date(y,m,1); // Old code-ஐ remove செய்யவும்
+          const chosenYMD = toLocalYMD(chosen); // Click செய்த date-ஐ YMD string-ஆக மாற்றவும்
+
+          $('#start_date').value = chosenYMD; // Start date-ஐயும் click செய்த date-ஆக set செய்யவும்
+          $('#end_date').value   = chosenYMD; // End date-ஐயும் click செய்த date-ஆக setசெய்யவும்
+          // --- END CHANGE ---
+
+          $('#calendar-pop').classList.remove('active');
+          applyDates();
+        };
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', ()=>{
+      // initial team lock before first fetch
+      if (FLASK_USER_ROLE === 'admin') {
+        selectedTeam = FLASK_USER_TEAM || '';
+        $('#choose-team').setAttribute('disabled','disabled');
+      }
+
+      document.getElementById('btn-condense').onclick = ()=>{ document.getElementById('logs-body').classList.toggle('text-xs'); };
+      document.getElementById('btn-apply-dates').onclick = applyDates;
+      document.getElementById('btn-quick-7').onclick   = ()=> quickRange(7);
+      document.getElementById('btn-quick-30').onclick  = ()=> quickRange(30);
+      document.getElementById('btn-quick-mtd').onclick = ()=>{
+        const today=new Date(); const start=new Date(today.getFullYear(), today.getMonth(), 1);
+        document.getElementById('start_date').value = toLocalYMD(start);
+        document.getElementById('end_date').value   = toLocalYMD(today);
+        applyDates();
+      };
+      // ✅ Yesterday handler
+      document.getElementById('btn-quick-yesterday').onclick = ()=>{
+        const y = new Date(); y.setDate(y.getDate()-1);
+        const yStr = toLocalYMD(new Date(y.getFullYear(), y.getMonth(), y.getDate()));
+        document.getElementById('start_date').value = yStr;
+        document.getElementById('end_date').value   = yStr;
+        applyDates();
+      };
+      document.getElementById('btn-browser-refresh').onclick = ()=> refreshAndClearDates();
+
+      // calendar controls calendar controlss
+      document.getElementById('btn-open-cal').onclick = (e)=>{ e.stopPropagation(); openCalendar(); };
+      document.getElementById('cal-prev').onclick = (e)=>{ e.stopPropagation(); cal.cur.setMonth(cal.cur.getMonth()-1); renderCalendar(); };
+      document.getElementById('cal-next').onclick = (e)=>{ e.stopPropagation(); cal.cur.setMonth(cal.cur.getMonth()+1); renderCalendar(); };
+      document.getElementById('cal-close').onclick = ()=> $('#calendar-pop').classList.remove('active');
+      document.getElementById('cal-last3').onclick = ()=>{
+        const end = new Date();
+        const start = new Date(); start.setMonth(start.getMonth()-3); start.setDate(start.getDate()+1);
+        $('#start_date').value = toLocalYMD(start);
+        $('#end_date').value   = toLocalYMD(end);
+        $('#calendar-pop').classList.remove('active');
+        applyDates();
+      };
+
+      document.getElementById('choose-team').onchange = (e)=>{
+        selectedTeam = e.target.value || '';
+        resetPrimaryFilter();
+        rebuildAllFiltersUI();
+        renderAll();
+      };
+
+      document.getElementById('btn-modal-close').onclick = closeModal;
+      document.getElementById('expanded-modal').addEventListener('click',e=>{ if(e.target.id==='expanded-modal') closeModal(); });
+
+      fetchData(FLASK_DEFAULT_START_DATE, FLASK_DEFAULT_END_DATE);
+    });
+
+    
+  </script>
+</body>
+</html>

@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% block title %}Admin Dashboard{% endblock %}
+
+{% block content %}
+<style>
+:root {
+  --brand:#ffd24d; --bg:#0f151d; --card-bg:#1c2530;
+}
+body {
+  background:var(--bg); color:#fff;
+  font-family:'Segoe UI',sans-serif;
+}
+.dashboard-grid {
+  display:grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px,1fr));
+  gap:20px;
+  margin-bottom:30px;
+}
+.card {
+  background:var(--card-bg);
+  border-radius:16px;
+  padding:20px;
+  box-shadow:0 6px 18px rgba(0,0,0,.35);
+  text-align:center;
+}
+.card h2 {
+  font-size:26px; font-weight:800; margin-bottom:5px; color:var(--brand);
+}
+.card p { font-size:14px; color:#ccc; margin:0; }
+.table-wrap {
+  background:var(--card-bg); border-radius:16px;
+  padding:20px; margin-top:20px;
+}
+.table {
+  width:100%; border-collapse:collapse; font-size:14px;
+}
+.table th, .table td {
+  padding:10px; border-bottom:1px solid #333; text-align:center;
+}
+.table th {
+  background:linear-gradient(135deg,#ffd24d,#ffecae);
+  color:#111; font-weight:700;
+}
+</style>
+
+<div class="dashboard-grid">
+  <div class="card">
+    <h2>{{ total_entries }}</h2>
+    <p>Total Entries</p>
+  </div>
+  <div class="card">
+    <h2>{{ total_users }}</h2>
+    <p>Active Users</p>
+  </div>
+  <div class="card">
+    <h2>{{ total_hours }}</h2>
+    <p>Total Hours</p>
+  </div>
+  <div class="card">
+    <h2>{{ active_projects|length }}</h2>
+    <p>Active Projects</p>
+  </div>
+</div>
+
+<!-- Charts -->
+<div class="dashboard-grid">
+  <div class="card"><canvas id="projectTypeChart"></canvas></div>
+  <div class="card"><canvas id="processChart"></canvas></div>
+  <div class="card"><canvas id="dailyChart"></canvas></div>
+  <div class="card"><canvas id="userHoursChart"></canvas></div>
+</div>
+
+<!-- Data Table -->
+<div class="table-wrap">
+  <h3 style="margin-bottom:15px;">Recent Logs</h3>
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Name</th><th>Date</th><th>Project</th><th>Process</th><th>Sub-Process</th><th>Duration</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in table_data %}
+      <tr>
+        <td>{{ row[0] }}</td>
+        <td>{{ row[1] }}</td>
+        <td>{{ row[2] }}</td>
+        <td>{{ row[3] }}</td>
+        <td>{{ row[4] }}</td>
+        <td>{{ row[5] }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+const projectTypeChart = new Chart(document.getElementById("projectTypeChart"), {
+  type:"pie",
+  data:{
+    labels: {{ project_type_data|map(attribute=0)|list|tojson }},
+    datasets:[{ data: {{ project_type_data|map(attribute=1)|list|tojson }}, backgroundColor:["#ffd24d","#2ecc71","#3498db","#e74c3c"] }]
+  }
+});
+const processChart = new Chart(document.getElementById("processChart"), {
+  type:"bar",
+  data:{
+    labels: {{ process_data|map(attribute=0)|list|tojson }},
+    datasets:[{ label:"Count", data: {{ process_data|map(attribute=1)|list|tojson }}, backgroundColor:"#ffd24d" }]
+  }
+});
+const dailyChart = new Chart(document.getElementById("dailyChart"), {
+  type:"line",
+  data:{
+    labels: {{ daily_data|map(attribute=0)|list|tojson }},
+    datasets:[{ label:"Hours", data: {{ daily_data|map(attribute=1)|list|tojson }}, borderColor:"#ffd24d", fill:false }]
+  }
+});
+const userHoursChart = new Chart(document.getElementById("userHoursChart"), {
+  type:"bar",
+  data:{
+    labels: {{ user_hours|map(attribute=0)|list|tojson }},
+    datasets:[{ label:"Hours", data: {{ user_hours|map(attribute=1)|list|tojson }}, backgroundColor:"#2ecc71" }]
+  }
+});
+</script>
+{% endblock %}
+ 

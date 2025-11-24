@@ -1,0 +1,7 @@
+# Ignore local junk
+.vscode/
+.venv/
+__pycache__/
+*.pyc
+*.zip
+.DS_Store

@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Login</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-image: url('https://storage.googleapis.com/my-react-image-bucket-123/Background25.jpg'); /* Adjust this path */
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      margin: 0;
+      padding: 0;
+      height: 100vh;
+      overflow: hidden;
+      color: #fff;
+      animation: fadeIn 1s ease-in-out;
+    }
+
+    .container {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0, 0, 0, 0.6);
+      padding: 30px 25px;
+      border-radius: 16px;
+      box-shadow: 0 0 20px rgba(255, 204, 0, 0.3);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 204, 0, 0.4);
+      width: 100%;
+      max-width: 320px;
+      text-align: center;
+      animation: slideIn 1.2s ease-out;
+    }
+
+    h1 {
+      font-size: 26px;
+      color: #ffcc00;
+      margin-bottom: 18px;
+      text-shadow: 0 0 8px rgba(255, 204, 0, 0.5);
+    }
+
+    form {
+      margin-top: 10px;
+    }
+
+    label {
+      font-size: 13px;
+      font-weight: bold;
+      display: block;
+      margin-bottom: 4px;
+      text-align: left;
+      color: #fff;
+    }
+
+    input[type="text"],
+    input[type="password"] {
+      width: 100%;
+      padding: 8px;
+      margin-bottom: 14px;
+      border: 1px solid #444;
+      border-radius: 5px;
+      font-size: 13px;
+      background: rgba(255, 255, 255, 0.9);
+      color: #111;
+      transition: box-shadow 0.3s ease;
+    }
+
+    input[type="text"]:focus,
+    input[type="password"]:focus {
+      box-shadow: 0 0 5px #ffcc00;
+      outline: none;
+    }
+
+    input[type="submit"] {
+      background: #ffcc00;
+      color: #000;
+      padding: 10px 18px;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+      width: 100%;
+      transition: background 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    input[type="submit"]:hover {
+      background: #ffd700;
+      transform: scale(1.05);
+      box-shadow: 0 0 12px #ffcc00;
+    }
+
+    p {
+      font-size: 12px;
+      margin-bottom: 12px;
+      color: #eee;
+    }
+
+    .error {
+      color: #ff4d4d;
+      font-size: 13px;
+    }
+
+    .success {
+      color: lightgreen;
+      font-size: 13px;
+    }
+
+    .register-link,
+    .forgot-link {
+      margin-top: 12px;
+      font-size: 12px;
+    }
+
+    .register-link a,
+    .forgot-link a {
+      color: #ffcc00;
+      text-decoration: none;
+      font-weight: bold;
+    }
+
+    .register-link a:hover,
+    .forgot-link a:hover {
+      color: #ffd700;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translate(-50%, -60%);
+      }
+      to {
+        opacity: 1;
+        transform: translate(-50%, -50%);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Login</h1>
+
+    <!-- Flash messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <p class="{{ category }}">{{ message }}</p>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    {% if error %}
+      <p class="error">{{ error }}</p>
+    {% endif %}
+
+    <form method="POST" action="/signin">
+      <label for="username">Username:</label>
+      <input type="text" id="username" name="username" required autocomplete="username" />
+
+      <label for="password">Password:</label>
+      <input type="password" id="password" name="password" required autocomplete="current-password" />
+
+      <input type="submit" value="Login" />
+    </form>
+
+    <p class="register-link">Don't have an account? <a href="/signup">Register here</a>.</p>
+    <p class="forgot-link"><a href="/forgot-password">Forgot Password?</a></p>
+  </div>
+</body>
+</html>

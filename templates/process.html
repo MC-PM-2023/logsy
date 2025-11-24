@@ -1,0 +1,320 @@
+{% extends "base.html" %}
+{% block title %}Logsy - Process & Sub-Process{% endblock %}
+
+{% block content %}
+<style>
+  
+.footer {
+  margin-top: 20px;       /* table ku gap */
+  padding: 15px 0;
+  text-align: center;
+  font-size: 14px;
+  color: #fff;
+
+  /* background: rgba(255,255,255,0.1); 
+  backdrop-filter: blur(12px) saturate(180%);
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
+  border-top: 1px solid rgba(255,255,255,0.25);*/
+}
+:root{
+  --primary:#ffd24d; --primary-hover:#e6bc46;
+  --accent:#2ecc71;  --warning:#ffb037;
+  --bg:#0f151d;      --card-bg:#30363d;
+  --head-grad:linear-gradient(135deg,#ffd24d 0%,#ffdb6e 100%);
+  --border:#1e242d;  --row-hover:#232b35;
+  --scroll-thumb:#8a8e96; --scroll-track:#1b212a;
+}
+html, body {
+  height: 100%;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+  background: var(--bg);
+  color: #e5e7eb;
+  line-height: 1.4;
+  overflow-y: auto;     /* ✅ vertical scroll enable */
+  overflow-x: hidden;   /* ✅ sideways scroll avoid */
+  padding-bottom: 50px; /* ✅ extra keela gap */
+}
+
+.card {
+  max-width: calc(95vw - 1px);
+  margin: 20px auto 40px auto;  /* ✅ bottom spacing add panniruken */
+  background: var(--card-bg);
+  border-radius: 18px;
+  box-shadow: 0 14px 34px rgba(0,0,0,.25);
+  padding: 20px 32px;
+  overflow: visible;   /* ✅ cut pannaama expand aagum */
+}
+
+h1{font-size:24px;margin:0 0 20px;color:#b8e4ff;}
+.back{
+  color:var(--primary);font-weight:600;text-decoration:none;
+  display:inline-block;margin-bottom:18px;transition:color .15s;
+}
+.back:hover{color:var(--primary-hover);}
+.flash{display:inline-block;padding:10px 16px;border-radius:6px;font-size:14px;margin-bottom:18px;}
+.flash.ok{background:#e9f8f1;color:var(--accent);}
+.flash.err{background:#fff4eb;color:var(--warning);}
+form{
+  display:grid;gap:8px;
+  grid-template-columns:repeat(auto-fit,minmax(190px,1fr));
+  margin-bottom:16px;
+}
+input,button{
+  font-size:12px;padding:8px 12px;border-radius:6px;
+  border:1px solid var(--border);
+  background:#1c222b;color:#e5e7eb;
+  transition:border .15s,box-shadow .15s,background .15s;
+}
+input::placeholder{color:#8c9098;}
+input:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 2px rgba(255,210,77,.25);}
+button{background:var(--primary);color:#050505;font-weight:600;cursor:pointer;border:none;}
+button:hover{background:var(--primary-hover);}
+button:active{transform:translateY(1px);}
+.table-wrap {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: visible;   /* ❌ no inner scroll */
+  max-height: none;    /* ❌ no height restriction */
+}
+
+.table-wrap::-webkit-scrollbar{width:8px}
+.table-wrap::-webkit-scrollbar-track{background:var(--scroll-track);border-radius:8px}
+.table-wrap::-webkit-scrollbar-thumb{background:var(--scroll-thumb);border-radius:8px}
+.table-wrap{scrollbar-width:thin;scrollbar-color:var(--scroll-thumb) var(--scroll-track);}
+table{
+  width:100%;border-collapse:collapse;font-size:13px;
+  min-width:540px;
+}
+th,td{
+  padding:2px 14px;text-align:left;border-bottom:1px solid var(--border);
+}
+th{
+  background:var(--head-grad);color:#111;font-weight:600;
+  position:sticky;top:0;z-index:2;
+}
+tbody tr:nth-child(even){background:#42484f;}
+tbody tr:hover{background:var(--row-hover);}
+.no-data{color:#9ba3ab;padding:18px 0;text-align:center;}
+/* Button group: actions always spaced, clean on both normal/edit */
+.action-btns {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+.edit-btn, .save-btn, .cancel-btn, .delete-btn {
+  font-size:10px;
+  padding:2px 16px;
+  border-radius:6px;
+  border:none; cursor:pointer; font-weight:500;
+  margin:0;
+  min-width:64px;
+  transition: background .15s;
+}
+.edit-btn  { background: #ffd24d; color: #222; }
+.save-btn  { background: #2ecc71; color: #fff; }
+.cancel-btn{ background: #ffb037; color: #222; }
+.delete-btn{ background: #e8493a; color: #fff; }
+tr.editing td { background: #181b20; }
+@media (max-width:620px){
+  td:first-child,th:first-child{display:none;}
+}
+.filter-select {
+  padding: 8px 8px;
+  border-radius: 6px;
+  background: #1c222b;
+  color: #e5e7eb;
+  border: 1px solid var(--border);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.filter-select:hover,
+.filter-select:focus {
+  border-color: #f1c40f;
+  box-shadow: 0 0 8px rgba(241, 196, 15, 0.4);
+}
+
+</style>
+
+<div class="card">
+  <a href="/home" class="back">&larr;&nbsp;Back&nbsp;to&nbsp;Dashboard</a>
+  <h1>Process & Sub-Process</h1>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, msg in messages %}
+        <span class="flash {{ 'err' if category == 'error' else 'ok' }}">{{ msg }}</span>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+
+  <form method="POST" action="{{ url_for('manage_process') }}">
+    <input type="text" name="team"    placeholder="Team"        required>
+    <input type="text" name="process" placeholder="Process"     required>
+    <input type="text" name="sub"     placeholder="Sub-Process" required>
+    <button type="submit">Add Row</button>
+  </form>
+
+  <!-- Dropdown Filter Row (same style) -->
+  <div style="display:flex;gap:16px;margin-bottom:10px;padding:1px 8px;">
+  <select id="filter_team" onchange="filterTable()" class="filter-select">
+    <option value="">All Teams</option>
+    {% for t in teams %}
+      <option value="{{ t }}">{{ t }}</option>
+    {% endfor %}
+  </select>
+
+  <select id="filter_process" onchange="filterTable()" class="filter-select">
+    <option value="">All Processes</option>
+    {% for p in processes %}
+      <option value="{{ p }}">{{ p }}</option>
+    {% endfor %}
+  </select>
+
+  <select id="filter_sub" onchange="filterTable()" class="filter-select">
+    <option value="">All Sub-Processes</option>
+    {% for s in sub_processes %}
+      <option value="{{ s }}">{{ s }}</option>
+    {% endfor %}
+  </select>
+</div>
+
+
+  <div class="table-wrap">
+    <table id="processTable">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Team</th>
+          <th>Process</th>
+          <th>Sub-Process</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in rows %}
+        <tr data-team="{{ r.team }}" data-process="{{ r.process }}" data-sub="{{ r.sub_process }}">
+          <td>{{ r.id }}</td>
+          <td>{{ r.team }}</td>
+          <td>{{ r.process }}</td>
+          <td>{{ r.sub_process }}</td>
+          <td>
+            <div class="action-btns">
+              <button class="edit-btn" onclick="editRow(this)">Edit</button>
+              <button class="delete-btn" onclick="deleteRow(this, {{ r.id }})">Delete</button>
+            </div>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" class="no-data">No records yet</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+<!-- Footer -->
+<footer class="footer">
+  <p>© 2025 Datasolve Analytics — All Rights Reserved</p>
+</footer>
+<script>
+function filterTable() {
+  var team = document.getElementById("filter_team").value.toLowerCase();
+  var process = document.getElementById("filter_process").value.toLowerCase();
+  var sub = document.getElementById("filter_sub").value.toLowerCase();
+
+  var rows = document.querySelectorAll("#processTable tbody tr");
+  rows.forEach(row => {
+    let match = true;
+    if (team && row.dataset.team.toLowerCase() !== team) match = false;
+    if (process && row.dataset.process.toLowerCase() !== process) match = false;
+    if (sub && row.dataset.sub.toLowerCase() !== sub) match = false;
+    row.style.display = match ? "" : "none";
+  });
+}
+function editRow(btn) {
+  var row = btn.closest('tr');
+  if(row.classList.contains('editing')) return;
+  row.classList.add('editing');
+  let tds = row.querySelectorAll('td');
+  let [id, team, process, sub] = [tds[0].innerText, tds[1].innerText, tds[2].innerText, tds[3].innerText];
+  tds[1].innerHTML = `<input value="${team}" style="width:100%">`;
+  tds[2].innerHTML = `<input value="${process}" style="width:100%">`;
+  tds[3].innerHTML = `<input value="${sub}" style="width:100%">`;
+  tds[4].innerHTML = `
+    <div class="action-btns">
+      <button class="save-btn" onclick="saveRow(this,${id})">Save</button>
+      <button class="cancel-btn" onclick="cancelEdit(this,'${team}','${process}','${sub}')">Cancel</button>
+      <button class="delete-btn" onclick="deleteRow(this,${id})">Delete</button>
+    </div>
+  `;
+}
+function saveRow(btn, id) {
+  var row = btn.closest('tr');
+  let team = row.cells[1].querySelector('input').value;
+  let process = row.cells[2].querySelector('input').value;
+  let sub = row.cells[3].querySelector('input').value;
+  fetch('/update_process_row', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({id, team, process, sub_process:sub})
+  })
+  .then(resp => resp.json())
+  .then(data => {
+    if(data.success){
+      row.cells[1].innerText = team;
+      row.cells[2].innerText = process;
+      row.cells[3].innerText = sub;
+      row.cells[4].innerHTML = `
+        <div class="action-btns">
+          <button class="edit-btn" onclick="editRow(this)">Edit</button>
+          <button class="delete-btn" onclick="deleteRow(this,${id})">Delete</button>
+        </div>
+      `;
+      row.classList.remove('editing');
+      row.dataset.team = team;
+      row.dataset.process = process;
+      row.dataset.sub = sub;
+    } else {
+      alert(data.error || "Update failed");
+    }
+  });
+}
+function cancelEdit(btn, t, p, s){
+  let row = btn.closest('tr');
+  let id = row.cells[0].innerText;
+  row.cells[1].innerText = t;
+  row.cells[2].innerText = p;
+  row.cells[3].innerText = s;
+  row.cells[4].innerHTML = `
+    <div class="action-btns">
+      <button class="edit-btn" onclick="editRow(this)">Edit</button>
+      <button class="delete-btn" onclick="deleteRow(this,${id})">Delete</button>
+    </div>
+  `;
+  row.classList.remove('editing');
+}
+function deleteRow(btn, id) {
+  if(!confirm("Are you sure you want to delete this row?")) return;
+  var row = btn.closest('tr');
+  fetch('/admin/delete_process_row', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({id: id})
+  })
+  .then(resp => resp.json())
+  .then(data => {
+    if(data.success){
+      row.remove();
+    } else {
+      alert(data.error || "Delete failed");
+    }
+  });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+{% set no_sidebar = True %}
+{% block title %}User–Project Matrix{% endblock %}
+
+{% block head_extra %}
+<style>
+  .footer {
+  margin-top: 20px;       /* table ku gap */
+  padding: 15px 0;
+  text-align: center;
+  font-size: 14px;
+  color: #fff;
+
+  /* background: rgba(255,255,255,0.1); 
+  backdrop-filter: blur(12px) saturate(180%);
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
+  border-top: 1px solid rgba(255,255,255,0.25);*/
+}
+  /* ─── remove left gutter reserved for hidden sidebar ─────────────────── */
+  :root { --sidebar-w: 0px !important; }               /* collapse any CSS-var width */
+  .edge-toggle,
+  .sidebar,
+  [class*="side-bar"],
+  [class*="nav-drawer"] { display:none !important; }   /* hide side UI if present */
+
+  /* Normalize common layout wrappers that might keep a left offset */
+  html, body { margin:0; }
+  main, .main, .content, .content-wrap, .page, .page-wrap,
+  .container, .container-fluid, .app-body, .layout, .app-main {
+    margin-left: 0 !important;
+    padding-left: 0 !important;
+  }
+
+  /* ─── page styles ─────────────────────────────────────────────────────── */
+  .wrap-card{
+    max-width:2150px;
+    margin:10px auto;
+    background:#2b2f36;
+    border-radius:16px;
+    box-shadow:0 12px 28px rgba(0,0,0,.35);
+    border:1px solid #1f2329;
+    padding:18px;
+  }
+  .wrap-head{
+    background:#3a3f46;
+    border-radius:12px;
+    padding:14px 18px;
+    font-weight:700;
+    color:#fff;
+    border:1px solid #2c3137;
+  }
+  .wrap-body{ padding:16px 12px 8px; }
+
+  .u-table{ width:100%; border-collapse:separate; border-spacing:0; }
+  .u-table thead th{
+    background:#ffd24d;
+    color:#111;
+    font-weight:700;
+    padding:10px 12px;
+    position:sticky; top:0; z-index:1;
+  }
+  .u-table tbody td{
+    background:#333940;
+    color:#eaeaea;
+    padding:10px 12px;
+    border-top:1px solid #2a2f35;
+    vertical-align:top;
+  }
+  .u-table tbody tr:nth-child(even) td{ background:#2f353c; }
+
+  .pill{ display:inline-block; font-size:12px; padding:2px 8px; border-radius:999px; background:#444; color:#fff; margin-left:6px; }
+  .pill-WIP{ background:#27ae60; color:#111; }
+  .pill-YTI{ background:#9b59b6; }
+  .pill-Hold{ background:#e67e22; }
+  .pill-Closed{ background:#e74c3c; }
+
+  .btn-ghost{
+    border:1px solid #aaa;
+    color:#f5f5f5;
+    background:transparent;
+    padding:10px 16px;
+    border-radius:8px;
+    transition:.25s;
+    text-decoration:none;
+  }
+  .btn-ghost:hover{ background:#2b2b2b; border-color:#ccc; }
+
+  .search{
+    background:#121519; color:#eaeaea; border:1px solid #444;
+    padding:10px 12px; border-radius:8px; width:280px;
+  }
+
+  /* Ensure the very first container is flush with the viewport left */
+  .page-edge-flush { margin-left:0 !important; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-edge-flush" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+  <a href="{{ url_for('assign_projects') }}" class="btn-ghost">← Back</a>
+  <input id="filter" class="search" placeholder="Quick filter: name / email / role / team">
+</div>
+
+<div class="wrap-card page-edge-flush">
+  <div class="wrap-head">User–Project Matrix</div>
+  <div class="wrap-body">
+    <div class="table-responsive">
+      <table class="u-table" id="matrix">
+        <thead>
+          <tr>
+            <th style="width:220px;">Username</th>
+            <th style="width:300px;">Email</th>
+            <th style="width:100px;">Role</th>
+            <th style="width:120px;">Team</th>
+            <th>Assigned Project Codes</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for u in users %}
+          <tr data-row="{{ (u.username ~ ' ' ~ u.email ~ ' ' ~ (u.role or '') ~ ' ' ~ (u.team or '')) | lower }}">
+            <td>{{ u.username }}</td>
+            <td>{{ u.email }}</td>
+            <td>{{ u.role }}</td>
+            <td>{{ u.team or '' }}</td>
+            <td>
+              {% set items = mapping.get(u.id, []) %}
+              {% if items and items|length %}
+                <ul style="margin:0; padding-left:18px;">
+                  {% for code,status in items %}
+                    <li>
+                      {{ code }} <span class="pill pill-{{ status }}">{{ status }}</span>
+                    </li>
+                  {% endfor %}
+                </ul>
+              {% else %}
+                <span style="opacity:.7;">— none —</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+          {% if not users %}
+          <tr><td colspan="5" style="text-align:center; opacity:.75; padding:14px;">No users found.</td></tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+<!-- Footer -->
+<footer class="footer">
+  <p>© 2025 Datasolve Analytics — All Rights Reserved</p>
+</footer>
+<script>
+  // Remove any classes/vars base.html may add that keep a sidebar gutter
+  document.body.classList.remove('has-sidebar','sidebar-open');
+  document.body.classList.add('no-sidebar');
+  document.body.style.setProperty('--sidebar-w','0px');
+
+  // simple client-side filter
+  const q = document.getElementById('filter');
+  const rows = document.querySelectorAll('#matrix tbody tr');
+  q.addEventListener('input', ()=> {
+    const v = q.value.trim().toLowerCase();
+    rows.forEach(tr => {
+      const hay = tr.getAttribute('data-row') || '';
+      tr.style.display = hay.includes(v) ? '' : 'none';
+    });
+  });
+</script>
+{% endblock %}

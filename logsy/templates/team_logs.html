@@ -1,0 +1,296 @@
+{% extends "base.html" %}
+{% block title %}Team Timesheet Logs{% endblock %}
+
+{% block content %}
+<style>
+  .footer {
+    margin-top: 20px; padding: 15px 0; text-align: center; font-size: 14px; color: #fff;
+  }
+
+  :root{ --bg:#0b0c0f; --card:#121318; --card-2:#14161b; --text:#e9edf2; --muted:#a7b0bd;
+         --line:#262a33; --accent:#f5c400; --accent-2:#ffe16b; --chip:#181a20; --chip-line:#2a2f38; }
+
+  body{ background:var(--bg); color:var(--text); font-family:Inter,"Segoe UI",system-ui,-apple-system,sans-serif; }
+  .wrap{ max-width:2580px; margin:2px auto; padding:0 16px; }
+  .card{ background:linear-gradient(250deg,var(--card) 0%,var(--card-2) 120%); border:1px solid var(--line);
+         border-radius:16px; box-shadow:0 10px 32px rgba(0,0,0,.35); overflow:hidden; }
+
+  .head{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding:18px 22px;
+         border-bottom:1px solid var(--line);
+         background:radial-gradient(900px 110px at 8% -20%, rgba(245,196,0,.14), transparent 60%); }
+  .head h2{ margin:0; font-weight:720; letter-spacing:.2px; color:var(--accent); }
+  .head .sub{ color:var(--muted); font-size:.92rem; }
+
+  /* Flash messages */
+  .flash-wrap{ padding:10px 18px; border-bottom:1px solid var(--line); background:#101217; }
+  .alert{ margin:8px 0; padding:10px 12px; border-radius:8px; font-weight:600; border:1px solid transparent; }
+  .alert-success{ background:#0f2a1f; border-color:#1f6b4d; color:#bff3db; }
+  .alert-error{   background:#2a1111; border-color:#6b1f1f; color:#f3c0c0; }
+
+  /* Toolbar */
+  .toolbar{ padding:14px 18px; border-bottom:1px solid var(--line); background:#101217; }
+  .frow{ display:grid; grid-template-columns: 200px 160px 1fr 1fr 1fr 180px auto; gap:10px; align-items:end; }
+  .fg label{ display:block; font-size:.78rem; color:var(--muted); margin:0 0 6px 2px; }
+  select, input[type="date"]{ width:100%; padding:9px 12px; border-radius:10px; border:1px solid var(--line);
+                              background:var(--chip); color:var(--text); transition:.15s; }
+  select:focus, input[type="date"]:focus{ outline:none; border-color:var(--accent);
+                                          box-shadow:0 0 0 3px rgba(245,196,0,.18); background:#151820; }
+  .btn{ background:var(--accent); color:#000; font-weight:700; border:none; padding:10px 14px; border-radius:10px; cursor:pointer; transition:.15s; }
+  .btn:hover{ background:var(--accent-2); box-shadow:0 6px 18px rgba(245,196,0,.18); }
+  .btn:active{ transform:translateY(1px); }
+  .btn[disabled]{ opacity:.75; cursor:not-allowed; box-shadow:none; }
+  .btn-ghost{ background:transparent; color:var(--accent); border:1px solid var(--accent); padding:9px 12px; border-radius:10px; font-weight:600; }
+  .btn-ghost:hover{ background:rgba(245,196,0,.08); }
+
+  /* Table */
+  .table-wrap{ max-height:68vh; overflow-y:auto; overflow-x:hidden; }
+  table{ width:100%; border-collapse:separate; border-spacing:0; table-layout:auto; }
+  thead th{ position:sticky; top:0; z-index:2; background:var(--accent); color:#000; font-weight:800; text-align:center;
+            padding:7px 8px; font-size:12.5px; border-bottom:1px solid #dcbc00; white-space:normal; }
+  tbody td{ text-align:left; padding:6px 8px; border-bottom:1px solid var(--line);
+            background:linear-gradient(180deg,#151820 0%,#11151b 100%); font-size:12.5px; line-height:1.15; white-space:normal; word-break:break-word; transition:.18s; }
+  tbody tr:nth-child(odd) td{ background:linear-gradient(180deg,#141820 0%,#10141a 100%); }
+  tbody tr:hover td{ background:#1a1f27; }
+
+  /* Edit row + inputs */
+  @keyframes rowGlow { from{ box-shadow:inset 0 0 0 0 rgba(245,196,0,.0);} to{ box-shadow:inset 0 0 0 9999px rgba(245,196,0,.04);} }
+  tr.editing td{ background:#19170b !important; animation:rowGlow .25s ease forwards; }
+  .t-input, .t-select{ width:100%; box-sizing:border-box; padding:6px 8px; border-radius:6px; border:1px solid var(--line);
+                        background:#121620; color:var(--text); transition:.15s; height:30px; }
+  .t-input:focus, .t-select:focus{ border-color:var(--accent); box-shadow:0 0 0 3px rgba(245,196,0,.18); outline:none; }
+  input[type="time"].t-input{ height:30px; }
+
+  th.col-action{ width:110px; }
+  td.actions-cell{ white-space:nowrap; }
+  .pill{ display:inline-flex; align-items:center; justify-content:center; height:30px; padding:6px 12px; line-height:18px; border-radius:8px;
+         background:var(--chip); border:1px solid var(--chip-line); color:var(--text); text-decoration:none; font-weight:600; white-space:nowrap; }
+  .pill:hover{ border-color:var(--accent); color:var(--accent); }
+
+  /* Pagination footer */
+  .pager{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 18px; border-top:1px solid var(--line); background:#101217; }
+  .pager .left, .pager .right{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .mini{ padding:7px 10px; font-size:13px; border-radius:8px; border:1px solid var(--line); background:var(--chip); color:var(--text); }
+  .btn-mini{ padding:8px 12px; border-radius:8px; }
+  .muted{ color:var(--muted); font-size:.9rem; }
+  @media (max-width:900px){ .frow{ grid-template-columns: 1fr 1fr 1fr; } .pager{ flex-direction:column; align-items:flex-start; } }
+</style>
+
+<div class="wrap">
+  <div class="card">
+    <!-- Header -->
+    <div class="head">
+      <h2>Team Timesheet Logs</h2>
+      <div class="sub">Review, filter and edit the last 50 entries</div>
+    </div>
+
+    <!-- Flash messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-wrap">
+          {% for cat, msg in messages %}
+            <div class="alert alert-{{ 'success' if cat=='success' else 'error' }}">{{ msg }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <!-- Toolbar (filters + per-page) -->
+    <div class="toolbar">
+      <form method="POST" id="filterForm">
+        <!-- Keep page/per_page in the same POST so pagination preserves filters -->
+        <input type="hidden" name="page" id="pageInput" value="{{ page|default(1) }}">
+        <div class="frow">
+          <div class="fg">
+            <label>Name</label>
+            <select name="username" onchange="this.form.submit()">
+              <option value="">All</option>
+              {% for u in users %}
+                <option value="{{ u.username }}" {% if request.form.username == u.username %}selected{% endif %}>{{ u.username }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="fg">
+            <label>Date</label>
+            <input type="date" name="date" value="{{ request.form.date or '' }}" onchange="this.form.submit()">
+          </div>
+          <div class="fg">
+            <label>Project</label>
+            <select name="project" onchange="this.form.submit()">
+              <option value="">All</option>
+              {% for p in projects %}
+                <option value="{{ p }}" {% if request.form.project == p %}selected{% endif %}>{{ p }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="fg">
+            <label>Process</label>
+            <select name="process" onchange="this.form.submit()">
+              <option value="">All</option>
+              {% for pr in processes %}
+                <option value="{{ pr }}" {% if request.form.process == pr %}selected{% endif %}>{{ pr }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="fg">
+            <label>Sub-Process</label>
+            <select name="sub_process" onchange="this.form.submit()">
+              <option value="">All</option>
+              {% for sp in sub_processes %}
+                <option value="{{ sp }}" {% if request.form.sub_process == sp %}selected{% endif %}>{{ sp }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <!-- Per-page selector -->
+          <div class="fg">
+            <label>Show</label>
+            <select class="mini" name="per_page" id="perPage" onchange="document.getElementById('pageInput').value=1; this.form.submit()">
+              {% set _pp = (per_page|int if per_page is defined else 50) %}
+              {% for n in [50,100,200,500,1000] %}
+                <option value="{{ n }}" {% if _pp == n %}selected{% endif %}>{{ n }} / page</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="fg" style="display:flex; gap:10px;">
+            <button class="btn" type="submit">Filter</button>
+            <a class="btn-ghost" href="{{ url_for('view_team_logs') }}">Reset</a>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <!-- Table -->
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th><th>Date</th><th>Project</th><th>Process</th><th>Sub-Process</th>
+            <th>Start</th><th>End</th><th>Duration</th><th>Total Hours</th><th class="col-action">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in logs %}
+            {% set row_id = row[11] %}
+            {% set is_edit = (editing_id == row_id|string) %}
+            {% if is_edit %}
+              <tr class="editing">
+                <form method="POST" action="{{ url_for('update_entry') }}">
+                  <input type="hidden" name="entry_id" value="{{ row_id }}">
+                  <input type="hidden" name="next" value="">
+                  <!-- keep pagination context on save -->
+                  <input type="hidden" name="page" value="{{ page|default(1) }}">
+                  <input type="hidden" name="per_page" value="{{ per_page|default(50) }}">
+
+                  <td>{{ row[0] }}</td>
+                  <td>{{ row[1] }}</td>
+                  <td>
+                    <select class="t-select" name="project" required>
+                      <option value="{{ row[3] }}" selected>{{ row[3] }}</option>
+                      {% for p in projects %}{% if p != row[3] %}<option value="{{ p }}">{{ p }}</option>{% endif %}{% endfor %}
+                    </select>
+                  </td>
+                  <td>
+                    <select class="t-select" name="process" required>
+                      <option value="{{ row[5] }}" selected>{{ row[5] }}</option>
+                      {% for pr in processes %}{% if pr != row[5] %}<option value="{{ pr }}">{{ pr }}</option>{% endif %}{% endfor %}
+                    </select>
+                  </td>
+                  <td>
+                    <select class="t-select" name="sub_process" required>
+                      <option value="{{ row[6] }}" selected>{{ row[6] }}</option>
+                      {% for sp in sub_processes %}{% if sp != row[6] %}<option value="{{ sp }}">{{ sp }}</option>{% endif %}{% endfor %}
+                    </select>
+                  </td>
+                  <td><input class="t-input" type="time" name="start_time" value="{{ row[7] or '' }}" required></td>
+                  <td><input class="t-input" type="time" name="end_time" value="{{ row[8] or '' }}" required></td>
+                  <td>{{ row[9] }}</td>
+                  <td>{{ row[10] }}</td>
+                  <td class="actions-cell">
+                    <div class="actions">
+                      <button class="btn" type="submit">Save</button>
+                      <a class="pill" href="{{ url_for('view_team_logs') }}">Cancel</a>
+                    </div>
+                  </td>
+                </form>
+              </tr>
+            {% else %}
+              <tr>
+                <td>{{ row[0] }}</td><td>{{ row[1] }}</td><td>{{ row[3] }}</td><td>{{ row[5] }}</td><td>{{ row[6] }}</td>
+                <td>{{ row[7] }}</td><td>{{ row[8] }}</td><td>{{ row[9] }}</td><td>{{ row[10] }}</td>
+                <td class="actions-cell">
+                  <a class="pill" href="{{ url_for('view_team_logs', editing_id=row_id) }}">Edit</a>
+                </td>
+              </tr>
+            {% endif %}
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination footer -->
+    {% set _page = page|default(1)|int %}
+    {% set _pp = per_page|default(50)|int %}
+    {% set _tp = total_pages|default(1)|int %}
+    <div class="pager">
+      <div class="left muted">
+        Showing <strong>{{ logs|length }}</strong> rows • Page <strong>{{ _page }}</strong> of <strong>{{ _tp }}</strong>
+      </div>
+      <div class="right">
+        <button class="btn btn-mini" id="prevBtn" {% if _page <= 1 %}disabled{% endif %}>‹ Prev</button>
+        <button class="btn btn-mini" id="nextBtn" {% if _page >= _tp %}disabled{% endif %}>Next ›</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer class="footer"><p>© Datasolve Analytics Pvt Ltd 2025.</p></footer>
+
+<script>
+  // Ensure Save closes edit mode: set "next" to current URL without editing_id
+  document.addEventListener('click', function(e){
+    const btn = e.target.closest('button.btn[type="submit"]');
+    if(!btn) return;
+    const form = btn.closest('form[action$="/update-entry"]');
+    if(!form) return;
+
+    const url = new URL(window.location.href);
+    url.searchParams.delete('editing_id');
+    const next = url.pathname + (url.searchParams.toString() ? '?' + url.searchParams.toString() : '');
+    const nextInput = form.querySelector('input[name="next"]');
+    if(nextInput) nextInput.value = next;
+
+    btn.disabled = true;
+    const original = btn.textContent;
+    btn.textContent = 'Saving...';
+    setTimeout(()=>{ try{ btn.disabled=false; btn.textContent=original; }catch(_){ } }, 6000);
+  });
+
+  // Pagination (POST to preserve filters)
+  const filterForm = document.getElementById('filterForm');
+  const pageInput  = document.getElementById('pageInput');
+  const totalPages = {{ total_pages|default(1) }};
+  document.getElementById('prevBtn')?.addEventListener('click', (e)=>{
+    e.preventDefault();
+    const p = Math.max(1, (parseInt(pageInput.value || '1', 10) - 1));
+    pageInput.value = p;
+    filterForm.submit();
+  });
+  document.getElementById('nextBtn')?.addEventListener('click', (e)=>{
+    e.preventDefault();
+    const cur = parseInt(pageInput.value || '1', 10);
+    const p = Math.min(totalPages, cur + 1);
+    pageInput.value = p;
+    filterForm.submit();
+  });
+
+  // Auto-hide flash messages after 2.5s
+  setTimeout(() => {
+    document.querySelectorAll('.flash-wrap .alert').forEach(el => {
+      el.style.transition = 'opacity .3s ease';
+      el.style.opacity = '0';
+      setTimeout(() => el.parentElement && el.parentElement.remove(), 400);
+    });
+  }, 2500);
+</script>
+{% endblock %}

@@ -1,0 +1,119 @@
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400&display=swap');
+  html, body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden; /* Disable scroll */
+    height: 100%;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #000000, #1a1a1a);
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-position: center;
+  }
+
+  .hero {
+    height: 100vh;
+    width: 100vw;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    gap: 24px;
+    padding: 40px;
+    color: #fff;
+    backdrop-filter: blur(6px);
+    animation: fadeIn 1.2s ease-in;
+  }
+
+.hero h1 {
+  font-size: 68px;
+  font-weight: 400;
+  background: linear-gradient(90deg, #f1c40f, #ffeb3b);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 0 16px rgba(255, 221, 51, 0.3);
+  animation: fadeInDown 1s ease-out;
+  font-family: "Cinzel Decorative", serif; /* ✅ Custom font */
+  font-style: normal;
+  letter-spacing: 6px; /* 👈 Add spacing between letters */
+  margin-bottom: 10px;
+}
+
+
+  .hero p {
+    font-size: 22px;
+    color: #f8f8f8;
+    max-width: 700px;
+    line-height: 1.6;
+    animation: fadeIn 1.8s ease-out;
+    text-shadow: 0 0 10px rgba(255, 235, 59, 0.1);
+  }
+
+  .btns {
+    padding: 6px 14px;
+    margin-top: 20px;
+    display: flex;
+    gap: 20px;
+    animation: fadeInUp 2.2s ease-out;
+  }
+
+  .hero a {
+    padding: 10px 30px;
+    border-radius: 12px;
+    font-weight: bold;
+    text-decoration: none;
+    font-size: 16px;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+  }
+
+  .btn-login {
+    background: #f1c40f;
+    color: #000;
+    border-color: #ffdf33;
+  }
+
+  .btn-login:hover {
+    background: #ffe135;
+    transform: scale(1.07);
+    box-shadow: 0 0 16px #f1c40f;
+  }
+
+  .btn-register {
+    background: #000;
+    color: #f1c40f;
+    border: 2px solid #f1c40f;
+  }
+
+  .btn-register:hover {
+    background: #1a1a1a;
+    transform: scale(1.07);
+    box-shadow: 0 0 14px #f1c40f;
+  }
+
+  @keyframes fadeInDown {
+    from { opacity: 0; transform: translateY(-50px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(50px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+</style>
+
+<div class="hero">
+  <h1><span style="font-weight:800;">Logsy</span></h1>
+  <div class="btns">
+    <a href="{{ url_for('login') }}" class="btn-login">Login</a>
+    <a href="{{ url_for('register') }}" class="btn-register">Register</a>
+  </div>
+</div>

@@ -1,0 +1,218 @@
+{% extends "base.html" %}
+{% block title %}User Management{% endblock %}
+
+{% block content %}
+<style>
+.footer {
+  margin-top: 20px;       /* table ku gap */
+  padding: 15px 0;
+  text-align: center;
+  font-size: 14px;
+  color: #fff;
+
+  /* background: rgba(255,255,255,0.1); 
+  backdrop-filter: blur(12px) saturate(180%);
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
+  border-top: 1px solid rgba(255,255,255,0.25);*/
+}
+:root{
+  --primary:#ffd24d; --primary-hover:#e6bc46;
+  --accent:#020202;  --danger:#e74c3c;
+  --bg:#0f151d;      --card-bg:#30363d;
+  --head-grad:linear-gradient(135deg,#ffd24d 0%,#ffdb6e 100%);
+  --border:#1e242d;  --row-hover:#232b35;
+  --scroll-thumb:#8a8e96; --scroll-track:#1b212a;
+}
+html, body {
+  height: 100%;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+  background: var(--bg);
+  color: #e5e7eb;
+  line-height: 1.4;
+  overflow-y: auto;   /* ✅ allow vertical scroll */
+  overflow-x: hidden; /* prevent sideways scroll */
+  padding-bottom: 40px; /* ✅ extra bottom gap */
+}
+
+.card {
+  max-width: calc(95vw - 1px);
+  margin: 20px auto 40px auto;  /* ✅ bottom spacing added */
+  background: var(--card-bg);
+  border-radius: 18px;
+  box-shadow: 0 14px 34px rgba(0,0,0,.25);
+  padding: 20px 32px;
+  overflow: visible;   /* ✅ let card expand */
+}
+
+.back{
+  color:var(--primary);font-weight:600;text-decoration:none;
+  display:inline-block;margin-bottom:18px;transition:color .15s;
+}
+.back:hover{color:var(--primary-hover);}
+h1{font-size:24px;margin:0 0 20px;color:#b8e4ff;}
+.flash{display:inline-block;padding:10px 16px;border-radius:60px;font-size:14px;margin-bottom:18px;}
+.flash.ok{background:#ffd24d;color:var(--accent);}
+.flash.err{background:#f7b2b2;color:var(--danger);}
+
+.table-wrap {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow-x: auto;   /* ✅ only horizontal scroll */
+  overflow-y: visible;
+  max-height: none;   /* ✅ no fixed height */
+}
+
+.table-wrap::-webkit-scrollbar{width:8px}
+.table-wrap::-webkit-scrollbar-track{background:var(--scroll-track);border-radius:8px}
+.table-wrap::-webkit-scrollbar-thumb{background:var(--scroll-thumb);border-radius:8px}
+.table-wrap{scrollbar-width:thin;scrollbar-color:var(--scroll-thumb) var(--scroll-track);}
+
+table{width:100%;border-collapse:collapse;font-size:14px;min-width:720px;}
+th,td{padding:10px 14px;text-align:center;border-bottom:1px solid var(--border);}
+th{
+  background:var(--head-grad);color:#111;font-weight:600;
+  position:sticky;top:0;z-index:2;
+}
+tbody tr:nth-child(even){background:#42484f;}
+tbody tr:hover{background:var(--row-hover);}
+.no-data{color:#9ba3ab;padding:18px 0;text-align:center;}
+
+select{
+  padding:6px 10px;font-size:14px;border:1px solid var(--border);
+  border-radius:6px;background:#1c222b;color:#e5e7eb;
+}
+button{
+  padding:6px 12px;border:none;border-radius:6px;
+  background:var(--primary);color:#050505;font-weight:600;cursor:pointer;
+}
+button:hover{background:var(--primary-hover);}
+.badge{padding:4px 10px;border-radius:12px;font-weight:600;font-size:13px;}
+.badge.ok{background:#2ecc71;color:var(--accent);}
+.badge.no{background:#ffecec;color:var(--danger);}
+
+/* ── Username cell with avatar ───────────────────────────── */
+.user-td{
+  display:flex; align-items:center; gap:12px;
+  justify-content:flex-start; text-align:left;   /* override table center */
+}
+.user-ava{
+  width:36px; height:36px; border-radius:50%;
+  object-fit:cover; object-position:50% 18%;
+  border:1px solid #2b3139; background:#222;
+  flex:0 0 36px; display:block;
+}
+.user-name{ font-weight:600; color:#e6e9ef; }
+
+@media(max-width:620px){
+  td:first-child,th:first-child{display:none;}
+}
+html, body {
+  height: 100%;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+  background: var(--bg);
+  color: #e5e7eb;
+  line-height: 1.4;
+  overflow-y: auto;   /* ✅ outer scroll */
+  overflow-x: hidden; /* prevent sideways scroll */
+}
+
+.card {
+  max-width: calc(95vw - 1px);
+  margin: 20px auto;   /* ✅ allow spacing */
+  background: var(--card-bg);
+  border-radius: 18px;
+  box-shadow: 0 14px 34px rgba(0,0,0,.25);
+  padding: 20px 32px;
+  overflow: visible;   /* ✅ let card expand */
+}
+
+</style>
+
+<div class="card">
+  <a href="/home" class="back">&larr;&nbsp;Back&nbsp;to&nbsp;Dashboard</a>
+  <h1>User Management</h1>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category,msg in messages %}
+        <span class="flash {{ 'err' if category=='error' else 'ok' }}">{{ msg }}</span>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Username</th>
+          <th>Email</th>
+          <th>Verified</th>
+          <th>Team</th>
+          <th>Role</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in users %}
+          <tr>
+            <td>{{ u.id }}</td>
+
+            <!-- Username with round avatar -->
+      <td class="user-td">
+        <img
+          class="user-ava"
+          src="{{ email_img_map.get(u.email) or gravatar_url(u.email, 64) or url_for('static', filename='img/avatar-default.png') }}"
+          alt="{{ u.username }}"
+          loading="lazy"
+          onerror="this.onerror=null; this.src={{ url_for('static', filename='img/avatar-default.png') | tojson }};">
+        <span class="user-name">{{ u.username }}</span>
+      </td>
+
+            <td>{{ u.email }}</td>
+            <td>
+              {% if u.verified %}
+                <span class="badge ok">Verified</span>
+              {% else %}
+                <span class="badge no">Unverified</span>
+              {% endif %}
+            </td>
+            <td>
+              <form method="POST" action="/admin/usermanagement" style="display:inline;">
+                <input type="hidden" name="uid" value="{{ u.id }}">
+                <select name="team">
+                  {% for team in ['MCTeam','IPTeam','BDTeam','AnalyticsTeam','MRTeam'] %}
+                    <option value="{{ team }}" {% if u.team == team %}selected{% endif %}>{{ team }}</option>
+                  {% endfor %}
+                </select>
+            </td>
+            <td>
+                <select name="role">
+                  {% for r in ["superadmin","admin","user"] %}
+                    <option value="{{ r }}" {% if u.role==r %}selected{% endif %}>{{ r }}</option>
+                  {% endfor %}
+                </select>
+            </td>
+            <td>
+                <button type="submit">Save</button>
+              </form>
+            </td>
+          </tr>
+        {% else %}
+          <tr><td colspan="7" class="no-data">No users yet</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+<!-- Footer -->
+<footer class="footer">
+  <p>© Datasolve Analytics Pvt Ltd 2025.</p>
+</footer>
+{% endblock %}

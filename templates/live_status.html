@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% block title %}Live Activity{% endblock %}
+
+{% block content %}
+<style>
+    /* You can move these styles to your main CSS file if you want */
+    .wrap { 
+        max-width: 1200px; 
+        margin: 20px auto; 
+        padding: 0 20px; 
+    }
+    .card{
+        border:1px solid var(--line, #232c3a); 
+        background:var(--surface, #161d27);
+        border-radius: 12px;
+        overflow:hidden;
+        box-shadow:0 10px 25px rgba(0,0,0,.25);
+        margin: 14px 0;
+    }
+    .card-head{ 
+        padding: 14px 18px;
+        border-bottom:1px solid var(--line, #232c3a);
+        background:linear-gradient(180deg,#1a2230,#151c27);
+    }
+    .card-head h1{ 
+        margin:0; 
+        font-size: 20px;
+        font-weight:800; 
+        color:#eaf4ff; 
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    .card-body{ padding: 18px; }
+
+    /* Table styles from dashboard.html */
+    .table-card { border: 1px solid var(--line, #232c3a); background: #0f1520; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.35); }
+    .table-head { padding: 8px 12px; border-bottom: 1px solid var(--line, #232c3a); background: #131a25; color: #cfe6ff; font-weight: 700; font-size: 13px; }
+    .table-wrap { overflow-x: auto; max-height: none; }
+    table { width: 100%; border-collapse: collapse; font-size: 12.5px; min-width: 800px; }
+    th, td {
+        padding: 8px 10px; /* More padding */
+        border-bottom: 1px solid #1f2937;
+        text-align: left;
+        vertical-align: middle;
+    }
+    thead th {
+        background: linear-gradient(180deg,#ffd24d,#ffecae); color: #121212;
+        font-weight: 800; position: sticky; top: 0; z-index: 3;
+        font-size: 12.5px;
+    }
+    tbody tr:nth-child(even) { background: #122034; }
+    tbody tr:hover { background: #18283e; }
+    .no-data { color: #8fa5bf; text-align: center; padding: 20px 0; font-size: 14px; }
+
+    /* Live status dot */
+    .live-dot {
+        height: 12px;
+        width: 12px;
+        background-color: #2ecc71; /* green */
+        border-radius: 50%;
+        display: inline-block;
+        animation: pulse 1.5s infinite;
+        box-shadow: 0 0 10px #2ecc71, 0 0 20px #2ecc71;
+    }
+    @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
+</style>
+
+<div class="wrap">
+    <div class="card">
+        <div class="card-head">
+            <h1>
+                <span class="live-dot"></span>
+                Live Activity Dashboard
+            </h1>
+        </div>
+        <div class="card-body" style="padding: 0;">
+            <div class="table-card" style="border: none; box-shadow: none; border-radius: 0 0 12px 12px;">
+                <div class="table-head">
+                    Users currently tracking time ({{ today_date }})
+                </div>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>User</th>
+                                {% if role == 'superadmin' %}
+                                <th>Team</th>
+                                {% endif %}
+                                <th>Project</th>
+                                <th>Process</th>
+                                <th>Sub-Process</th>
+                                <th>Start Time</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in entries %}
+                            <tr>
+                                <td>{{ row[0] }}</td> {% if role == 'superadmin' %}
+                                <td>{{ row[1] }}</td> <td>{{ row[2] }}</td> <td>{{ row[3] }}</td> <td>{{ row[4] }}</td> <td>{{ row[5] }}</td> {% else %}
+                                <td>{{ row[2] }}</td> <td>{{ row[3] }}</td> <td>{{ row[4] }}</td> <td>{{ row[5] }}</td> {% endif %}
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="{% if role == 'superadmin' %}6{% else %}5{% endif %}" class="no-data">
+                                    No users are currently tracking time.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,82 @@
+# -----------------
+# Python / Flask
+# -----------------
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pdb
+*.pkl
+*.log
+*.pot
+
+# Byte-compiled / cache
+*.pyc
+*.pyo
+*.pyd
+*.py.class
+
+# Flask / instance
+instance/
+*.db
+*.sqlite3
+*.sqlite
+
+# -----------------
+# Virtual environments
+# -----------------
+.venv/
+venv/
+ENV/
+env/
+
+# -----------------
+# VS Code
+# -----------------
+.vscode/
+*.code-workspace
+
+# -----------------
+# OS / Editor junk
+# -----------------
+.DS_Store
+Thumbs.db
+ehthumbs.db
+desktop.ini
+
+# -----------------
+# Build / Distribution
+# -----------------
+build/
+dist/
+*.egg-info/
+.eggs/
+*.egg
+pip-wheel-metadata/
+
+# -----------------
+# Logs & Reports
+# -----------------
+*.log
+*.csv
+*.out
+*.tmp
+
+# -----------------
+# Zips / Archives
+# -----------------
+*.zip
+*.tar
+*.tar.gz
+*.7z
+*.rar
+
+# -----------------
+# Secrets
+# -----------------
+.env
+*.pem
+*.crt
+*.key
+secrets.json
+credentials.json

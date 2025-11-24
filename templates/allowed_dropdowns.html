@@ -1,0 +1,215 @@
+{% extends "base.html" %}
+{% block title %}Manage Allowed Dropdowns{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width:1000px;margin:40px auto;padding:30px; overflow:hidden">
+
+  <!-- 🔧 Assignment Form -->
+  <div class="assign-card" style="
+    background-color: #0f151d;
+    border: 1px solid #ffd24d;
+    border-radius: 12px;
+    padding: 25px;
+    margin-bottom: 30px;
+    box-shadow: 0 0 12px rgba(255,210,77,0.1);
+  ">
+    <h2 style="font-size: 20px; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; color: #fff;">
+      <span>🛠️</span>
+      <span style="color: #ffd24d">Assign Team → Process → Sub‑Process Access</span>
+    </h2>
+
+    <form method="POST">
+      <div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-end">
+        <div style="flex: 1; min-width: 180px">
+          <label style="color: #ddd">User</label><br>
+          <select name="user_id" required style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #888;">
+            <option value="">-- Select User --</option>
+            {% for u in users if u.team == user.team %}
+              <option value="{{ u.id }}">{{ u.username }} ({{ u.role }})</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div style="flex: 1; min-width: 150px">
+          <label style="color: #ddd">Team</label><br>
+          <input type="text" name="team" value="{{ user.team }}" readonly
+                style="width: 100%; background: #333; color: #ffd24d; padding: 8px; border: 1px solid #999; border-radius: 6px;">
+        </div>
+
+        <div style="flex: 1; min-width: 180px">
+          <label style="color: #ddd">Process</label><br>
+          <select id="process" name="process" required style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #888;">
+            <option value="">-- Select Process --</option>
+          </select>
+        </div>
+
+        <div style="flex: 1; min-width: 180px">
+          <label style="color: #ddd">Sub-Process</label><br>
+          <select id="sub" name="sub" required style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #888;">
+            <option value="">-- Select Sub-Process --</option>
+          </select>
+        </div>
+
+        <div style="min-width: 100px;">
+          <button type="submit" style="
+            background: #ffd24d;
+            color: #111821;
+            font-weight: bold;
+            padding: 10px 18px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+          ">➕ Assign</button>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <!-- 🔽 Filter Dropdowns -->
+  <div style="display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 15px;">
+    <select id="filterUser" style="flex:1; padding:8px; border-radius:6px;">
+      <option value="">Filter by User</option>
+      {% for u in users if u.team == user.team %}
+        <option value="{{ u.username }}">{{ u.username }}</option>
+      {% endfor %}
+    </select>
+
+    <select id="filterProcess" style="flex:1; padding:8px; border-radius:6px;">
+      <option value="">Filter by Process</option>
+      {% for p in allowed | selectattr('team', 'equalto', user.team) | map(attribute='process') | unique %}
+        <option value="{{ p }}">{{ p }}</option>
+      {% endfor %}
+    </select>
+
+    <select id="filterSub" style="flex:1; padding:8px; border-radius:6px;">
+      <option value="">Filter by Sub-Process</option>
+      {% for s in allowed | selectattr('team', 'equalto', user.team) | map(attribute='sub_process') | unique %}
+        <option value="{{ s }}">{{ s }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <!-- 🧾 Table -->
+  <table id="accessTable" border="0" cellpadding="0" cellspacing="0" style="
+    width: 100%;
+    margin-top: 10px;
+    background-color: #111821;
+    color: #fff;
+    border-collapse: collapse;
+  ">
+    <thead style="background: #ffd24d; color: #111821;">
+      <tr>
+        <th style="padding: 10px;">#</th>
+        <th style="padding: 10px;">User</th>
+        <th style="padding: 10px;">Team</th>
+        <th style="padding: 10px;">Process</th>
+        <th style="padding: 10px;">Sub-Process</th>
+        <th style="padding: 10px;">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in allowed if row.team == user.team %}
+        <tr style="border-top: 1px solid #333;">
+          <td style="padding: 10px;">{{ loop.index }}</td>
+          <td style="padding: 10px;">
+            {% for u in users if u.id == row.user_id %}
+              {{ u.username }}
+            {% endfor %}
+          </td>
+          <td style="padding: 10px;">{{ row.team }}</td>
+          <td style="padding: 10px;">{{ row.process }}</td>
+          <td style="padding: 10px;">{{ row.sub_process }}</td>
+          <td style="padding: 10px;">
+            {% if role in ['admin', 'superadmin'] %}
+              <form method="POST" action="{{ url_for('delete_allowed', id=row.id) }}" style="display:inline">
+                <button type="submit" onclick="return confirm('Are you sure you want to delete this row?')" style="
+                  background-color: #e74c3c;
+                  color: #fff;
+                  border: none;
+                  padding: 6px 12px;
+                  border-radius: 4px;
+                  font-weight: bold;
+                  cursor: pointer;
+                ">Delete</button>
+              </form>
+            {% endif %}
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="6" style="padding: 10px;">No assignments yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- 📜 Scripts -->
+<script>
+  const allData = {};
+  {% for row in processes if row.team == user.team %}
+    if (!allData["{{ row.process }}"]) allData["{{ row.process }}"] = [];
+    allData["{{ row.process }}"].push("{{ row.sub_process }}");
+  {% endfor %}
+
+  const processSelect = document.getElementById("process");
+  const subSelect = document.getElementById("sub");
+
+  processSelect.addEventListener("change", function () {
+    const process = this.value;
+    subSelect.innerHTML = '<option value="">-- Select Sub-Process --</option>';
+    if (process in allData) {
+      allData[process].forEach(sub => {
+        const opt = document.createElement("option");
+        opt.value = opt.textContent = sub;
+        subSelect.appendChild(opt);
+      });
+    }
+  });
+
+  for (const proc in allData) {
+    const opt = document.createElement("option");
+    opt.value = opt.textContent = proc;
+    processSelect.appendChild(opt);
+  }
+
+  function applyTableFilters() {
+    const userFilter = document.getElementById("filterUser").value.toLowerCase();
+    const processFilter = document.getElementById("filterProcess").value.toLowerCase();
+    const subFilter = document.getElementById("filterSub").value.toLowerCase();
+
+    const rows = document.querySelectorAll("#accessTable tbody tr");
+    rows.forEach(row => {
+      const cols = row.querySelectorAll("td");
+      const user = cols[1]?.innerText.toLowerCase();
+      const process = cols[3]?.innerText.toLowerCase();
+      const sub = cols[4]?.innerText.toLowerCase();
+
+      const show =
+        (!userFilter || user === userFilter) &&
+        (!processFilter || process === processFilter) &&
+        (!subFilter || sub === subFilter);
+
+      row.style.display = show ? "" : "none";
+    });
+  }
+
+  ["filterUser", "filterProcess", "filterSub"].forEach(id => {
+    const el = document.getElementById(id);
+    el.addEventListener("change", function () {
+      localStorage.setItem(id, this.value);
+      applyTableFilters();
+    });
+  });
+
+  window.addEventListener("DOMContentLoaded", () => {
+    ["filterUser", "filterProcess", "filterSub"].forEach(id => {
+      const val = localStorage.getItem(id);
+      if (val) {
+        const el = document.getElementById(id);
+        if (el) el.value = val;
+      }
+    });
+    applyTableFilters();
+  });
+</script>
+{% endblock %}

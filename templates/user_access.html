@@ -1,0 +1,373 @@
+{% extends "base.html" %}
+{% set no_sidebar = True %}
+{% block title %}Logsy - User Management{% endblock %}
+
+{% block content %}
+<style>
+  .footer {
+    margin-top: 20px;
+    padding: 15px 0;
+    text-align: center;
+    font-size: 14px;
+    color: #fff;
+  }
+  /* ── FIX LEFT GUTTER ── */
+  :root{ --sidebar-w:0px !important; }
+  .edge-toggle,.sidebar,[class*="side-bar"],[class*="nav-drawer"]{ display:none !important; }
+  main,.main,.content,.content-wrap,.page,.page-wrap,.container,.container-fluid,
+  .app-body,.layout,.app-main,#app,body{ margin-left:0 !important; padding-left:0 !important; }
+
+  /* ── styles ── */
+  :root{
+    --bg:#0f141a; --surface:#121922; --panel:#18212b;
+    --line:#263140; --muted:#9fb0c6; --text:#e9eef4;
+    --accent:#ffd24d; --accent-2:#7dd3fc;
+    --good:#27ae60; --warn:#e67e22; --bad:#e74c3c; --hold:#9b59b6;
+    --radius:16px; --gap:18px;
+  }
+
+  /* page */
+  .page-top{display:flex;gap:10px;justify-content:space-between;align-items:center;margin-bottom:14px;}
+  .btn{cursor:pointer;border-radius:12px;padding:10px 16px;font-weight:700;border:1px solid transparent;transition:.18s;display:inline-flex;align-items:center;gap:8px;text-decoration:none}
+  .btn-ghost{border-color:#3a4757;color:var(--text);background:transparent}
+  .btn-ghost:hover{background:#1b2430}
+  .btn-yellow{background:var(--accent);color:#111}
+  .btn-yellow:hover{filter:brightness(.96)}
+
+  /* card shell */
+  .wrap-card{max-width:2150px;margin:10px auto;background:var(--surface);border-radius:var(--radius);
+             box-shadow:0 16px 36px rgb(0 0 0 / .35);border:1px solid var(--line);padding:0}
+  .wrap-head{background:linear-gradient(180deg,#1e2732 0%,#121a24 100%);
+             border-radius:var(--radius) var(--radius) 0 0;padding:14px 18px;border-bottom:1px solid var(--line);
+             color:#fff;font-weight:800;letter-spacing:.3px;display:flex;justify-content:space-between;align-items:center}
+  .wrap-body{padding:16px 14px 14px}
+
+  label{color:#dfe6ee;margin-bottom:6px;font-weight:700;display:block}
+  select,input[type="text"]{background:#0f151c;color:#eaeaea;border:1px solid #313c4b;padding:10px 12px;border-radius:12px;width:100%}
+
+  /* 3 columns */
+  .cols{display:grid;grid-template-columns:1fr 280px 1fr;gap:var(--gap);align-items:start}
+  @media (max-width: 1200px){ .cols{grid-template-columns:1fr 260px 1fr;} }
+  @media (max-width: 980px){ .cols{grid-template-columns:1fr;gap:14px} .center-col{order:3} }
+
+  /* panels */
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+  .panel-head{display:flex;align-items:center;gap:10px;justify-content:space-between;padding:10px;border-bottom:1px solid var(--line);background:#121a24;position:sticky;top:0;z-index:2}
+  .panel-tools{display:flex;gap:8px;flex-wrap:wrap}
+  .filter-row{display:grid;grid-template-columns:1fr 140px;gap:8px;padding:10px;border-bottom:1px solid var(--line);background:#0f151c}
+  .listbox{max-height:460px;overflow:auto;scrollbar-gutter:stable both-edges}
+  .listbox::-webkit-scrollbar{width:10px}
+  .listbox::-webkit-scrollbar-thumb{background:#233041;border-radius:10px}
+
+  .item{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;padding:12px 12px;border-bottom:1px dashed #243141}
+  .item:hover{background:#16202a}
+  .item:last-child{border-bottom:0}
+  
+  /* CRITICAL FIX: Ensure hidden items are actually invisible */
+  .item[hidden] { display: none !important; }
+
+  .code{font-weight:800;color:#f3f7ff;letter-spacing:.2px}
+  .sub{font-size:12px;color:var(--muted)}
+
+  /* chips & pills */
+  .chip{font-size:12px;padding:2px 8px;border-radius:999px;background:#233041;color:#d7e9ff;border:1px solid #314055}
+  .badge{font-size:12px;background:#1a2531;border:1px solid #2a384a;color:#cfe7ff;border-radius:999px;padding:2px 8px}
+  .pill{display:inline-block;font-size:12px;padding:2px 8px;border-radius:999px;background:#444;color:#fff;border:1px solid #555}
+  .pill-WIP{background:var(--good);color:#102216;border-color:#0f6937}
+  .pill-YTI{background:var(--hold);border-color:#6e3b93}
+  .pill-Hold{background:#f59e0b;border-color:#b45309}
+  .pill-Closed{background:var(--bad);border-color:#8b1d1d}
+
+  .legend{display:flex;gap:8px;flex-wrap:wrap}
+  .actions{padding:10px;text-align:left;border-top:1px solid var(--line);background:#101823}
+  .actions .btn{padding:10px 14px}
+
+  /* CENTER */
+  .center-col{ position:sticky; top:10px; align-self:start; display:flex; justify-content:center; }
+  .preview{
+    width:100%; max-width:260px;
+    background:linear-gradient(180deg,#121a24 0%,#0f151c 100%);
+    border-radius:18px;
+    border:1px solid #2a3646;
+    box-shadow:0 18px 40px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.03);
+    padding:16px 14px 14px;
+  }
+  .p-head{display:flex; align-items:center; gap:12px; margin-bottom:10px}
+  .avatar{
+    width:72px;height:72px;border-radius:50%;object-fit:cover;object-position:50% 18%;
+    border:2px solid rgba(255,255,255,.08); background:#1d2631; flex:0 0 72px;
+    box-shadow:0 0 0 3px rgba(125,211,252,.12);
+  }
+  .up-name{font-weight:800;color:#eef3fb;line-height:1.1}
+  .up-email{font-size:12px;color:#9fb0c6;word-break:break-all}
+  .up-rows{display:grid;gap:8px;margin-top:8px}
+  .row{ display:flex; align-items:center; justify-content:space-between; gap:8px; background:#0d141c; border:1px solid #253143; border-radius:12px; padding:10px 12px; }
+  .row .l{font-size:12px;color:#9fb0c6} .row .r{font-weight:700;color:#e7edf6}
+  .meta{display:flex; flex-wrap:wrap; gap:6px; margin-top:10px}
+  .meta .chip{background:#1a2330;border-color:#2a3748}
+
+  .muted{color:var(--muted)}
+  .inline{display:flex;gap:10px;align-items:center}
+  .count{font-variant-numeric:tabular-nums;background:#122030;border:1px solid #233248}
+</style>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+
+<div class="page-top">
+  <a href="{{ url_for('assign_projects') }}" class="btn btn-ghost">← Back to Assign by Project</a>
+  
+  <div style="margin-left:auto; display:flex; gap:10px;">
+    <a href="{{ url_for('user_project_matrix') }}" class="btn btn-yellow" style="text-decoration:none;">
+      <i class="bi bi-volume-down"></i> Assign Projects - Team
+    </a>
+    <a href="{{ url_for('admin_project_codes') }}" class="btn btn-yellow">
+      <i class="bi bi-gear-fill"></i> Project Allocations
+    </a>
+  </div>
+</div>
+
+<div class="wrap-card">
+  <div class="wrap-head">
+    <div>User ↔ Project Access</div>
+    <div class="legend">
+      <span class="badge">Legend:</span>
+      <span class="pill pill-WIP">WIP</span>
+      <span class="pill pill-YTI">YTI</span>
+      <span class="pill pill-Hold">Hold</span>
+      <span class="pill pill-Closed">Closed</span>
+    </div>
+  </div>
+
+  <div class="wrap-body">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div style="margin-bottom:10px;">
+          {% for cat, msg in messages %}
+            <div class="chip" style="background: {{ 'rgba(34,197,94,.15)' if cat=='success' else ('rgba(239,68,68,.15)' if cat=='error' else 'rgba(59,130,246,.15)') }}; border-color:#3a4757;">
+              {{ msg }}
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <!-- USER PICKER -->
+    <form method="get" style="margin-bottom:14px;">
+      <label>Select User</label>
+      <div class="inline">
+        <select name="user_id" onchange="this.form.submit()">
+          <option value="" disabled {% if not selected_user %}selected{% endif %}>Select User...</option>
+          {% for u in users %}
+            <option value="{{ u.id }}" {% if selected_user and u.id == selected_user.id %}selected{% endif %}>
+              {{ u.username }}{% if u.team %} — {{ u.team }}{% endif %}
+            </option>
+          {% endfor %}
+        </select>
+        {% if selected_user %}
+          <div class="chip">Role: {{ selected_role or '—' }}</div>
+          {% if selected_team %}<div class="chip">Team: {{ selected_team }}</div>{% endif %}
+        {% endif %}
+      </div>
+    </form>
+
+    {% if not selected_user %}
+      <div class="muted">Please select a user to proceed.</div>
+    {% else %}
+      <div class="cols" id="dualList">
+        <!-- AVAILABLE -->
+        <div class="panel" data-side="available">
+          <div class="panel-head">
+            <div class="inline">
+              <strong>Available Project Codes</strong>
+              <span class="chip count" id="availCount">0</span>
+            </div>
+            <div class="panel-tools">
+              <button type="button" class="btn btn-ghost" onclick="toggleSelectAll('available', true)">Select all</button>
+              <button type="button" class="btn btn-ghost" onclick="toggleSelectAll('available', false)">Clear</button>
+            </div>
+          </div>
+
+          <!-- SINGLE FILTER DROPDOWN (Full Width) -->
+          <div class="filter-row" style="display:block;">
+            <select id="availStatus" onchange="applyFilters('available')" style="width:100%;">
+              <option value="">All Status</option>
+              <option value="WIP">WIP</option>
+              <option value="YTI">YTI</option>
+              <option value="Hold">Hold</option>
+              <option value="Closed">Closed</option>
+            </select>
+          </div>
+
+          <form method="post" id="addForm">
+            <input type="hidden" name="user_id" value="{{ selected_user.id }}">
+            <input type="hidden" name="action" value="add">
+            <div class="listbox" id="availList">
+              {% set avail = [] %}
+              {% for c in codes if c.id not in assigned_ids and c.team == selected_user.team %}
+                {% set _ = avail.append(1) %}
+                <label class="item" data-status="{{ c.status }}" data-text="{{ (c.code ~ ' ' ~ (c.team or ''))|lower }}">
+                  <div>
+                    <div class="code">{{ c.code }}</div>
+                    <div class="sub">
+                      {% if c.team %}Team: {{ c.team }}{% else %}—{% endif %}
+                    </div>
+                  </div>
+                  <span class="pill pill-{{ c.status }}">{{ c.status }}</span>
+                  <input type="checkbox" name="code_ids" value="{{ c.id }}" />
+                </label>
+              {% endfor %}
+              
+              {% if avail|length == 0 %}
+                <div class="muted" style="padding:12px">No available codes for team {{ selected_user.team }}.</div>
+              {% endif %}
+            </div>
+            <div class="actions">
+              <button class="btn btn-yellow" type="submit" id="addBtn" disabled>Assign</button>
+            </div>
+          </form>
+        </div>
+
+        <!-- CENTER — user preview -->
+        <div class="center-col">
+          <div class="preview">
+            <div class="p-head">
+              <img class="avatar"
+                   src="{{ selected_avatar }}"
+                   alt="avatar"
+                   onerror="this.onerror=null; this.src={{ url_for('static', filename='img/avatar-default.png') | tojson }};">
+              <div>
+                <div class="up-name">{{ selected_user.username }}</div>
+                <div class="up-email">{{ selected_user.email }}</div>
+              </div>
+            </div>
+
+            <div class="up-rows">
+              <div class="row"><span class="l">Role</span><span class="r">{{ selected_role or '—' }}</span></div>
+              <div class="row"><span class="l">Team</span><span class="r">{{ selected_team or '—' }}</span></div>
+              <div class="row"><span class="l">Assignments</span><span class="r" id="asgnCountMirror">{{ assigned_rows|length }}</span></div>
+            </div>
+
+            <div class="meta">
+              <span class="chip">User ID: {{ selected_user.id }}</span>
+              {% if selected_user.team %}<span class="chip">Group • {{ selected_user.team }}</span>{% endif %}
+            </div>
+          </div>
+        </div>
+
+        <!-- ASSIGNED -->
+        <div class="panel" data-side="assigned">
+          <div class="panel-head">
+            <div class="inline">
+              <strong>Assigned to {{ selected_user.username }}</strong>
+              <span class="chip count" id="asgnCount">0</span>
+            </div>
+            <div class="panel-tools">
+              <button type="button" class="btn btn-ghost" onclick="toggleSelectAll('assigned', true)">Select all</button>
+              <button type="button" class="btn btn-ghost" onclick="toggleSelectAll('assigned', false)">Clear</button>
+            </div>
+          </div>
+
+          <!-- SINGLE FILTER DROPDOWN (Full Width) -->
+          <div class="filter-row" style="display:block;">
+            <select id="asgnStatus" onchange="applyFilters('assigned')" style="width:100%;">
+              <option value="">All Status</option>
+              <option value="WIP">WIP</option>
+              <option value="YTI">YTI</option>
+              <option value="Hold">Hold</option>
+              <option value="Closed">Closed</option>
+            </select>
+          </div>
+
+          <form method="post" id="removeForm">
+            <input type="hidden" name="user_id" value="{{ selected_user.id }}">
+            <input type="hidden" name="action" value="remove">
+            <div class="listbox" id="asgnList">
+              {% for r in assigned_rows %}
+                <label class="item" data-status="{{ r.project.status }}" data-text="{{ (r.project.code)|lower }}">
+                  <div>
+                    <div class="code">{{ r.project.code }}</div>
+                    <div class="sub">Assigned</div>
+                  </div>
+                  <span class="pill pill-{{ r.project.status }}">{{ r.project.status }}</span>
+                  <input type="checkbox" name="code_ids" value="{{ r.project.id }}" />
+                </label>
+              {% endfor %}
+              {% if assigned_rows|length == 0 %}
+                <div class="muted" style="padding:12px">No active assignments.</div>
+              {% endif %}
+            </div>
+            <div class="actions">
+              <button class="btn btn-ghost" type="submit" id="removeBtn" disabled>Unassign</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Footer -->
+<footer class="footer">
+  <p>© Datasolve Analytics Pvt Ltd 2025.</p>
+</footer>
+
+<script>
+  /* Normalize body classes */
+  document.body.classList.remove('has-sidebar','sidebar-open');
+  document.body.classList.add('no-sidebar');
+  document.body.style.setProperty('--sidebar-w','0px');
+
+  function refreshCounts(){
+    const avail = document.querySelectorAll('#availList .item:not([hidden])').length;
+    const asgn  = document.querySelectorAll('#asgnList  .item:not([hidden])').length;
+    const availSel = document.querySelectorAll('#availList input[type=checkbox]:checked').length;
+    const asgnSel  = document.querySelectorAll('#asgnList  input[type=checkbox]:checked').length;
+    const addBtn = document.getElementById('addBtn'), remBtn = document.getElementById('removeBtn');
+    
+    document.getElementById('availCount').textContent = avail;
+    document.getElementById('asgnCount').textContent  = asgn;
+    
+    const mirror = document.getElementById('asgnCountMirror');
+    if(mirror) mirror.textContent = asgn;
+    
+    if(addBtn) addBtn.disabled = (availSel === 0);
+    if(remBtn) remBtn.disabled = (asgnSel === 0);
+  }
+
+  // UPDATED STRICT FILTER LOGIC (NO SEARCH TEXT, ONLY STATUS)
+  function applyFilters(side){
+    const listId = side === 'available' ? 'availList' : 'asgnList';
+    const statusId = side === 'available' ? 'availStatus' : 'asgnStatus';
+
+    const box = document.getElementById(listId);
+    const statusVal = document.getElementById(statusId).value.toLowerCase().trim();
+
+    [...box.querySelectorAll('.item')].forEach(el => {
+      // Get item status, trim whitespace to ensure strict matching
+      const st = (el.getAttribute('data-status') || '').toLowerCase().trim();
+      
+      // If statusVal is empty (All Status), match is true.
+      // Otherwise, strict equality check is required.
+      const hit = !statusVal || st === statusVal;
+      
+      el.hidden = !hit;
+      // Uncheck hidden items
+      // Uncheck hidden items
+      if(!hit) el.querySelector('input[type=checkbox]').checked = false;
+    });
+    refreshCounts();
+  }
+
+  function toggleSelectAll(side, checked){
+    const box = document.getElementById(side === 'available' ? 'availList' : 'asgnList');
+    [...box.querySelectorAll('.item:not([hidden]) input[type=checkbox]')].forEach(cb=> cb.checked = checked);
+    refreshCounts();
+  }
+
+  document.addEventListener('DOMContentLoaded', ()=>{
+    document.getElementById('dualList')?.addEventListener('change', e=>{
+      if(e.target.matches('input[type=checkbox]')) refreshCounts();
+    });
+    refreshCounts();
+  });
+</script>
+{% endblock %}

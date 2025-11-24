@@ -1,0 +1,487 @@
+{% extends "base.html" %}
+{% block title %}Logsy - Team Logs{% endblock %}
+
+{% block content %}
+<style>
+  .footer {
+    margin-top: 20px; padding: 15px 0; text-align: center; font-size: 14px; color: #fff;
+  }
+
+  :root{ --bg:#0b0c0f; --card:#121318; --card-2:#14161b; --text:#e9edf2; --muted:#a7b0bd;
+        --line:#262a33; --accent:#f5c400; --accent-2:#ffe16b; --chip:#181a20; --chip-line:#2a2f38; }
+
+  body{ background:var(--bg); color:var(--text); font-family:Inter,"Segoe UI",system-ui,-apple-system,sans-serif; }
+  .wrap{ max-width:2580px; margin:2px auto; padding:0 16px; }
+  .card{ background:linear-gradient(250deg,var(--card) 0%,var(--card-2) 120%); border:1px solid var(--line);
+        border-radius:16px; box-shadow:0 10px 32px rgba(0,0,0,.35); }
+
+  .head{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding:18px 22px;
+        border-bottom:1px solid var(--line);
+        background:radial-gradient(900px 110px at 8% -20%, rgba(245,196,0,.14), transparent 60%); }
+  .head h2{ margin:0; font-weight:720; letter-spacing:.2px; color:var(--accent); }
+  .head .sub{ color:var(--muted); font-size:.92rem; }
+
+  /* Flash messages */
+  .flash-wrap{ padding:10px 18px; border-bottom:1px solid var(--line); background:#101217; }
+  .alert{ margin:8px 0; padding:10px 12px; border-radius:8px; font-weight:600; border:1px solid transparent; }
+  .alert-success{ background:#0f2a1f; border-color:#1f6b4d; colorbff3db; }
+  .alert-error{   background:#2a1111; border-color:#6b1f1f; color:#f3c0c0; }
+
+  /* --- MODIFIED: Toolbar styles for flexbox --- */
+  .toolbar{ padding:14px 18px; border-bottom:1px solid var(--line); background:#101217; }
+
+  .filter-row {
+      display: flex;
+      flex-wrap: wrap; /* This is key for responsiveness */
+      gap: 10px;
+      align-items: end;
+  }
+
+  .fg {
+      flex: 1 1 180px; /* Each filter group will try to be 180px */
+      min-width: 160px; /* But won't shrink smaller than 160px */
+  }
+  .fg.date-filter {
+      flex: 1 1 160px; /* Dates can be a bit smaller */
+      max-width: 180px;
+  }
+  .fg.show-filter {
+      flex: 1 1 180px;
+      max-width: 200px;
+  }
+  .fg.buttons {
+      flex: 1 1 180px; /* Button group */
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end; /* Align buttons to the right */
+      min-width: 180px; /* Ensure buttons don't wrap */
+  }
+
+  .fg label{ display:block; font-size:.78rem; color:var(--muted); margin:0 0 6px 2px; }
+  select, input[type="date"]{ width:100%; padding:9px 12px; border-radius:10px; border:1px solid var(--line);
+                              background:var(--chip); color:var(--text); transition:.15s; }
+  select:focus, input[type="date"]:focus{ outline:none; border-color:var(--accent);
+                                          box-shadow:0 0 0 3px rgba(245,196,0,.18); background:#151820; }
+  .btn{ background:var(--accent); color:#000; font-weight:700; border:none; padding:10px 14px; border-radius:10px; cursor:pointer; transition:.15s; }
+  .btn:hover{ background:var(--accent-2); box-shadow:0 6px 18px rgba(245,196,0,.18); }
+  .btn:active{ transform:translateY(1px); }
+  .btn[disabled]{ opacity:.75; cursor:not-allowed; box-shadow:none; }
+  .btn-ghost{ background:transparent; color:var(--accent); border:1px solid var(--accent); padding:9px 12px; border-radius:10px; font-weight:600; }
+  .btn-ghost:hover{ background:rgba(245,196,0,.08); }
+
+  /* Table */
+  /* --- MODIFIED: Added max-height and overflow-y for inner scroll --- */
+  .table-wrap{
+      /* Add vertical scroll IN the table wrap */
+    overflow-x: auto;  /* Keep horizontal scroll for safety */
+  }
+  table{ width:100%; border-collapse:separate; border-spacing:0; table-layout:auto; }
+
+  /* --- MODIFIED: Make the whole thead sticky --- */
+  thead {
+    position: sticky; /* This makes the header freeze */
+    top: 0;           /* Sticks to the top of the .table-wrap */
+    z-index: 2;
+  }
+  thead th{
+    background:var(--accent); color:#000; font-weight:800; text-align:center;
+    padding:7px 8px; font-size:12.5px; border-bottom:1px solid #dcbc00;
+    white-space:normal;
+  }
+
+  /* --- NEW: Styles for the filter row in the table --- */
+  .filter-header-row th {
+    background: #f5d12e; /* Lighter accent */
+    padding: 6px 8px;
+  }
+  .filter-header-row select,
+  .filter-header-row input[type="date"] { /* MODIFIED: Added date input */
+    width: 100%;
+    padding: 6px 8px;
+    border-radius: 6px;
+    border: 1px solid var(--line);
+    background: var(--chip);
+    color: var(--text);
+    font-size: 12px;
+  }
+  .filter-header-row select:focus,
+  .filter-header-row input[type="date"]:focus { /* MODIFIED: Added date input */
+    outline: none;
+    border-color: var(--accent);
+  }
+  /* --- End of new styles --- */
+
+  tbody td{ text-align:left; padding:6px 8px; border-bottom:1px solid var(--line);
+            background:linear-gradient(180deg,#151820 0%,#11151b 100%); font-size:12.5px; line-height:1.15; white-space:normal; word-break:break-word; transition:.18s; }
+  tbody tr:nth-child(odd) td{ background:linear-gradient(180deg,#141820 0%,#10141a 100%); }
+  tbody tr:hover td{ background:#1a1f27; }
+
+  th.col-action{ width:150px; }
+  td.actions-cell{ white-space:nowrap; }
+  .pill{ display:inline-flex; align-items:center; justify-content:center; height:30px; padding:6px 12px; line-height:18px; border-radius:8px;
+        background:var(--chip); border:1px solid var(--chip-line); color:var(--text); text-decoration:none; font-weight:600; white-space:nowrap; }
+  .pill:hover{ border-color:var(--accent); color:var(--accent); }
+
+  .pill-delete {
+      background: #2a1111;
+      border-color: #6b1f1f;
+      color: #f3c0c0;
+      cursor: pointer;
+  }
+  .pill-delete:hover {
+      background: #4a2121;
+      border-color: #8b3f3f;
+      color: #f3c0c0;
+  }
+
+  /* Pagination footer */
+  .pager{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 18px; border-top:1px solid var(--line); background:#101217; }
+  .pager .left, .pager .right{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .mini{ padding:7px 10px; font-size:13px; border-radius:8px; border:1px solid var(--line); background:var(--chip); color:var(--text); }
+  .btn-mini{ padding:8px 12px; border-radius:8px; }
+  .muted{ color:var(--muted); font-size:.9rem; }
+
+  /* Modal Styles */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    z-index: 100;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0,0,0,0.7);
+  }
+  .modal-content {
+    background: var(--card);
+    margin: 15% auto;
+    padding: 24px;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    width: 90%;
+    max-width: 400px;
+    text-align: center;
+    box-shadow: 0 10px 32px rgba(0,0,0,.35);
+  }
+  .modal-title {
+    margin-top: 0;
+    margin-bottom: 12px;
+    color: var(--text);
+    font-weight: 700;
+    font-size: 1.2rem;
+  }
+  .modal-body {
+    color: var(--muted);
+    margin-bottom: 25px;
+    font-size: 0.95rem;
+  }
+  .modal-actions {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+  }
+  .modal-actions .btn,
+  .modal-actions .btn-ghost {
+    flex: 1;
+  }
+  .btn-danger {
+    background: #b00;
+    border-color: #b00;
+    color: white;
+  }
+  .btn-danger:hover {
+    background: #d00;
+  }
+
+  @media (max-width:900px){
+      .fg.buttons { justify-content: flex-start; } /* Stack buttons nicely on mobile */
+      .pager{ flex-direction:column; align-items:flex-start; }
+  }
+</style>
+
+<div class="wrap">
+  <div class="card">
+    <div class="head">
+      <h2>Team Logsy Logs</h2>
+      <div class="sub">Review, filter and edit entries</div>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-wrap">
+          {% for cat, msg in messages %}
+            <div class="alert alert-{{ 'success' if cat=='success' else 'error' }}">{{ msg }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <!-- --- MODIFIED: <form> ippo toolbar matrum table-a wrap pannuthu --- -->
+    <form method="POST" id="filterForm">
+      <input type="hidden" name="page" id="pageInput" value="{{ page|default(1) }}">
+
+      <div class="toolbar">
+        <!-- --- MODIFIED: Top filter row --- -->
+        <div class="filter-row">
+            <div class="fg date-filter">
+                <label>Start Date (Range)</label>
+                <input type="date" name="start_date" value="{{ request.form.start_date or '' }}" onchange="this.form.submit()">
+            </div>
+            <div class="fg date-filter">
+                <label>End Date (Range)</label>
+                <input type="date" name="end_date" value="{{ request.form.end_date or '' }}" onchange="this.form.submit()">
+            </div>
+            <div class="fg show-filter">
+                <label>Show</label>
+                <select class="mini" name="per_page" id="perPage" onchange="document.getElementById('pageInput').value=1; this.form.submit()">
+                    {% set _pp = (per_page|int if per_page is defined else 50) %}
+                    {% for n in [50,100,200,500,1000] %}
+                    <option value="{{ n }}" {% if _pp == n %}selected{% endif %}>{{ n }} / page</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="fg buttons">
+                <button class="btn" type="submit">Filter</button>
+                <a class="btn-ghost" href="{{ url_for('view_team_logs') }}">Reset</a>
+                <a class="btn-ghost" href="{{ url_for('live_status') }}">live status</a>
+            </div>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <!-- --- MODIFIED: Row 1: Column Titles (Order Changed) --- -->
+            <tr>
+              <th>Name</th>
+              {% if role == 'superadmin' %}<th>Team</th>{% endif %}
+              <th>Date</th>
+              <th>Project</th>
+              <th>Process</th>
+              <th>Sub-Process</th>
+              <th>Start</th>
+              <th>End</th>
+              <th>Duration</th>
+              <th class="col-action">Action</th>
+            </tr>
+
+            <!-- --- MODIFIED: Row 2: Column Filters (Order Changed + Date Filter Added) --- -->
+            <tr class="filter-header-row">
+              <th> <!-- Name Filter -->
+                <select name="username" onchange="this.form.submit()">
+                  <option value="">All</option>
+                  {% for u in users %}
+                  <option value="{{ u.username }}" {% if request.form.username == u.username %}selected{% endif %}>{{ u.username }}</option>
+                  {% endfor %}
+                </select>
+              </th>
+
+              {% if role == 'superadmin' %}
+              <th> <!-- Team Filter -->
+                <select name="team" onchange="this.form.submit()">
+                  <option value="">All</option>
+                  {% for t in teams %}
+                  <option value="{{ t }}" {% if request.form.team == t %}selected{% endif %}>{{ t }}</option>
+                  {% endfor %}
+                </select>
+              </th>
+              {% endif %}
+
+              <th> <!-- NEW: Date (Single) Filter -->
+                <input type="date" name="date" value="{{ request.form.date or '' }}" onchange="this.form.submit()">
+              </th>
+
+              <th> <!-- Project Filter -->
+                <select name="project" onchange="this.form.submit()">
+                  <option value="">All</option>
+                  {% for p in projects %}
+                  <option value="{{ p }}" {% if request.form.project == p %}selected{% endif %}>{{ p }}</option>
+                  {% endfor %}
+                </select>
+              </th>
+              <th> <!-- Process Filter -->
+                <select name="process" onchange="this.form.submit()">
+                  <option value="">All</option>
+                  {% for pr in processes %}
+                  <option value="{{ pr }}" {% if request.form.process == pr %}selected{% endif %}>{{ pr }}</option>
+                  {% endfor %}
+                </select>
+              </th>
+              <th> <!-- Sub-Process Filter -->
+                <select name="sub_process" onchange="this.form.submit()">
+                  <option value="">All</option>
+                  {% for sp in sub_processes %}
+                  <option value="{{ sp }}" {% if request.form.sub_process == sp %}selected{% endif %}>{{ sp }}</option>
+                  {% endfor %}
+                </select>
+              </th>
+
+              <th></th> <!-- Start (No filter) -->
+              <th></th> <!-- End (No filter) -->
+              <th></th> <!-- Duration (No filter) -->
+              <th></th> <!-- Action (No filter) -->
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in logs %}
+              {% set row_id = row[11] %}
+              {% set is_edit = (editing_id == row_id|string) %}
+              {% if is_edit %}
+                <tr class="editing">
+                  <form method="POST" action="{{ url_for('update_entry') }}">
+                    <input type="hidden" name="entry_id" value="{{ row_id }}">
+                    <input type="hidden" name="next" value="">
+                    <input type="hidden" name="page" value="{{ page|default(1) }}">
+                    <input type="hidden" name="per_page" value="{{ per_page|default(50) }}">
+
+                    <!-- --- MODIFIED: Column Order Changed --- -->
+                    <td>{{ row[0] }}</td> <!-- Name -->
+                    {% if role == 'superadmin' %}<td>{{ row[4] }}</td>{% endif %} <!-- Team -->
+                    <td>{{ row[1] }}</td> <!-- Date -->
+
+                    <td> <!-- Project -->
+                      <select class="t-select" name="project" required>
+                        <option value="{{ row[3] }}" selected>{{ row[3] }}</option>
+                        {% for p in projects %}{% if p != row[3] %}<option value="{{ p }}">{{ p }}</option>{% endif %}{% endfor %}
+                      </select>
+                    </td>
+                    <td> <!-- Process -->
+                      <select class="t-select" name="process" required>
+                        <option value="{{ row[5] }}" selected>{{ row[5] }}</option>
+                        {% for pr in processes %}{% if pr != row[5] %}<option value="{{ pr }}">{{ pr }}</option>{% endif %}{% endfor %}
+                      </select>
+                    </td>
+                    <td> <!-- Sub-Process -->
+                      <select class="t-select" name="sub_process" required>
+                        <option value="{{ row[6] }}" selected>{{ row[6] }}</option>
+                        {% for sp in sub_processes %}{% if sp != row[6] %}<option value="{{ sp }}">{{ sp }}</option>{% endif %}{% endfor %}
+                      </select>
+                    </td>
+                    <td><input class="t-input" type="time" name="start_time" value="{{ row[7] or '' }}" required></td> <!-- Start -->
+                    <td><input class="t-input" type="time" name="end_time" value="{{ row[8] or '' }}" required></td> <!-- End -->
+                    <td>{{ row[9] }}</td> <!-- Duration -->
+
+                    <td class="actions-cell">
+                      <div class="actions">
+                        <button class="btn" type="submit">Save</button>
+                        <!-- MODIFIED: Changed .pill to .btn-ghost for consistent size -->
+                        <a class="btn-ghost" href="{{ url_for('view_team_logs') }}">Cancel</a>
+                      </div>
+                    </td>
+                  </form>
+                </tr>
+              {% else %}
+                <tr>
+                  <!-- --- MODIFIED: Column Order Changed --- -->
+                  <td>{{ row[0] }}</td> <!-- Name -->
+                  {% if role == 'superadmin' %}<td>{{ row[4] }}</td>{% endif %} <!-- Team -->
+                  <td>{{ row[1] }}</td> <!-- Date -->
+                  <td>{{ row[3] }}</td> <!-- Project -->
+                  <td>{{ row[5] }}</td> <!-- Process -->
+                  <td>{{ row[6] }}</td> <!-- Sub-Process -->
+                  <td>{{ row[7] }}</td> <!-- Start -->
+                  <td>{{ row[8] }}</td> <!-- End -->
+                  <td>{{ row[9] }}</td> <!-- Duration -->
+
+                  <td class="actions-cell">
+                    <a class="pill" href="{{ url_for('view_team_logs', editing_id=row_id) }}">Edit</a>
+
+                    {% if role == 'superadmin' %}
+                      <button type="button" class="pill pill-delete delete-btn"
+                              data-delete-url="{{ url_for('delete_log', log_id=row[11]) }}"
+                              style="margin-left: 5px;">
+                        Delete
+                      </button>
+                    {% endif %}
+
+                  </td>
+                </tr>
+              {% endif %}
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </form> <!-- --- MODIFIED: Form tag ends here --- -->
+
+
+    {% set _page = page|default(1)|int %}
+    {% set _pp = per_page|default(50)|int %}
+    {% set _tp = total_pages|default(1)|int %}
+    <div class="pager">
+      <div class="left muted">
+        Showing <strong>{{ logs|length }}</strong> rows • Page <strong>{{ _page }}</strong> of <strong>{{ _tp }}</strong>
+      </div>
+      <div class="right">
+        <!-- MODIFIED: Added form="filterForm" and type="submit" for pagination -->
+        <button class="btn btn-mini" id="prevBtn" type="submit" form="filterForm" name="page" value="{{ _page - 1 }}" {% if _page <= 1 %}disabled{% endif %}>‹ Prev</button>
+        <button class="btn btn-mini" id="nextBtn" type="submit" form="filterForm" name="page" value="{{ _page + 1 }}" {% if _page >= _tp %}disabled{% endif %}>Next ›</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer class="footer"><p>© Datasolve Analytics Pvt Ltd 2025.</p></footer>
+
+<div id="deleteModal" class="modal-overlay">
+  <div class="modal-content">
+    <h3 class="modal-title">Confirm Deletion</h3>
+    <p class="modal-body">Are you sure you want to delete this log entry? This action cannot be undone.</p>
+    <div class="modal-actions">
+      <button type="button" id="cancelDeleteBtn" class="btn-ghost">Cancel</button>
+      <form id="confirmDeleteForm" method="POST" action="">
+        <button type="submit" class="btn btn-danger">Yes, Delete</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const modal = document.getElementById('deleteModal');
+  if (modal) {
+    const cancelBtn = document.getElementById('cancelDeleteBtn');
+    const deleteForm = document.getElementById('confirmDeleteForm');
+    const deleteButtons = document.querySelectorAll('.delete-btn');
+
+    // Function to show the modal
+    function showModal(url) {
+      deleteForm.action = url; // Set the form's action
+      modal.style.display = 'block';
+    }
+
+    // Function to hide the modal
+    function hideModal() {
+      modal.style.display = 'none';
+      deleteForm.action = ''; // Clear the action
+    }
+
+    // Add click listener to all delete buttons in the table
+    deleteButtons.forEach(button => {
+      button.addEventListener('click', function(e) {
+        e.preventDefault(); // Stop any default action
+        const deleteUrl = this.getAttribute('data-delete-url');
+        showModal(deleteUrl);
+      });
+    });
+
+    // Add click listener to the cancel button
+    if (cancelBtn) {
+      cancelBtn.addEventListener('click', hideModal);
+    }
+
+    // Add click listener to the modal background (to close on click outside)
+    modal.addEventListener('click', function(e) {
+      if (e.target === modal) {
+        hideModal();
+      }
+    });
+  }
+
+  // --- MODIFIED: Pagination button logic ---
+  // Removed the old JS for prevBtn and nextBtn
+  // The buttons are now type="submit" and handle pagination through the form.
+});
+</script>
+
+{% endblock %}

@@ -1,0 +1,494 @@
+{% extends "base.html" %}
+{% block title %}Timesheet Logger{% endblock %}
+
+{% block content %}
+<style>
+:root{
+  --primary:#ffd24d; --primary-hover:#ffdf85;
+  --accent:#2ecc71;  --danger:#e74c3c;
+  --bg:#0e1319;      --surface:#161d27;  --panel:#111722;
+  --text:#e7ecf2;    --muted:#9fb0c6;    --line:#232c3a;
+  /* Left alignment near sidebar */
+  --sidebar-w: 200px;  /* adjust to your sidebar width */
+  --left-gap: 0px;     /* small gap from sidebar */
+}
+
+html,body{height:100%;}
+body{
+  margin:0; padding:0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  background:var(--bg); color:var(--text); line-height:1.45;
+  overflow:auto; /* outer scroll only */
+}
+
+.wrap {
+  width: 84%;
+  max-width: none;
+  margin-left: calc(var(--sidebar-w) + var(--left-gap));
+  margin-right: 10px;
+}
+
+
+/* Hide the top bar you marked (keeps sidebar from base.html) */
+.topbar, .brand, .profile { display:none !important; }
+
+.card{
+  border:1px solid var(--line); background:var(--surface);
+  border-radius:16px; overflow:hidden;
+  box-shadow:0 14px 30px rgba(0,0,0,.25);
+  margin-bottom:18px; margin-left:0;
+}
+.card-head{ padding:16px 18px; border-bottom:1px solid var(--line);
+  background:linear-gradient(180deg,#1a2230,#151c27);
+}
+.card-head h1{ margin:0; font-size:22px; letter-spacing:.2px; font-weight:800; color:#eaf4ff; }
+
+.card-body{ padding:18px 0; }
+
+/* 3 boxes in one row */
+.box-grid{
+  display:grid; grid-template-columns: 1fr 1fr 1fr; gap:16px;
+}
+@media (max-width: 980px){ .box-grid{ grid-template-columns: 1fr; } }
+
+.box{
+  border:1px solid var(--line); background:var(--panel);
+  border-radius:12px; padding:16px;
+}
+.box h2{ margin:0 0 12px; font-size:15px; color:#cfe1ff; letter-spacing:.15px; font-weight:700; }
+
+.form-row{
+  display:grid; grid-template-columns: 120px 1fr; gap:10px; align-items:center;
+  margin-bottom:12px;
+}
+.form-row:last-child{ margin-bottom:0; }
+.form-row label{ color:var(--muted); font-size:13px; }
+
+input,select{
+  width:100%; padding:10px 12px; border-radius:8px; border:1px solid #2a3240;
+  background:#0f1520; color:var(--text); font-size:14px;
+}
+input[readonly], select[disabled]{ background:#101726; opacity:.95; }
+
+.helper{ font-size:12px; color:var(--muted); margin-top:6px; }
+.inline{ display:flex; gap:10px; align-items:center; }
+.inline button{
+  padding:10px 12px; border:none; border-radius:8px; font-weight:700; cursor:pointer;
+  background:var(--accent); color:#061016;
+}
+.inline button:hover{ filter:brightness(1.05); }
+
+.actions{
+  display:flex; justify-content:center; padding:14px; gap:10px;
+  border-top:1px solid var(--line); background:#131a25;
+}
+.primary{
+  background:var(--primary); color:#101010; border:none; border-radius:10px;
+  font-weight:800; padding:12px 22px; cursor:pointer;
+  box-shadow:0 8px 20px rgba(255,210,77,.18);
+}
+.primary:hover{ background:var(--primary-hover); }
+.primary:disabled{ opacity:.45; cursor:not-allowed; }
+
+.flash{ margin:10px 0 14px; }
+.flash .msg{
+  background:#0f1520; border:1px dashed #334155; color:#cfe6ff;
+  padding:10px 12px; border-radius:10px; font-size:13.5px;
+}
+
+/* table + filters (page scroll only; no inner scroll) */
+.table-card{ border:1px solid var(--line); background:#0f1520; border-radius:12px; overflow:visible; }
+.table-head{ padding:10px 14px; border-bottom:1px solid var(--line); background:#131a25; color:#cfe6ff; font-weight:700; }
+.table-wrap{ overflow-x:auto; overflow-y:visible; max-height:none; }
+table{ width:100%; border-collapse:collapse; font-size:13.5px; min-width:880px; }
+th,td{ padding:10px 12px; border-bottom:1px solid #1f2937; text-align:center; }
+thead th{
+  background:linear-gradient(180deg,#ffd24d,#ffecae); color:#121212; font-weight:800; position:sticky; top:0; z-index:3;
+}
+thead .filters th{ background:#182131; position:sticky; top:46px; z-index:2; }
+thead .filters select{ width:100%; padding:6px 8px; font-size:13px; border-radius:8px; background:#0f1520; color:#e7ecf2; border:1px solid #2a3240; }
+tbody tr:nth-child(even){ background:#122034; }
+tbody tr:hover{ background:#18283e; }
+.no-data{ color:#8fa5bf; text-align:center; padding:16px 0; }
+
+/* tiny gif under time box */
+.tiny-gif{ display:block; width:64px; height:64px; margin:8px auto 0; opacity:.9; }
+
+.edit-btn{
+  padding:6px 10px; font-size:12.5px; border-radius:8px; border:1px solid #3a4557;
+  background:#192231; color:#e7ecf2; cursor:pointer;
+}
+.edit-btn:hover{ background:#213044; }
+
+/* simple modal */
+.modal-backdrop{ display:none; position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:50; }
+.modal{ position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); width:min(520px,92vw);
+  background:#121a26; border:1px solid #2a3444; border-radius:12px; padding:16px; z-index:60; display:none;
+}
+.modal h3{ margin:0 0 10px; font-size:16px; color:#eaf4ff; }
+.modal .row{ display:grid; grid-template-columns: 130px 1fr; gap:10px; margin-bottom:10px; align-items:center; }
+.modal input, .modal select{ padding:9px 10px; }
+.modal .m-actions{ display:flex; justify-content:flex-end; gap:10px; }
+.btn{ padding:9px 14px; border-radius:8px; border:1px solid #374151; background:#0f1520; color:#e7ecf2; cursor:pointer; }
+.btn.primary{ background:var(--primary); color:#111; border:none; font-weight:800; }
+
+/* Narrow screens: center layout */
+@media (max-width: 1100px){
+  .wrap{ margin-left: 0 !important; margin-right: 0 !important; padding: 0 12px; }
+}
+</style>
+
+<div class="wrap">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="flash">
+        {% for cat, msg in messages %}
+          <div class="msg">{{ msg }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  <form method="POST" action="/start" class="card" autocomplete="off">
+    <div class="card-head"><h1>Timesheet Logger</h1></div>
+
+    <div class="card-body">
+      <!-- 3 PARTS -->
+      <div class="box-grid">
+        <!-- BOX 1: Name, Date, Team -->
+        <div class="box">
+          <h2>Work Details</h2>
+
+          <div class="form-row">
+            <label>Name</label>
+            <input type="text" name="name_display" value="{{ username }}" readonly>
+          </div>
+
+          <div class="form-row">
+            <label>Date</label>
+            <input type="date" name="date" value="{{ today }}" required>
+          </div>
+
+          {% if user_team %}
+          <div class="form-row">
+            <label>Team</label>
+            <div>
+              <input type="text" value="{{ user_team }}" readonly title="Team fixed by admin">
+              <input type="hidden" name="team" value="{{ user_team }}">
+              <div class="helper">Managed by admin</div>
+            </div>
+          </div>
+          {% else %}
+          <div class="form-row">
+            <label for="team">Team</label>
+            <select id="team" name="team" required>
+              <option value="">Select Team</option>
+            </select>
+          </div>
+          {% endif %}
+        </div>
+
+        <!-- BOX 2: Project, Process, Sub-Process -->
+        <div class="box">
+          <h2>Project & Process</h2>
+
+          {% set pc_count = user_project_codes|length %}
+          {% if pc_count == 0 %}
+            <div class="form-row">
+              <label>Project</label>
+              <div>
+                <input type="text" value="No assigned WIP project" readonly>
+                <div class="helper">Contact admin to assign a WIP project.</div>
+              </div>
+            </div>
+          {% elif pc_count == 1 %}
+            <div class="form-row">
+              <label>Project</label>
+              <div>
+                <input type="text" value="{{ user_project_codes[0].code }}" readonly>
+                <input type="hidden" name="project" value="{{ user_project_codes[0].code }}">
+                <div class="helper">Assigned by {{ user_project_codes[0].assigned_by }} (since {{ user_project_codes[0].start_date }})</div>
+              </div>
+            </div>
+          {% else %}
+            <div class="form-row">
+              <label for="project">Project</label>
+              <div>
+                <select name="project" id="project" required>
+                  <option disabled selected>Select Project</option>
+                  {% for p in user_project_codes %}
+                    <option value="{{ p.code }}">{{ p.code }}</option>
+                  {% endfor %}
+                </select>
+                <div class="helper">
+                  {% for p in user_project_codes %}
+                    • {{ p.code }} — {{ p.assigned_by }} (since {{ p.start_date }})<br>
+                  {% endfor %}
+                </div>
+              </div>
+            </div>
+          {% endif %}
+
+          <div class="form-row">
+            <label for="process">Process</label>
+            <select id="process" name="process" required>
+              <option value="">Select Process</option>
+            </select>
+          </div>
+
+          <div class="form-row">
+            <label for="sub_process">Sub‑Process</label>
+            <select id="sub_process" name="sub_process" required>
+              <option value="">Select Sub‑Process</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- BOX 3: Start & End Time + tiny gif -->
+        <div class="box">
+          <h2>Time</h2>
+
+          <div class="form-row">
+            <label for="start_time">Start Time</label>
+            <div class="inline">
+              <input type="time" name="start_time" id="start_time" required>
+              <button type="button" onclick="setCurrentTime('start_time')">Now</button>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <label for="end_time">End Time</label>
+            <div class="inline">
+              <input type="time" name="end_time" id="end_time" required>
+              <button type="button" onclick="setCurrentTime('end_time')">Now</button>
+            </div>
+          </div>
+
+          <!-- tiny animation gif (put your gif in /static/img/) -->
+          <img class="tiny-gif" src="/static/img/working.gif" alt="working...">
+        </div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="primary" type="submit" {% if pc_count == 0 %}disabled title="No assigned WIP project"{% endif %}>
+        Submit
+      </button>
+    </div>
+  </form>
+
+  <div class="table-card">
+    <div class="table-head">Recent Entries</div>
+    <div class="table-wrap">
+      <table id="log-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Date</th>
+            <th>Day</th>
+            <th>Project</th>
+            <th>Team</th>
+            <th>Process</th>
+            <th>Sub‑process</th>
+            <th>Start Time</th>
+            <th>End Time</th>
+            <th>Duration (h)</th>
+            <th>Edit</th>
+          </tr>
+          <!-- filter row -->
+          <tr class="filters">
+            <th><select data-col="0"><option value="">All</option></select></th>
+            <th><select data-col="1"><option value="">All</option></select></th>
+            <th><select data-col="2"><option value="">All</option></select></th>
+            <th><select data-col="3"><option value="">All</option></select></th>
+            <th><select data-col="4"><option value="">All</option></select></th>
+            <th><select data-col="5"><option value="">All</option></select></th>
+            <th><select data-col="6"><option value="">All</option></select></th>
+            <th><select data-col="7"><option value="">All</option></select></th>
+            <th><select data-col="8"><option value="">All</option></select></th>
+            <th><select data-col="9"><option value="">All</option></select></th>
+            <th><!-- no filter for edit --></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if entries %}
+            {% for row in entries %}
+              <tr data-id="{{ row[10] if row|length>10 else loop.index0 }}">
+                <td>{{ row[0] }}</td>
+                <td>{{ row[1] }}</td>
+                <td>{{ row[2] }}</td>
+                <td>{{ row[3] }}</td>
+                <td>{{ row[4] }}</td>
+                <td>{{ row[5] }}</td>
+                <td>{{ row[6] }}</td>
+                <td>{{ row[7] }}</td>
+                <td>{{ row[8] }}</td>
+                <td>{{ row[9] }}</td>
+                <td>
+                  <button type="button" class="edit-btn">Edit</button>
+                </td>
+              </tr>
+            {% endfor %}
+          {% else %}
+            <tr><td colspan="11" class="no-data">No data found</td></tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT MODAL -->
+<div class="modal-backdrop" id="mb"></div>
+<div class="modal" id="mm">
+  <h3>Edit Entry</h3>
+  <form id="edit-form" method="POST" action="/update-entry">
+    <input type="hidden" name="entry_id" id="m_entry_id">
+    <div class="row">
+      <label>Project</label>
+      <input type="text" name="project" id="m_project">
+    </div>
+    <div class="row">
+      <label>Process</label>
+      <input type="text" name="process" id="m_process">
+    </div>
+    <div class="row">
+      <label>Sub‑Process</label>
+      <input type="text" name="sub_process" id="m_sub">
+    </div>
+    <div class="row">
+      <label>Start Time</label>
+      <input type="time" name="start_time" id="m_start">
+    </div>
+    <div class="row">
+      <label>End Time</label>
+      <input type="time" name="end_time" id="m_end">
+    </div>
+    <div class="m-actions">
+      <button type="button" class="btn" id="m_close">Cancel</button>
+      <button type="submit" class="btn primary">Save</button>
+    </div>
+  </form>
+</div>
+
+<script>
+  function setCurrentTime(id){
+    const n = new Date();
+    document.getElementById(id).value =
+      String(n.getHours()).padStart(2,'0') + ':' + String(n.getMinutes()).padStart(2,'0');
+  }
+
+  // master: { Team: { Process: [Sub1, Sub2...] } }
+  const master   = {{ team_json|tojson }};
+  const userTeam = {{ user_team|tojson }}; // string or null
+
+  // ====== Process/Sub-process cascade ======
+  window.addEventListener('load', () => {
+    const processSel = document.getElementById('process');
+    const subSel     = document.getElementById('sub_process');
+
+    const fillProcesses = (team) => {
+      processSel.length = 1; subSel.length = 1;
+      if (!team || !master[team]) return;
+      Object.keys(master[team]).forEach(proc => processSel.add(new Option(proc, proc)));
+    };
+
+    processSel.onchange = () => {
+      subSel.length = 1;
+      const tVal = userTeam || (document.getElementById('team')?.value || '');
+      if (!processSel.value || !tVal) return;
+      (master[tVal][processSel.value] || []).forEach(sp => subSel.add(new Option(sp, sp)));
+    };
+
+    if (userTeam) {
+      fillProcesses(userTeam);
+    } else {
+      const teamSel = document.getElementById('team');
+      Object.keys(master).forEach(t => teamSel.add(new Option(t, t)));
+      teamSel.onchange = () => fillProcesses(teamSel.value);
+    }
+  });
+
+  // ====== Filters for table (dropdown per column) ======
+  (function initFilters(){
+    const table = document.getElementById('log-table');
+    const tbody = table.querySelector('tbody');
+    const rows  = Array.from(tbody.querySelectorAll('tr'));
+    const filters = Array.from(table.querySelectorAll('thead .filters select'));
+
+    // build unique options for each column
+    filters.forEach(sel => {
+      const col = parseInt(sel.dataset.col,10);
+      const values = new Set();
+      rows.forEach(r => {
+        const cell = r.children[col];
+        if (!cell) return;
+        const v = (cell.textContent || '').trim();
+        if (v) values.add(v);
+      });
+      Array.from(values).sort().forEach(v => sel.add(new Option(v, v)));
+      sel.addEventListener('change', applyFilter);
+    });
+
+    function applyFilter(){
+      const active = filters.map(s => s.value);
+      rows.forEach(r => {
+        let visible = true;
+        for (let i=0;i<active.length;i++){
+          if (!filters[i].value) continue;
+          const v = (r.children[i].textContent || '').trim();
+          if (v !== active[i]) { visible = false; break; }
+        }
+        r.style.display = visible ? '' : 'none';
+      });
+    }
+  })();
+
+  // ====== Enable Edit only for last 3 days ======
+  (function enableEditForRecent(){
+    const today = new Date("{{ today }}"); // 'YYYY-MM-DD' from backend
+    const table = document.getElementById('log-table');
+    const rows  = Array.from(table.querySelectorAll('tbody tr'));
+
+    rows.forEach(r => {
+      const dateText = r.children[1]?.textContent?.trim(); // Date column
+      const btn = r.querySelector('.edit-btn');
+      if (!btn || !dateText) return;
+
+      const d = new Date(dateText);
+      const diffDays = (today - d)/(1000*60*60*24);
+
+      if (isNaN(diffDays) || diffDays > 3 || diffDays < 0){
+        btn.style.display = 'none';
+        return;
+      }
+
+      // attach open-modal handler
+      btn.addEventListener('click', () => openEditModal(r));
+    });
+  })();
+
+  // ====== Edit modal handlers ======
+  const mb = document.getElementById('mb');
+  const mm = document.getElementById('mm');
+  const mClose = document.getElementById('m_close');
+
+  function openEditModal(row){
+    const id = row.dataset.id || '';
+    document.getElementById('m_entry_id').value = id;
+    document.getElementById('m_project').value  = row.children[3]?.textContent?.trim() || '';
+    document.getElementById('m_process').value  = row.children[5]?.textContent?.trim() || '';
+    document.getElementById('m_sub').value      = row.children[6]?.textContent?.trim() || '';
+    document.getElementById('m_start').value    = (row.children[7]?.textContent?.trim() || '').slice(0,5);
+    document.getElementById('m_end').value      = (row.children[8]?.textContent?.trim() || '').slice(0,5);
+
+    mb.style.display = 'block';
+    mm.style.display = 'block';
+  }
+  function closeModal(){
+    mb.style.display = 'none';
+    mm.style.display = 'none';
+  }
+  mClose.addEventListener('click', closeModal);
+  mb.addEventListener('click', closeModal);
+</script>
+{% endblock %}

@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Register</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-image: url('https://storage.googleapis.com/my-react-image-bucket-123/Background25.jpg'); /* Adjust this path */ /* ✅ Update path to your image */
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      margin: 0;
+      padding: 0;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      animation: fadeIn 1.2s ease-in;
+    }
+
+    .container {
+      background: rgba(0, 0, 0, 0.7);
+      padding: 30px 25px;
+      border-radius: 12px;
+      box-shadow: 0 0 20px rgba(255, 204, 0, 0.3);
+      backdrop-filter: blur(6px);
+      border: 1px solid rgba(255, 204, 0, 0.4);
+      width: 100%;
+      max-width: 400px;
+      text-align: center;
+      color: #fff;
+      animation: slideUp 1.3s ease-out;
+    }
+
+    h1 {
+      color: #ffcc00;
+      margin-bottom: 18px;
+      font-size: 28px;
+      text-shadow: 0 0 10px rgba(255, 204, 0, 0.3);
+    }
+
+    form {
+      margin-top: 15px;
+    }
+
+    label {
+      font-size: 14px;
+      font-weight: bold;
+      display: block;
+      margin-bottom: 4px;
+      text-align: left;
+      color: #fff;
+    }
+
+    input[type="text"],
+    input[type="password"],
+    select {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 14px;
+      border: 1px solid #555;
+      border-radius: 6px;
+      font-size: 14px;
+      background: rgba(255, 255, 255, 0.9);
+      color: #111;
+      transition: box-shadow 0.3s ease;
+    }
+
+    input[type="text"]:focus,
+    input[type="password"]:focus,
+    select:focus {
+      box-shadow: 0 0 6px #ffcc00;
+      outline: none;
+    }
+
+    input[type="submit"] {
+      background: #ffcc00;
+      color: #000;
+      padding: 12px 20px;
+      border: none;
+      border-radius: 6px;
+      font-size: 16px;
+      cursor: pointer;
+      width: 100%;
+      font-weight: bold;
+      transition: background 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
+    }
+
+    input[type="submit"]:hover {
+      background: #ffd700;
+      transform: scale(1.05);
+      box-shadow: 0 0 12px #ffcc00;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
+
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(40px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Register</h1>
+
+    <form method="POST" action="/signup">
+      <label for="username">Username:</label>
+      <input type="text" id="username" name="username" required>
+
+      <label for="email">Email:</label>
+      <input type="text" id="email" name="email" required>
+
+      <label for="team">Select Your Team:</label>
+      <select id="team" name="team" required>
+        <option value="">-- Select Team --</option>
+        <option value="MCTeam">MCTeam</option>
+        <option value="IPTeam">IPTeam</option>
+        <option value="BDTeam">BDTeam</option>
+        <option value="BDTeam">AnalyticsTeam</option>
+      </select>
+
+      <label for="password">Password:</label>
+      <input type="password" id="password" name="password" required>
+
+      <label for="confirm_password">Re-enter Password:</label>
+      <input type="password" id="confirm_password" name="confirm_password" required>
+
+      <input type="submit" value="Register">
+    </form>
+  </div>
+</body>
+</html>

@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}My 7-Day Hours{% endblock %}
+{% block content %}
+<style>
+  .week-grid{
+    display:flex; gap:10px; flex-wrap:wrap; margin:20px 0
+  }
+  .day-box{
+    flex:1 0 120px; background:#161d27; border-radius:10px; padding:12px;
+    text-align:center; color:#cfe6ff; box-shadow:0 4px 12px rgba(0,0,0,.35);
+    border:1px solid #232c3a; position:relative
+  }
+  .day-box .wday{opacity:.9; font-size:13px; letter-spacing:.2px}
+  .day-box .date{opacity:.65; font-size:12px; margin-top:2px}
+  .day-box strong{
+  display:block; font-size:16px; margin-top:6px; letter-spacing:.3px;
+  color:#fff;
+}
+.day-box strong.leave-text{
+  color:#ff0000;   /* 🔴 Red override */
+}
+
+  .total-box{
+    background:#ffd24d; color:#111; font-weight:800; border:none;
+    box-shadow:0 6px 16px rgba(255,210,77,.25)
+  }
+  .badge-today{
+    position:absolute; top:6px; right:6px; font-size:10px; padding:2px 6px;
+    border-radius:999px; background:#0ea5e9; color:#081018; font-weight:800
+  }
+  /* 🔴 Leave style in red */
+  .leave-text{
+    color:#ff0000; 
+    font-weight:700;
+  }
+  .meta{color:#9fb0c6; margin-bottom:8px}
+  @media (max-width:560px){
+    .day-box{ flex:1 0 calc(50% - 10px) }
+  }
+</style>
+
+<div class="card">
+  <div class="card-head"><h2 style="margin:0">Last 7 Days – {{ username }}</h2></div>
+  <div class="card-body">
+    <div class="meta">Window: {{ start_date }} → {{ end_date }}</div>
+
+    <div class="week-grid">
+      {% for d, hms in series %}
+        {% set is_today = (d == end_date) %}
+        <div class="day-box">
+          {% if is_today %}<span class="badge-today">Today</span>{% endif %}
+          <div class="wday">{{ d|datetimeformat("%a") }}</div>
+          <div class="date">{{ d|datetimeformat("%d %b") }}</div>
+          {% if hms == "00:00" %}
+            <strong class="leave-text">Leave</strong>
+          {% else %}
+            <strong>{{ hms }}</strong>
+          {% endif %}
+        </div>
+      {% endfor %}
+      <div class="day-box total-box">
+        <div class="wday">Total Hours</div>
+        <div class="date">{{ start_date|datetimeformat("%d %b") }}–{{ end_date|datetimeformat("%d %b") }}</div>
+        <strong>{{ total_str }}</strong>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

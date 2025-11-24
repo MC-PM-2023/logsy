@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <!-- This is the link for the Bootstrap Icons, which you already had -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <meta charset="UTF-8">
+  <title>{% block title %}Logsy{% endblock %}</title>
+  <link rel="icon" href="https://storage.googleapis.com/my-react-image-bucket-123/DS_Logos/Logsy_Favicon.png" type="image/x-icon">
+  <style>
+    :root{
+      --sidebar-w: 180px; /* <-- 200px-லிருந்து 180px ஆக குறைத்துள்ளேன் */
+      --bg:#1e1e1e; --text:#ffffff;
+      --header:#ffffff; --sidebar:#111821;
+      --brand:#f1c40f; --brand-hover:#ffd24d;
+      --ease:cubic-bezier(.2,.7,.2,1);
+      --shadow:0 12px 34px rgba(0,0,0,.35), 0 1px 0 rgba(255,255,255,.06);
+      --line:#e9ecf2;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+
+    /* page */
+    body{
+      font-family:'Segoe UI',sans-serif;
+      background:var(--bg); color:var(--text);
+      margin-left:var(--sidebar-w);
+      transition:margin-left .32s var(--ease);
+    }
+    body.no-sidebar{ margin-left:0 !important; }
+
+    /* header */
+    header{
+      position:fixed; top:0; left:0; right:0;
+      background:var(--header); color:#000;
+      padding:6px 16px;
+      display:flex; align-items:center; justify-content:space-between;
+      box-shadow:0 2px 6px rgba(0,0,0,.6);
+      z-index:1000;
+    }
+    .logo img{height:42px; cursor:pointer; user-select:none}
+
+    .userwrap{display:flex; align-items:center; gap:12px; font-weight:600; font-size:15px; position:relative;}
+    .uname{color:#070707}
+
+    /* avatar */
+    .picon{
+      width:38px; height:38px; border-radius:50%;
+      object-fit:cover;
+      object-position:50% 18%;
+      
+      background:#222;
+      cursor:pointer;
+    }
+    .picon-lg{
+      width:70px; height:70px; border-radius:50%;
+      object-fit:cover;
+      object-position:50% 18%;   /* ⬅️ same nudge for sidebar */
+    }
+    .gif{height:45px}
+
+    /* sidebar */
+    .sidebar{
+      position:fixed; top:0; left:0; bottom:0;
+      width:var(--sidebar-w); background:var(--sidebar);
+      padding-top:80px; display:flex; flex-direction:column; gap:20px; /* <-- 30px-லிருந்து 20px ஆக குறைத்துள்ளேன் */
+      box-shadow:2px 0 12px rgba(0,0,0,.55);
+      z-index:900; transition:transform .32s var(--ease);
+    }
+    body.no-sidebar .sidebar{ transform:translateX(-100%); }
+
+    .sidebar .avatar{
+      text-align:center; color:var(--brand); font-weight:600;
+      display:flex; flex-direction:column; align-items:center; gap:8px;
+    }
+    .sidebar .avatar .name{ color:#e8e8e8; font-weight:700; }
+    .sidebar .avatar small{ color:#b7c0cc; font-weight:600; }
+
+    /* ----- OLD NAV STYLES ----- */
+    /* These are now overridden by the new styles below, but are safe to keep */
+    .sidebar nav{display:flex; flex-direction:column; gap:12px; padding:0 12px;} /* <-- 20px-லிருந்து 12px ஆக குறைத்துள்ளேன் */
+    .sidebar nav a{
+      background:var(--brand); color:#111821; text-decoration:none;
+      font-weight:700; font-size:14px; text-align:center;
+      padding:4px 8px; border-radius:10px;
+      transition:background .2s, transform .18s var(--ease);
+    }
+    .sidebar nav a:hover{background:var(--brand-hover); transform:translateY(-1px);}
+    /* ----- END OLD NAV STYLES ----- */
+
+
+    /* edge arrow toggle */
+    .edge-toggle{
+      position:fixed;
+      top:90px;
+      left:calc(var(--sidebar-w) - 10px);
+      z-index:980;
+      width:22px; height:60px;
+      border-radius:10px 0 0 10px;
+      background:#ffd24d; color:#111;
+      border:1px solid #c9a100;
+      display:flex; align-items:center; justify-content:center;
+      font-size:20px; font-weight:800; line-height:1;
+      cursor:pointer; user-select:none;
+      box-shadow:0 4px 16px rgba(0,0,0,.4);
+      transition:left .32s var(--ease), background .2s;
+    }
+    .edge-toggle:hover{ background:#ffe57a; }
+    body.no-sidebar .edge-toggle{ left:6px; }
+
+    /* content */
+    main{ 
+      padding:90px 15px; /* <-- 20px-லிருந்து 15px ஆக குறைத்துள்ளேன் */
+      min-height:calc(100vh - 90px); 
+      overflow-x: auto; /* <-- ADDED THIS to prevent content being cut off */
+    }
+
+    /* ===== Header Profile Dropdown ===== */
+    .profile-dropdown{
+      position:absolute;
+      top:52px;          /* just below the avatar */
+      right:0;
+      width:310px;
+      background:#fff;
+      color:#111;
+      border-radius:14px;
+      box-shadow:var(--shadow);
+      border:1px solid #e8eaef;
+      padding:12px;
+      display:none;        /* hidden by default */
+      z-index:1200;
+    }
+    .profile-dropdown.open{ display:block; }
+
+    .pd-card{
+      display:grid;
+      grid-template-columns: 52px 1fr;
+      gap:12px;
+      padding:10px;
+      border-radius:12px;
+      background:#f7f8fb;
+      border:1px solid #eef1f6;
+    }
+    .pd-avatar{
+      width:52px; height:52px; border-radius:50%;
+      object-fit:cover; object-position:50% 18%;
+      border:1px solid rgba(243, 0, 0, 0.06);
+      background:#ddd;
+    }
+    .pd-name{ font-weight:700; font-size:15px; color:#111; }
+    .pd-email{ font-size:12px; color:#4a4f57; word-break:break-all; }
+    
+    .pd-role {
+      display: inline-block;
+      margin-top: 4px;
+      padding: 4px 10px;
+      font-size: 12px;
+      font-weight: 600;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #c9c7c7, #c9c7c7);
+      color: #111;
+      text-transform: capitalize;
+    }
+
+    /* divider + padding for the action area */
+    .pd-actions{
+      margin-top:10px;
+      padding:10px 12px 12px;
+      border-top:1px solid #eef2f7;
+    }
+
+    /* logout row */
+    .pd-logout{
+      display:flex; align-items:center; gap:10px;
+      padding:8px 10px;
+      border-radius:10px;
+      color:#f71111;           /* red color */
+      font-weight:600; font-size:14px;
+      text-decoration:none;
+      line-height:1;           /* fixes vertical misalign */
+    }
+    .pd-logout:hover{ background:#f3f4f6; color:#111; }
+
+    /* icon sizing & alignment */
+    .logout-icon{
+      width:20px; height:20px;
+      flex:0 0 20px;            /* prevents squish */
+      display:block;           /* avoids baseline drop */
+    }
+
+    /* small screens */
+    @media (max-width: 900px){
+      body{ margin-left:0; }
+      .sidebar{ transform:translateX(-100%); }
+      body.sidebar-open .sidebar{ transform:translateX(0); }
+      .edge-toggle{ left:6px; }
+    }
+    @media (prefers-reduced-motion: reduce){
+      *{transition:none !important; animation:none !important;}
+    }
+    
+    
+    /* ===== VVVV: NEW STYLES ADDED HERE VVVV ===== */
+
+    /* ===== New Sidebar Navigation Style ===== */
+    .sidebar nav {
+        gap: 8px; /* A bit less space between items */
+    }
+
+    .sidebar nav a {
+        /* --- Style Change --- */
+        background: transparent;  /* Remove the yellow background */
+        color: #e8e8e8;          /* Light text for the dark sidebar */
+        text-align: left;       /* Align text to the left */
+        font-weight: 600;       /* A bit lighter than 700 */
+        font-size: 14px;        /* <-- 15px-லிருந்து 14px ஆக குறைத்துள்ளேன் */
+        padding: 10px 12px;     /* <-- Padding சரிசெய்யப்பட்டுள்ளது */
+        border-radius: 8px;     /* A more standard border radius */
+        
+        /* --- Icon Alignment --- */
+        display: flex;
+        align-items: center;
+        gap: 12px; /* <-- 14px-லிருந்து 12px ஆக குறைத்துள்ளேன் */
+        
+        /* --- Animation Prep --- */
+        transition: background 0.2s, color 0.2s, transform 0.15s var(--ease);
+    }
+
+    /* --- Hover Effect --- */
+    .sidebar nav a:hover {
+        background: rgba(255, 255, 255, 0.1); /* Subtle background on hover */
+        color: var(--brand);                  /* Highlight text with brand color */
+        transform: translateX(4px);           /* Small "nudge" effect */
+    }
+
+    /* --- ✨ Click Animation --- */
+    .sidebar nav a:active {
+        transform: scale(0.96);      /* This is the click animation you wanted! */
+        transition-duration: 0.05s;  /* Make the click feel very fast */
+    }
+
+    /* --- Active Page Style --- */
+    /* This class will highlight the current page */
+    .sidebar nav a.active {
+        background: var(--brand); /* The yellow background */
+        color: #111821;        /* Dark text */
+        font-weight: 700;       /* Make it bold */
+    }
+    .sidebar nav a.active:hover {
+        transform: none; /* Don't nudge the active link */
+    }
+
+    /* --- Icon Styling --- */
+    .sidebar nav a i {
+        font-size: 16px;    /* <-- 18px-லிருந்து 16px ஆக குறைத்துள்ளேன் */
+        line-height: 1;
+        width: 20px;        /* <-- 22px-லிருந்து 20px ஆக குறைத்துள்ளேன் */
+        text-align: center; /* Center the icon in its "box" */
+    }
+    
+    /* ===== ^^^^: END OF NEW STYLES ^^^^ ===== */
+
+  </style>
+
+  {% block head_extra %}{% endblock %}
+</head>
+
+<body class="{% if no_sidebar %}no-sidebar{% endif %}">
+
+  <header>
+    <div class="logo" id="logoToggle" aria-label="Toggle sidebar">
+      <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo">
+    </div>
+
+    {% if username %}
+    <div class="userwrap" id="profileWrap">
+      <span class="uname">{{ username }}</span>
+
+      <!-- TOP-RIGHT PROFILE PHOTO (TOGGLE) -->
+      <img
+        id="profileBtn"
+        class="picon"
+        src="{{ profile_image_url or url_for('static', filename='img/avatar-default.png') }}"
+        alt="{{ username }}"
+        aria-haspopup="true"
+        aria-expanded="false"
+        tabindex="0">
+
+      <img class="gif" src="https://storage.googleapis.com/my-react-image-bucket-123/Logsy.gif" alt="App GIF">
+
+
+      <!-- DROPDOWN -->
+      <div id="profileDropdown" class="profile-dropdown" role="menu" aria-label="Profile menu">
+        <div class="pd-card">
+          <img class="pd-avatar"
+               src="{{ profile_image_url or url_for('static', filename='img/avatar-default.png') }}"
+               alt="{{ username }}">
+          <div>
+            <div class="pd-name">{{ username }}</div>
+            <div class="pd-email">{{ user_email or '' }}</div>
+            <div class="pd-role">{{ role or '' }}</div>
+          </div>
+        </div>
+
+        <div class="pd-actions">
+          <a class="pd-logout" href="{{ url_for('logout') }}">
+            <svg class="logout-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
+                 fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                 aria-hidden="true">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+              <polyline points="16 17 21 12 16 7"/>
+              <line x1="21" y1="12" x2="9" y2="12"/>
+            </svg>
+            <span>Logout</span>
+          </a>
+        </div>
+      </div> <!-- End profileDropdown -->
+    </div> <!-- End userwrap -->
+    {% endif %}
+  </header>
+
+  {% if username and not no_sidebar %}
+  <aside class="sidebar" role="navigation" aria-label="Sidebar">
+    <div class="avatar">
+      <img
+        class="picon picon-lg"
+        src="{{ profile_image_url or url_for('static', filename='img/avatar-default.png') }}"
+        alt="{{ profile_name }}">
+
+      <!-- 👇 Show Name + Employee_ID -->
+      <div class="name">
+        {{ profile_name }}<br>
+        <small>{{ employee_id }}</small>
+      </div>
+    </div>
+
+
+    <!-- ===== VVVV: UPDATED NAVIGATION BLOCK VVVV ===== -->
+    <nav>
+      <!-- 
+        This uses the 'active_page' variable from your Flask route.
+        Example: class="{{ 'active' if active_page == 'home' else '' }}"
+      -->
+      <a href="{{ url_for('dashboard') }}" class="{{ 'active' if active_page == 'dashboard' else '' }}" title="Hii Home">
+        <i class="bi bi-house-door-fill"></i>
+        Home
+      </a>
+      
+      {% if role == 'superadmin' %}
+        <a href="{{ url_for('manage_users') }}" class="{{ 'active' if active_page == 'manage_users' else '' }}" title="Manage Users">
+          <i class="bi bi-person-fill-gear"></i>
+          Administration
+        </a>
+      {% endif %}
+      
+      {% if role in ['superadmin','admin'] %}
+        <a href="{{ url_for('manage_process') }}" class="{{ 'active' if active_page == 'manage_process' else '' }}" title="Manage Process/Sub-Process">
+          <i class="bi bi-diagram-3-fill"></i>
+          Process
+        </a>
+        <a href="{{ url_for('assign_projects') }}" class="{{ 'active' if active_page == 'assign_projects' else '' }}" title="Assign Projects">
+          <i class="bi bi-clipboard-plus-fill"></i>
+          Assign
+        </a>
+         <a href="{{ url_for('admin_project_codes') }}" class="{{ 'active' if active_page == 'admin_project_codes' else '' }}" title="View Project Allocations">
+           <i class="bi bi-journal-check"></i>
+           Allocations
+         </a>
+         <a href="{{ url_for('dashboard_bp.index') }}" class="{{ 'active' if active_page == 'dashboard_bp' else '' }}" title="View Dashboard Analytics">
+           <i class="bi bi-bar-chart-line-fill"></i>
+           Dashboard
+         </a>
+        
+        {% if role == "superadmin" %}
+          <a href="{{ url_for('view_team_logs') }}" class="{{ 'active' if active_page == 'view_team_logs' else '' }}" title="View Team Logs">
+            <i class="bi bi-calendar3-week-fill"></i>
+            Team Logs
+          </a>
+        {% else %}
+          <a href="{{ url_for('view_team_logs') }}" class="{{ 'active' if active_page == 'view_team_logs' else '' }}" title="View {{ user_team if user_team else 'Team' }} Logs">
+            <i class="bi bi-calendar3-week-fill"></i>
+            {{ user_team if user_team else 'Team' }} Logs
+          </a>
+        {% endif %}
+      {% endif %}
+      
+    </nav>
+    <!-- ===== ^^^^: END OF UPDATED NAVIGATION ^^^^ ===== -->
+
+  </aside>
+  {% endif %}
+
+  <!-- Arrow toggle -->
+  <div id="edgeToggle" class="edge-toggle" role="button" aria-label="Collapse sidebar" aria-expanded="true">‹</div>
+
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+
+  <script>
+    (function(){
+      const body = document.body;
+      const logo = document.getElementById('logoToggle');
+      const edge = document.getElementById('edgeToggle');
+      const STORAGE_KEY = 'sidebarOpen';
+
+      const isNarrow = () => window.matchMedia('(max-width: 900px)').matches;
+
+      function apply(open){
+        if(isNarrow()){
+          body.classList.toggle('sidebar-open', open);
+          body.classList.toggle('no-sidebar', !open);
+        }else{
+          body.classList.toggle('no-sidebar', !open);
+          body.classList.remove('sidebar-open');
+        }
+        if(edge){
+          edge.textContent = open ? '‹' : '›';
+          edge.setAttribute('aria-expanded', String(open));
+          edge.setAttribute('aria-label', open ? 'Collapse sidebar' : 'Expand sidebar');
+        }
+      }
+      function currentOpen(){
+        if(isNarrow()){
+          return body.classList.contains('sidebar-open') || !body.classList.contains('no-sidebar');
+        }
+        return !body.classList.contains('no-sidebar');
+      }
+      function toggle(){
+        const next = !currentOpen();
+        apply(next);
+        try{ localStorage.setItem(STORAGE_KEY, String(next)); }catch(e){}
+      }
+      function restore(){
+        let saved = null;
+        try{ saved = localStorage.getItem(STORAGE_KEY); }catch(e){}
+        const wantOpen = saved === null ? true : (saved === 'true');
+        apply(isNarrow() ? false : wantOpen);
+      }
+      edge && edge.addEventListener('click', toggle);
+      logo && logo.addEventListener('click', toggle);
+      window.addEventListener('resize', restore);
+      document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape' && isNarrow()){ apply(false); }});
+      restore();
+
+      /* ===== Profile dropdown ===== */
+      const btn = document.getElementById('profileBtn');
+      const dd  = document.getElementById('profileDropdown');
+
+      function openDD(open){
+        if(!dd) return;
+        dd.classList.toggle('open', open);
+        btn && btn.setAttribute('aria-expanded', String(open));
+      }
+      function toggleDD(){ openDD(!dd.classList.contains('open')); }
+
+      if(btn){
+        btn.addEventListener('click', toggleDD);
+        btn.addEventListener('keydown', (e)=>{
+          if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); toggleDD(); }
+          if(e.key === 'Escape'){ openDD(false); }
+        });
+      }
+      document.addEventListener('click', (e)=>{
+        if(!dd) return;
+        if(dd.classList.contains('open') && !dd.contains(e.target) && !btn.contains(e.target)){
+          openDD(false);
+        }
+      });
+      window.addEventListener('keydown', (e)=>{ if(e.key === 'Escape'){ openDD(false); }});
+    })();
+  </script>
+  
+</body>
+</html>
