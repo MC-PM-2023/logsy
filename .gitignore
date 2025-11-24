@@ -9,6 +9,7 @@ __pycache__/
 *.pkl
 *.log
 *.pot
+*.yaml
 
 # Byte-compiled / cache
 *.pyc
