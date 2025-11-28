@@ -36,7 +36,9 @@
       box-shadow:0 2px 6px rgba(0,0,0,.6);
       z-index:1000;
     }
-    .logo img{height:42px; cursor:pointer; user-select:none}
+    /* Updated Logo Styles to handle the Link */
+    .logo a { display: block; }
+    .logo img{height:42px; cursor:pointer; user-select:none; display: block;}
 
     .userwrap{display:flex; align-items:center; gap:12px; font-weight:600; font-size:15px; position:relative;}
     .uname{color:#070707}
@@ -55,7 +57,10 @@
       object-fit:cover;
       object-position:50% 18%;   /* ⬅️ same nudge for sidebar */
     }
-    .gif{height:45px}
+    
+    /* Updated GIF Styles */
+    .gif-link { display: block; height: 45px; }
+    .gif{height:45px; display: block;}
 
     /* sidebar */
     .sidebar{
@@ -266,8 +271,11 @@
 <body class="{% if no_sidebar %}no-sidebar{% endif %}">
 
   <header>
-    <div class="logo" id="logoToggle" aria-label="Toggle sidebar">
-      <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo">
+    <!-- UPDATED: Wrapped Logo in <a> tag and removed id="logoToggle" -->
+    <div class="logo" aria-label="Go to Home">
+      <a href="{{ url_for('dashboard') }}" title="Go to Dashboard">
+        <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo">
+      </a>
     </div>
 
     {% if username %}
@@ -284,7 +292,10 @@
         aria-expanded="false"
         tabindex="0">
 
-      <img class="gif" src="https://storage.googleapis.com/my-react-image-bucket-123/Logsy.gif" alt="App GIF">
+      <!-- UPDATED: Wrapped GIF in <a> tag -->
+      <a href="{{ url_for('dashboard') }}" class="gif-link" title="Go to Dashboard">
+        <img class="gif" src="https://storage.googleapis.com/my-react-image-bucket-123/Logsy.gif" alt="App GIF">
+      </a>
 
 
       <!-- DROPDOWN -->
@@ -398,7 +409,7 @@
   <script>
     (function(){
       const body = document.body;
-      const logo = document.getElementById('logoToggle');
+      const logo = document.getElementById('logoToggle'); // This won't find the element anymore, which is good (stops toggle conflict)
       const edge = document.getElementById('edgeToggle');
       const STORAGE_KEY = 'sidebarOpen';
 

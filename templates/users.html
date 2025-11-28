@@ -3,18 +3,7 @@
 
 {% block content %}
 <style>
-.footer {
-  margin-top: 20px;       /* table ku gap */
-  padding: 15px 0;
-  text-align: center;
-  font-size: 14px;
-  color: #fff;
-
-  /* background: rgba(255,255,255,0.1); 
-  backdrop-filter: blur(12px) saturate(180%);
-  -webkit-backdrop-filter: blur(12px) saturate(180%);
-  border-top: 1px solid rgba(255,255,255,0.25);*/
-}
+/* --- Theme Variables --- */
 :root{
   --primary:#ffd24d; --primary-hover:#e6bc46;
   --accent:#020202;  --danger:#e74c3c;
@@ -23,196 +12,301 @@
   --border:#1e242d;  --row-hover:#232b35;
   --scroll-thumb:#8a8e96; --scroll-track:#1b212a;
 }
-html, body {
-  height: 100%;
-}
+
+/* 1. RESET & FIXED LAYOUT */
+html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; }
 
 body {
   font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
   background: var(--bg);
   color: #e5e7eb;
-  line-height: 1.4;
-  overflow-y: auto;   /* ✅ allow vertical scroll */
-  overflow-x: hidden; /* prevent sideways scroll */
-  padding-bottom: 40px; /* ✅ extra bottom gap */
 }
 
+/* Wrapper - The Magic Container */
+.wrap {
+  /* Height: Fill vertical space minus headers */
+  height: calc(100vh - 90px);
+  
+  /* WIDTH: Auto fills available space */
+  width: auto; 
+  
+  /* DEFAULT PADDING (Safe start) */
+  padding: 15px 20px;
+  
+  display: flex;
+  flex-direction: column;
+  
+  /* Smooth animation when margin changes */
+  transition: margin-left 0.3s ease-in-out;
+}
+
+/* Card Container */
 .card {
-  max-width: calc(95vw - 1px);
-  margin: 20px auto 40px auto;  /* ✅ bottom spacing added */
   background: var(--card-bg);
-  border-radius: 18px;
+  border-radius: 12px;
   box-shadow: 0 14px 34px rgba(0,0,0,.25);
-  padding: 20px 32px;
-  overflow: visible;   /* ✅ let card expand */
+  display: flex;
+  flex-direction: column;
+  height: 100%; 
+  overflow: hidden;
+  padding: 0;
+  width: 100%; /* Force card to fill wrap */
 }
 
-.back{
-  color:var(--primary);font-weight:600;text-decoration:none;
-  display:inline-block;margin-bottom:18px;transition:color .15s;
+/* --- 2. Header Area --- */
+.card-head {
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  display: flex; justify-content: space-between; align-items: center;
 }
-.back:hover{color:var(--primary-hover);}
-h1{font-size:24px;margin:0 0 20px;color:#b8e4ff;}
-.flash{display:inline-block;padding:10px 16px;border-radius:60px;font-size:14px;margin-bottom:18px;}
-.flash.ok{background:#ffd24d;color:var(--accent);}
-.flash.err{background:#f7b2b2;color:var(--danger);}
 
+.back {
+  color: var(--primary); font-weight: 600; text-decoration: none;
+  font-size: 13px; display: flex; align-items: center; gap: 5px;
+}
+.back:hover { color: var(--primary-hover); }
+
+h1 { margin: 0; font-size: 18px; color: #b8e4ff; line-height: 1; }
+
+/* Flash Messages */
+.flash-group { display: flex; gap: 8px; }
+.flash-msg {
+  padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: 600;
+}
+.flash-msg.ok { background: #ffd24d; color: #000; }
+.flash-msg.err { background: #ff6b6b; color: #fff; }
+
+/* --- 3. Table Area --- */
 .table-wrap {
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  overflow-x: auto;   /* ✅ only horizontal scroll */
-  overflow-y: visible;
-  max-height: none;   /* ✅ no fixed height */
+  flex: 1;           
+  overflow: auto;    
+  position: relative;
+  width: 100%;
 }
 
-.table-wrap::-webkit-scrollbar{width:8px}
-.table-wrap::-webkit-scrollbar-track{background:var(--scroll-track);border-radius:8px}
-.table-wrap::-webkit-scrollbar-thumb{background:var(--scroll-thumb);border-radius:8px}
-.table-wrap{scrollbar-width:thin;scrollbar-color:var(--scroll-thumb) var(--scroll-track);}
+/* Scrollbar Styling */
+.table-wrap::-webkit-scrollbar { width: 6px; height: 6px; }
+.table-wrap::-webkit-scrollbar-track { background: var(--scroll-track); }
+.table-wrap::-webkit-scrollbar-thumb { background: var(--scroll-thumb); border-radius: 4px; }
 
-table{width:100%;border-collapse:collapse;font-size:14px;min-width:720px;}
-th,td{padding:10px 14px;text-align:center;border-bottom:1px solid var(--border);}
-th{
-  background:var(--head-grad);color:#111;font-weight:600;
-  position:sticky;top:0;z-index:2;
-}
-tbody tr:nth-child(even){background:#42484f;}
-tbody tr:hover{background:var(--row-hover);}
-.no-data{color:#9ba3ab;padding:18px 0;text-align:center;}
-
-select{
-  padding:6px 10px;font-size:14px;border:1px solid var(--border);
-  border-radius:6px;background:#1c222b;color:#e5e7eb;
-}
-button{
-  padding:6px 12px;border:none;border-radius:6px;
-  background:var(--primary);color:#050505;font-weight:600;cursor:pointer;
-}
-button:hover{background:var(--primary-hover);}
-.badge{padding:4px 10px;border-radius:12px;font-weight:600;font-size:13px;}
-.badge.ok{background:#2ecc71;color:var(--accent);}
-.badge.no{background:#ffecec;color:var(--danger);}
-
-/* ── Username cell with avatar ───────────────────────────── */
-.user-td{
-  display:flex; align-items:center; gap:12px;
-  justify-content:flex-start; text-align:left;   /* override table center */
-}
-.user-ava{
-  width:36px; height:36px; border-radius:50%;
-  object-fit:cover; object-position:50% 18%;
-  border:1px solid #2b3139; background:#222;
-  flex:0 0 36px; display:block;
-}
-.user-name{ font-weight:600; color:#e6e9ef; }
-
-@media(max-width:620px){
-  td:first-child,th:first-child{display:none;}
-}
-html, body {
-  height: 100%;
+table { 
+  width: 100%; 
+  border-collapse: separate; 
+  border-spacing: 0; 
+  font-size: 13px; 
+  table-layout: fixed; /* Important for standard columns */
+  min-width: 800px;    /* Prevent crushing on very small screens */
 }
 
-body {
-  font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
-  background: var(--bg);
-  color: #e5e7eb;
-  line-height: 1.4;
-  overflow-y: auto;   /* ✅ outer scroll */
-  overflow-x: hidden; /* prevent sideways scroll */
+/* Sticky Header */
+th {
+  background: var(--head-grad); color: #111; font-weight: 700;
+  position: sticky; top: 0; z-index: 10;
+  padding: 10px; text-align: left;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+  white-space: nowrap;
 }
 
-.card {
-  max-width: calc(95vw - 1px);
-  margin: 20px auto;   /* ✅ allow spacing */
-  background: var(--card-bg);
-  border-radius: 18px;
-  box-shadow: 0 14px 34px rgba(0,0,0,.25);
-  padding: 20px 32px;
-  overflow: visible;   /* ✅ let card expand */
+/* Rows */
+td {
+  padding: 8px 10px; 
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: middle;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
+tbody tr:nth-child(even) { background: #3a4149; }
+tbody tr:hover { background: var(--row-hover); }
+
+/* --- Components --- */
+select {
+  width: 100%;
+  padding: 4px 6px; font-size: 13px; border: 1px solid var(--border);
+  border-radius: 4px; background: #1c222b; color: #fff; outline: none;
+}
+select:focus { border-color: var(--primary); }
+
+button {
+  padding: 4px 12px; border: none; border-radius: 4px;
+  background: var(--primary); color: #050505; font-weight: 600; cursor: pointer;
+  font-size: 12px; width: 100%;
+}
+button:hover { background: var(--primary-hover); }
+
+.badge { padding: 2px 8px; border-radius: 10px; font-weight: 600; font-size: 11px; display: inline-block; }
+.badge.ok { background: #2ecc71; color: #000; }
+.badge.no { background: #ff6b6b; color: #fff; }
+
+/* Avatar */
+.user-td { display: flex; align-items: center; gap: 10px; }
+.user-ava { 
+  width: 28px; height: 28px; 
+  border-radius: 50%; border: 1px solid #555; background: #222; object-fit: cover; 
+  flex-shrink: 0; 
+}
+.user-name { font-weight: 600; color: #fff; font-size: 13px; }
+
+/* --- 4. Footer --- */
+.card-foot {
+  padding: 10px; text-align: center; font-size: 12px; color: #888;
+  border-top: 1px solid var(--border); background: var(--card-bg);
+  flex-shrink: 0;
+}
 </style>
 
-<div class="card">
-  <a href="/home" class="back">&larr;&nbsp;Back&nbsp;to&nbsp;Dashboard</a>
-  <h1>User Management</h1>
+<div class="wrap" id="mainWrap">
+  <div class="card">
+    
+    <!-- Header -->
+    <div class="card-head">
+       <div style="display:flex; flex-direction:column; gap:4px;">
+         <a href="/home" class="back">&larr; Back to Dashboard</a>
+         <h1>User Management</h1>
+       </div>
 
-  {% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-      {% for category,msg in messages %}
-        <span class="flash {{ 'err' if category=='error' else 'ok' }}">{{ msg }}</span>
-      {% endfor %}
-    {% endif %}
-  {% endwith %}
+       <!-- Flash Messages -->
+       {% with messages = get_flashed_messages(with_categories=true) %}
+         {% if messages %}
+           <div class="flash-group">
+             {% for category,msg in messages %}
+               <span class="flash-msg {{ 'err' if category=='error' else 'ok' }}">{{ msg }}</span>
+             {% endfor %}
+           </div>
+         {% endif %}
+       {% endwith %}
+    </div>
 
-  <div class="table-wrap">
-    <table>
-      <thead>
-        <tr>
-          <th>ID</th>
-          <th>Username</th>
-          <th>Email</th>
-          <th>Verified</th>
-          <th>Team</th>
-          <th>Role</th>
-          <th>Action</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for u in users %}
+    <!-- Table -->
+    <div class="table-wrap">
+      <table>
+        <!-- Standard Widths (Percentages for fluidity) -->
+        <colgroup>
+          <col style="width: 5%;">   <!-- ID -->
+          <col style="width: 20%;">  <!-- Username -->
+          <col style="width: 25%;">  <!-- Email -->
+          <col style="width: 10%;">  <!-- Status -->
+          <col style="width: 15%;">  <!-- Team -->
+          <col style="width: 15%;">  <!-- Role -->
+          <col style="width: 10%;">  <!-- Action -->
+        </colgroup>
+        <thead>
           <tr>
-            <td>{{ u.id }}</td>
-
-            <!-- Username with round avatar -->
-      <td class="user-td">
-        <img
-          class="user-ava"
-          src="{{ email_img_map.get(u.email) or gravatar_url(u.email, 64) or url_for('static', filename='img/avatar-default.png') }}"
-          alt="{{ u.username }}"
-          loading="lazy"
-          onerror="this.onerror=null; this.src={{ url_for('static', filename='img/avatar-default.png') | tojson }};">
-        <span class="user-name">{{ u.username }}</span>
-      </td>
-
-            <td>{{ u.email }}</td>
-            <td>
-              {% if u.verified %}
-                <span class="badge ok">Verified</span>
-              {% else %}
-                <span class="badge no">Unverified</span>
-              {% endif %}
-            </td>
-            <td>
-              <form method="POST" action="/admin/usermanagement" style="display:inline;">
-                <input type="hidden" name="uid" value="{{ u.id }}">
-                <select name="team">
-                  {% for team in ['MCTeam','IPTeam','BDTeam','AnalyticsTeam','MRTeam'] %}
-                    <option value="{{ team }}" {% if u.team == team %}selected{% endif %}>{{ team }}</option>
-                  {% endfor %}
-                </select>
-            </td>
-            <td>
-                <select name="role">
-                  {% for r in ["superadmin","admin","user"] %}
-                    <option value="{{ r }}" {% if u.role==r %}selected{% endif %}>{{ r }}</option>
-                  {% endfor %}
-                </select>
-            </td>
-            <td>
-                <button type="submit">Save</button>
-              </form>
-            </td>
+            <th>ID</th>
+            <th>Username</th>
+            <th>Email</th>
+            <th>Status</th>
+            <th>Team</th>
+            <th>Role</th>
+            <th style="text-align:center;">Action</th>
           </tr>
-        {% else %}
-          <tr><td colspan="7" class="no-data">No users yet</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {% for u in users %}
+            <tr>
+              <td>{{ u.id }}</td>
+              <td>
+                <div class="user-td">
+                  <img class="user-ava" 
+                       src="{{ email_img_map.get(u.email) or gravatar_url(u.email, 64) or url_for('static', filename='img/avatar-default.png') }}"
+                       alt="{{ u.username }}" loading="lazy">
+                  <span class="user-name">{{ u.username }}</span>
+                </div>
+              </td>
+              <td title="{{ u.email }}">{{ u.email }}</td>
+              <td>
+                {% if u.verified %}
+                  <span class="badge ok">Verified</span>
+                {% else %}
+                  <span class="badge no">Unverified</span>
+                {% endif %}
+              </td>
+              <td>
+                <form method="POST" action="/admin/usermanagement" style="display:inline;">
+                  <input type="hidden" name="uid" value="{{ u.id }}">
+                  <select name="team">
+                    {% for team in ['MCTeam','IPTeam','BDTeam','AnalyticsTeam','MRTeam'] %}
+                      <option value="{{ team }}" {% if u.team == team %}selected{% endif %}>{{ team }}</option>
+                    {% endfor %}
+                  </select>
+              </td>
+              <td>
+                  <select name="role">
+                    {% for r in ["superadmin","admin","user"] %}
+                      <option value="{{ r }}" {% if u.role==r %}selected{% endif %}>{{ r }}</option>
+                    {% endfor %}
+                  </select>
+              </td>
+              <td style="text-align:center;">
+                  <button type="submit">Save</button>
+                </form>
+              </td>
+            </tr>
+          {% else %}
+            <tr><td colspan="7" style="padding:20px; color:#aaa; text-align:center;">No users found.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Footer -->
+    <div class="card-foot">
+      © Datasolve Analytics Pvt Ltd 2025.
+    </div>
   </div>
 </div>
-<!-- Footer -->
-<footer class="footer">
-  <p>© Datasolve Analytics Pvt Ltd 2025.</p>
-</footer>
+
+<!-- SMART LAYOUT ADJUSTER SCRIPT -->
+<script>
+  function checkSidebarAndAdjust() {
+    const wrap = document.getElementById('mainWrap');
+    
+    // 1. Try to detect sidebar element visually
+    // We look for any element on the left that is tall
+    // This is a heuristic since we don't know the sidebar ID
+    let sidebarWidth = 0;
+    
+    // Common sidebar IDs/Classes to try
+    const potentialSidebars = document.querySelectorAll('nav, aside, .sidebar, #sidebar, .sidenav');
+    
+    for (let el of potentialSidebars) {
+      const rect = el.getBoundingClientRect();
+      // If element is on the left, visible, and tall
+      if (rect.left === 0 && rect.width > 0 && rect.height > 500) {
+        sidebarWidth = Math.max(sidebarWidth, rect.width);
+      }
+    }
+
+    // 2. Fallback Logic if script can't find element:
+    // If we can't find it, check if body has a left margin/padding
+    const bodyStyle = window.getComputedStyle(document.body);
+    const marginLeft = parseInt(bodyStyle.marginLeft);
+    if (marginLeft > 0) sidebarWidth = Math.max(sidebarWidth, marginLeft);
+
+    // 3. Apply Margin
+    // If Sidebar is Open (>100px), push content. 
+    // If Closed (usually <80px or 0), push less.
+    
+    if (sidebarWidth > 190) {
+       // Sidebar Open state
+       // Add a small buffer (20px) so it doesn't touch
+       wrap.style.marginLeft = (sidebarWidth + 8) + 'px';
+    } else {
+       // Sidebar Closed state (or mini icon state)
+       // Use a safe default if detected width is 0, otherwise use width
+       const safeMargin = sidebarWidth > 0 ? sidebarWidth + 10 : 80; 
+       wrap.style.marginLeft = safeMargin + 'px';
+    }
+  }
+
+  // Run continuously to catch animations
+  setInterval(checkSidebarAndAdjust, 300);
+  
+  // Initial Run
+  window.addEventListener('load', checkSidebarAndAdjust);
+  window.addEventListener('resize', checkSidebarAndAdjust);
+</script>
 {% endblock %}

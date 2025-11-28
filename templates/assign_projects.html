@@ -1,150 +1,335 @@
 {% extends "base.html" %}
 {% block title %}Logsy - Assign Projects{% endblock %}
 
-{% block head_extra %}
-<style>
-  .footer {
-  margin-top: 20px;       /* table ku gap */
-  padding: 15px 0;
-  text-align: center;
-  font-size: 14px;
-  color: #fff;
-
-  /* background: rgba(255,255,255,0.1); 
-  backdrop-filter: blur(12px) saturate(180%);
-  -webkit-backdrop-filter: blur(12px) saturate(180%);
-  border-top: 1px solid rgba(255,255,255,0.25);*/
-}
-  .wrap-card { max-width: 1100px; margin: 10px auto; background:#2b2f36; border-radius:16px;
-               box-shadow:0 12px 28px rgba(0,0,0,.35); border:1px solid #1f2329; padding:18px 18px 10px; }
-  .wrap-head { background:#3a3f46; border-radius:12px 12px 0 0; padding:14px 18px; font-weight:700; color:#fff; border:1px solid #2c3137; }
-  .wrap-body { padding:16px 12px 8px; }
-  .form-row { display:flex; gap:14px; flex-wrap:wrap; align-items:end; padding:2px 8px; }
-  .fg { min-width:260px; flex:1 1 300px; }
-  label { color:#e8e8e8; margin-bottom:6px; font-weight:600; }
-  select, input[type="text"] { background:#121519; color:#eaeaea; border:1px solid #444; padding:10px 12px; border-radius:8px; width:100%; }
-  .btn-yellow { background:#ffd24d; color:#111; font-weight:700; border:none; padding:4px 8px; border-radius:8px; transition:.25s; }
-  .btn-yellow:hover { background:#f7c933; transform: translateY(-1px); }
-  .btn-ghost  { border:1px solid #aaa; color:#f5f5f5; background:transparent; padding:4px 8px; border-radius:8px; transition:.25s; }
-  .btn-ghost:hover { background:#2b2b2b; border-color:#ccc; transform: scale(1.02); }
-  .btn-end-now { background:#e74c3c; color:#fff; border:none; padding:8px 14px; border-radius:8px; transition:.25s; }
-  .btn-end-now:hover { background:#c0392b; transform: scale(1.03); }
-  .pill { display:inline-block; font-size:12px; padding:2px 8px; border-radius:999px; margin-left:8px; background:#444; color:#fff; }
-  .pill-assigned { background:#27ae60; color:#111; }
-  .u-table { width:100%; border-collapse:separate; border-spacing:0; }
-  .u-table thead th { background:#ffd24d; color:#111; font-weight:500; padding:4px 8px;font-size:15px;text-align: left; }
-  .u-table tbody td { background:#333940; color:#eaeaea;font-size:13px; padding:2px 12px; border-top:1px solid #2a2f35; }
-  .u-table tbody tr:nth-child(even) td { background:#2f353c; }
-  .u-table tbody tr:hover td { background:#293039; }
-  .toolbar { display:flex; align-items:center; gap:10px; justify-content:space-between; margin:10px 0 6px; }
-  .muted { color:#c9c9c9; }
-</style>
-{% endblock %}
-
 {% block content %}
+<style>
+/* --- Theme Variables --- */
+:root{
+  --primary:#ffd24d; --primary-hover:#e6bc46;
+  --accent:#2ecc71;  --warning:#ffb037;
+  --danger:#e74c3c;
+  --bg:#0f151d;      --card-bg:#30363d;
+  --head-grad:linear-gradient(135deg,#ffd24d 0%,#ffdb6e 100%);
+  --border:#1e242d;  --row-hover:#232b35;
+  --scroll-thumb:#8a8e96; --scroll-track:#1b212a;
+}
 
-<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-  <a href="{{ url_for('dashboard') }}" class="btn-ghost" style="text-decoration:none;">← Home</a>
-  <div style="display:flex; gap:10px;">
-    <a href="{{ url_for('user_access') }}" class="btn-yellow" style="text-decoration:none;">Assigned Projects - User</a>
-    <a href="{{ url_for('admin_project_codes') }}" class="btn-yellow" style="text-decoration:none;">Project Allocations</a>
-    <a href="{{ url_for('live_status') }}" class="btn-yellow" style="text-decoration:none;">live status</a>
-  </div>
-</div>
+/* 1. RESET & FIXED LAYOUT */
+html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; }
 
+body {
+  font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+  background: var(--bg);
+  color: #e5e7eb;
+}
 
+/* Wrapper - The Magic Container */
+.wrap {
+  /* Height: Full screen minus headers (Adjusted to 110px to save Footer) */
+  height: calc(100vh - 110px);
+  
+  /* WIDTH: Auto fills available space */
+  width: auto; 
+  
+  /* DEFAULT PADDING */
+  padding: 15px 20px;
+  
+  display: flex;
+  flex-direction: column;
+  
+  /* Smooth animation when sidebar toggles */
+  transition: margin-left 0.3s ease-in-out;
+}
 
-  <div class="wrap-head">Assign Users to a Project Code</div>
-  <div class="wrap-body">
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        <div class="mb-2">
-          {% for cat, msg in messages %}
-            <div class="alert alert-{{ 'success' if cat=='success' else ('danger' if cat=='error' else 'info') }} mb-2">{{ msg }}</div>
-          {% endfor %}
+/* Card Container */
+.card {
+  background: var(--card-bg);
+  border-radius: 12px;
+  box-shadow: 0 14px 34px rgba(0,0,0,.25);
+  display: flex;
+  flex-direction: column;
+  height: 100%; 
+  overflow: hidden;
+  padding: 0;
+  width: 100%;
+}
+
+/* --- 2. Fixed Top Section --- */
+.top-section {
+  padding: 15px 20px;
+  border-bottom: 1px solid var(--border);
+  background: #252a30;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.header-row {
+  display: flex; justify-content: space-between; align-items: center;
+}
+
+.back {
+  color: var(--primary); font-weight: 600; text-decoration: none;
+  font-size: 13px; transition: color .15s;
+}
+.back:hover { color: var(--primary-hover); }
+
+.btn-nav {
+  background: transparent; border: 1px solid var(--primary); color: var(--primary);
+  padding: 4px 12px; border-radius: 6px; font-size: 12px; text-decoration: none; font-weight: 600;
+  transition: 0.2s;
+}
+.btn-nav:hover { background: rgba(255, 210, 77, 0.1); }
+
+/* Controls Grid */
+.form-row {
+  display: grid; gap: 15px;
+  grid-template-columns: 1fr 1fr auto;
+  align-items: end;
+}
+
+.fg { display: flex; flex-direction: column; gap: 5px; }
+.fg label { font-size: 12px; color: #aaa; font-weight: 600; }
+
+/* Inputs & Selects */
+input, select {
+  font-size: 13px; padding: 8px 12px; border-radius: 6px;
+  border: 1px solid var(--border);
+  background: #1c222b; color: #e5e7eb;
+  width: 100%; box-sizing: border-box;
+  outline: none;
+}
+input:focus, select:focus { border-color: var(--primary); }
+
+button {
+  padding: 8px 16px; border: none; border-radius: 6px;
+  font-weight: 600; cursor: pointer; white-space: nowrap;
+}
+.btn-yellow { background: var(--primary); color: #050505; }
+.btn-yellow:hover { background: var(--primary-hover); }
+.btn-yellow:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.btn-ghost { background: #444; color: #fff; }
+.btn-ghost:hover { background: #555; }
+.btn-ghost:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Flash Messages */
+.flash-container { margin-bottom: 5px; }
+.flash { padding: 6px 12px; border-radius: 4px; font-size: 12px; font-weight: 600; display: inline-block; }
+.flash.success { background: #e9f8f1; color: var(--accent); }
+.flash.error { background: #fff4eb; color: var(--danger); }
+.flash.info { background: #eef; color: #335; }
+
+/* --- 3. Table Area (Scrollable) --- */
+.table-wrap {
+  flex: 1;           
+  overflow: auto;    
+  position: relative;
+  width: 100%;
+  padding: 0;
+}
+
+/* Scrollbar Styling */
+.table-wrap::-webkit-scrollbar { width: 6px; height: 6px; }
+.table-wrap::-webkit-scrollbar-track { background: var(--scroll-track); }
+.table-wrap::-webkit-scrollbar-thumb { background: var(--scroll-thumb); border-radius: 4px; }
+
+table { 
+  width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13px; 
+  table-layout: fixed; min-width: 800px; 
+}
+
+/* Sticky Header (General) */
+th {
+  background: var(--head-grad); color: #111; font-weight: 700;
+  position: sticky; top: 0; z-index: 10;
+  padding: 8px 12px; text-align: left;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+}
+
+td {
+  padding: 6px 12px; border-bottom: 1px solid var(--border);
+  color: #ccc; vertical-align: middle;
+}
+
+tbody tr:nth-child(even) { background: #42484f; }
+tbody tr:hover { background: var(--row-hover); }
+
+/* Toolbar above table */
+.toolbar {
+  padding: 8px 15px; background: #2a2f35; border-bottom: 1px solid var(--border);
+  display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #ccc;
+}
+
+/* --- FROZEN SECTION HEADER FIX --- */
+/* The divider bar "Active Assignments Log" */
+.section-head {
+  background: #3a3f46; color: #fff; padding: 0 15px; font-weight: 700; font-size: 14px;
+  border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+  
+  /* Stick to the top when scrolling */
+  position: sticky; top: 0; z-index: 20; 
+  
+  /* Fixed height to calculate offset for next header */
+  height: 38px; 
+  display: flex; align-items: center;
+  box-sizing: border-box;
+  
+  /* Justify content to push filter to right */
+  justify-content: space-between;
+}
+
+/* Special Sticky rule for the table headers INSIDE the Active Assignments section */
+.aa-table th {
+  /* Stick BELOW the section header (38px offset) */
+  top: 38px; 
+  z-index: 15; 
+}
+
+/* Pills */
+.pill { padding: 2px 8px; border-radius: 10px; font-size: 11px; background: #444; color: #fff; }
+.pill-assigned { background: var(--accent); color: #000; font-weight: 600; }
+
+/* --- 4. Footer --- */
+.card-foot {
+  padding: 10px; text-align: center; font-size: 12px; color: #888;
+  border-top: 1px solid var(--border); background: var(--card-bg);
+  flex-shrink: 0;
+}
+</style>
+
+<div class="wrap" id="mainWrap">
+  <div class="card">
+    
+    <!-- Fixed Top Section -->
+    <div class="top-section">
+      <div class="header-row">
+        <a href="{{ url_for('dashboard') }}" class="back">&larr; Home</a>
+        <div style="display:flex; gap:10px;">
+          <a href="{{ url_for('user_access') }}" class="btn-nav">Assigned Projects</a>
+          <a href="{{ url_for('admin_project_codes') }}" class="btn-nav">Project Allocations</a>
+          <a href="{{ url_for('live_status') }}" class="btn-nav">Live Status</a>
         </div>
-      {% endif %}
-    {% endwith %}
-
-    <!-- Project first -->
-    <div class="form-row">
-      <div class="fg">
-        <label>Project Code</label>
-        <select id="projectSelect">
-          <option value="" disabled selected>Select Code</option>
-          {% for c in codes if c.status == 'WIP' %}
-        <option value="{{ c.id }}">{{ c.code }}{% if c.team %} — {{ c.team }}{% endif %}</option>
-        {% endfor %}
-
-        </select>
       </div>
 
-      <div class="fg">
-        <label>Quick Filter (user)</label>
-        <input type="text" id="userFilter" placeholder="Type to filter users by name/team…">
-      </div>
+      <!-- Flash Messages -->
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <div class="flash-container">
+            {% for cat, msg in messages %}
+              <span class="flash {{ cat }}">{{ msg }}</span>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endwith %}
 
-      <div class="fg" style="flex:0 0 auto; display:flex; gap:10px;">
-        <button id="assignBtn" class="btn-yellow" disabled>Assign</button>
-        <button id="endBtn" class="btn-ghost" disabled>Unassign</button>
+      <!-- Project Select Form -->
+      <div class="form-row">
+        <div class="fg">
+          <label>Project Code</label>
+          <select id="projectSelect">
+            <option value="" disabled selected>Select Code</option>
+            {% for c in codes if c.status == 'WIP' %}
+              <option value="{{ c.id }}">{{ c.code }}{% if c.team %} — {{ c.team }}{% endif %}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="fg">
+          <label>Quick Filter (User)</label>
+          <input type="text" id="userFilter" placeholder="Type to filter by name or team...">
+        </div>
+        <div class="fg" style="flex-direction: row; gap: 10px;">
+          <button id="assignBtn" class="btn-yellow" disabled>Assign</button>
+          <button id="endBtn" class="btn-ghost" disabled>Unassign</button>
+        </div>
       </div>
     </div>
 
-    <!-- Users table with checkboxes -->
-    <form id="bulkForm" method="post" class="mt-2">
-      <input type="hidden" name="project_id" id="projectHidden">
-      <input type="hidden" name="action" id="actionHidden">
-      <div class="toolbar">
-        <div>
-          <label><input type="checkbox" id="checkAll" disabled> Select All</label>
-          <span class="pill" id="selCount">0 selected</span>
-          <span class="pill" id="assignedCount">0 already assigned</span>
+    <!-- Scrollable Content -->
+    <div class="table-wrap">
+      
+      <form id="bulkForm" method="post">
+        <input type="hidden" name="project_id" id="projectHidden">
+        <input type="hidden" name="action" id="actionHidden">
+        
+        <!-- Toolbar -->
+        <div class="toolbar">
+          <div style="display:flex; gap:10px; align-items:center;">
+            <label style="cursor:pointer;"><input type="checkbox" id="checkAll" disabled> Select All</label>
+            <span class="pill" id="selCount">0 selected</span>
+            <span class="pill" id="assignedCount">0 assigned</span>
+          </div>
+          <div>Choose project first</div>
         </div>
-        <div class="muted">Tip: choose a project first, then select users and click Assign / End.</div>
-      </div>
 
-      <div class="table-responsive">
+        <!-- User Selection Table -->
         <table class="u-table">
+          <colgroup>
+            <col style="width: 50px;">  <!-- # -->
+            <col style="width: 50px;">  <!-- Pick -->
+            <col style="width: 30%;">   <!-- User -->
+            <col style="width: 30%;">   <!-- Team -->
+            <col style="width: 20%;">   <!-- Status -->
+          </colgroup>
           <thead>
             <tr>
-              <th style="width:60px;">#</th>
-              <th style="width:60px;">Pick</th>
+              <th>#</th>
+              <th style="text-align:center;">Pick</th>
               <th>User</th>
               <th>Team</th>
-              <th>Assigned?</th>
+              <th>Status</th>
             </tr>
           </thead>
           <tbody id="userRows">
             {% for u in users %}
             <tr data-username="{{ u.username|lower }}" data-team="{{ (u.team or '')|lower }}">
               <td>{{ loop.index }}</td>
-              <td>
+              <td style="text-align:center;">
                 <input type="checkbox" class="u-check" name="user_ids" value="{{ u.id }}" disabled>
               </td>
               <td>{{ u.username }}</td>
               <td>{{ u.team or '' }}</td>
-              <td class="assign-cell">
-                <span class="pill">—</span>
-              </td>
+              <td class="assign-cell"><span class="pill">—</span></td>
             </tr>
+            {% else %}
+            <tr><td colspan="5" style="text-align:center; padding:20px;">No users found.</td></tr>
             {% endfor %}
-            {% if not users %}
-            <tr><td colspan="5" class="muted" style="text-align:center; padding:14px;">No users found.</td></tr>
-            {% endif %}
           </tbody>
         </table>
-      </div>
-    </form>
-  </div>
+      </form>
 
-  <!-- Existing active assignments table (kept) -->
-  <div class="wrap-head" style="border-top:0; border-radius:0;">Active Assignments</div>
-  <div class="wrap-body" style="padding-top:8px;">
-    <div class="table-responsive">
-      <table class="u-table">
+      <!-- Active Assignments Section (Frozen Header) -->
+      <div class="section-head">
+        <span>Active Assignments Log</span>
+        <div style="display:flex; gap:10px;">
+          <!-- Status Dropdown Filter -->
+          <select id="statusFilter" style="background:#1c222b; border:1px solid #555; color:#eee; padding:2px 8px; width:120px; border-radius:4px; font-size:12px; outline:none; height:24px;">
+            <option value="">All Status</option>
+            <option value="wip">WIP</option>
+            <option value="yti">YTI</option>
+            <option value="hold">Hold</option>
+            <option value="closed">Closed</option>
+          </select>
+          <!-- Search Input -->
+          <input type="text" id="activeFilter" placeholder="Search..." 
+                 style="background:#1c222b; border:1px solid #555; color:#eee; padding:2px 8px; width:180px; border-radius:4px; font-size:12px; outline:none; height:24px;">
+        </div>
+      </div>
+      
+      <!-- Added class 'aa-table' to target specific sticky header logic -->
+      <table class="u-table aa-table">
+        <colgroup>
+          <col style="width: 50px;">
+          <col style="width: 20%;">
+          <col style="width: 30%;">
+          <col style="width: 15%;">
+          <col style="width: 15%;">
+          <col style="width: 15%;">
+        </colgroup>
         <thead>
           <tr>
-            <th style="width:70px;">#</th>
+            <th>#</th>
             <th>User</th>
             <th>Project Code</th>
             <th>Status</th>
@@ -152,7 +337,7 @@
             <th>Start Date</th>
           </tr>
         </thead>
-        <tbody>
+        <tbody id="activeRows">
           {% for a in active %}
           <tr>
             <td>{{ loop.index }}</td>
@@ -163,116 +348,167 @@
             <td>{{ a.start_date.strftime('%Y-%m-%d') if a.start_date else '' }}</td>
           </tr>
           {% else %}
-          <tr>
-            <td colspan="6" class="muted" style="text-align:center; padding:18px;">No active assignments.</td>
-          </tr>
+          <tr><td colspan="6" style="text-align:center; padding:20px; color:#888;">No active assignments.</td></tr>
           {% endfor %}
         </tbody>
       </table>
+
+    </div>
+
+    <!-- Footer -->
+    <div class="card-foot">
+      © 2025 Datasolve Analytics — All Rights Reserved
     </div>
   </div>
 </div>
-<!-- Footer -->
-<footer class="footer">
-  <p>© Datasolve Analytics Pvt Ltd 2025.</p>
-</footer>
+
+<!-- JS Scripts (Sidebar Adjust + Logic) -->
 <script>
-  // Data from backend: map of project_id -> [user_id, ...] who are currently assigned (active)
-  const assignedMap = {{ assigned_map|tojson }};  // e.g., {"12":[3,7], "13":[5]}
-  const projectSelect = document.getElementById('projectSelect');
-  const userRows = document.getElementById('userRows');
-  const checkAll = document.getElementById('checkAll');
-  const selCount = document.getElementById('selCount');
-  const assignedCount = document.getElementById('assignedCount');
-  const assignBtn = document.getElementById('assignBtn');
-  const endBtn = document.getElementById('endBtn');
-  const bulkForm = document.getElementById('bulkForm');
-  const projectHidden = document.getElementById('projectHidden');
-  const actionHidden = document.getElementById('actionHidden');
-  const userFilter = document.getElementById('userFilter');
-
-  function updateCounts() {
-    const checks = userRows.querySelectorAll('.u-check:not([disabled])');
-    const selected = Array.from(checks).filter(c => c.checked).length;
-    selCount.textContent = selected + ' selected';
-    assignBtn.disabled = selected === 0 || !projectSelect.value;
-    endBtn.disabled = selected === 0 || !projectSelect.value;
+function checkSidebarAndAdjust() {
+  const wrap = document.getElementById('mainWrap');
+  let sidebarWidth = 0;
+  const potentialSidebars = document.querySelectorAll('nav, aside, .sidebar, #sidebar, .sidenav');
+  
+  for (let el of potentialSidebars) {
+    const rect = el.getBoundingClientRect();
+    if (rect.left === 0 && rect.width > 0 && rect.height > 500) {
+      sidebarWidth = Math.max(sidebarWidth, rect.width);
+    }
   }
 
-  function renderAssignmentBadges() {
-    const pid = projectSelect.value;
-    const assignedSet = new Set((assignedMap[pid] || []).map(String));
-    let assignedTotal = 0;
+  const bodyStyle = window.getComputedStyle(document.body);
+  const marginLeft = parseInt(bodyStyle.marginLeft);
+  if (marginLeft > 0) sidebarWidth = Math.max(sidebarWidth, marginLeft);
 
-    userRows.querySelectorAll('tr').forEach(tr => {
-      const cb = tr.querySelector('.u-check');
-      const uid = cb ? cb.value : null;
-      const cell = tr.querySelector('.assign-cell');
-      if (!cb || !cell) return;
-
-      // Enable the checkbox only when project selected
-      cb.disabled = !pid;
-
-      // Mark assigned state
-      if (pid && uid && assignedSet.has(uid)) {
-        cell.innerHTML = '<span class="pill pill-assigned">Assigned</span>';
-        assignedTotal++;
-      } else {
-        cell.innerHTML = '<span class="pill">—</span>';
-      }
-    });
-
-    assignedCount.textContent = assignedTotal + ' already assigned';
-    checkAll.checked = false;
-    checkAll.disabled = !pid;
-    updateCounts();
+  if (sidebarWidth > 100) {
+     wrap.style.marginLeft = (sidebarWidth + 10) + 'px';
+  } else {
+     const safeMargin = sidebarWidth > 0 ? sidebarWidth + 10 : 80; 
+     wrap.style.marginLeft = safeMargin + 'px';
   }
+}
 
-  projectSelect.addEventListener('change', () => {
-    projectHidden.value = projectSelect.value || '';
-    // Clear selections on change
-    userRows.querySelectorAll('.u-check').forEach(cb => { cb.checked = false; });
-    renderAssignmentBadges();
+setInterval(checkSidebarAndAdjust, 300);
+window.addEventListener('load', checkSidebarAndAdjust);
+window.addEventListener('resize', checkSidebarAndAdjust);
+
+// 2. Assignment Logic
+const assignedMap = {{ assigned_map|tojson }};
+const projectSelect = document.getElementById('projectSelect');
+const userRows = document.getElementById('userRows');
+const checkAll = document.getElementById('checkAll');
+const selCount = document.getElementById('selCount');
+const assignedCount = document.getElementById('assignedCount');
+const assignBtn = document.getElementById('assignBtn');
+const endBtn = document.getElementById('endBtn');
+const bulkForm = document.getElementById('bulkForm');
+const projectHidden = document.getElementById('projectHidden');
+const actionHidden = document.getElementById('actionHidden');
+const userFilter = document.getElementById('userFilter');
+
+// New Active Filter Logic
+const activeFilter = document.getElementById('activeFilter');
+const statusFilter = document.getElementById('statusFilter');
+const activeRows = document.getElementById('activeRows');
+
+function filterActiveTable() {
+  const q = activeFilter ? activeFilter.value.trim().toLowerCase() : '';
+  const s = statusFilter ? statusFilter.value.trim().toLowerCase() : '';
+  
+  if(!activeRows) return;
+
+  activeRows.querySelectorAll('tr').forEach(tr => {
+    const text = tr.innerText.toLowerCase();
+    // Status is in the 4th column (index 3). Let's find the pill text.
+    const statusPill = tr.querySelector('.pill-assigned'); 
+    const statusText = statusPill ? statusPill.innerText.toLowerCase() : '';
+    
+    const matchesText = text.includes(q);
+    const matchesStatus = s === '' || statusText === s;
+    
+    tr.style.display = (matchesText && matchesStatus) ? '' : 'none';
+  });
+}
+
+if(activeFilter) activeFilter.addEventListener('input', filterActiveTable);
+if(statusFilter) statusFilter.addEventListener('change', filterActiveTable);
+
+function updateCounts() {
+  const checks = userRows.querySelectorAll('.u-check:not([disabled])');
+  const selected = Array.from(checks).filter(c => c.checked).length;
+  selCount.textContent = selected + ' selected';
+  assignBtn.disabled = selected === 0 || !projectSelect.value;
+  endBtn.disabled = selected === 0 || !projectSelect.value;
+}
+
+function renderAssignmentBadges() {
+  const pid = projectSelect.value;
+  const assignedSet = new Set((assignedMap[pid] || []).map(String));
+  let assignedTotal = 0;
+
+  userRows.querySelectorAll('tr').forEach(tr => {
+    const cb = tr.querySelector('.u-check');
+    const uid = cb ? cb.value : null;
+    const cell = tr.querySelector('.assign-cell');
+    if (!cb || !cell) return;
+
+    cb.disabled = !pid;
+
+    if (pid && uid && assignedSet.has(uid)) {
+      cell.innerHTML = '<span class="pill pill-assigned">Assigned</span>';
+      assignedTotal++;
+    } else {
+      cell.innerHTML = '<span class="pill">—</span>';
+    }
   });
 
-  checkAll.addEventListener('change', () => {
-    const pid = projectSelect.value;
-    const assignedSet = new Set((assignedMap[pid] || []).map(String));
-    userRows.querySelectorAll('.u-check:not([disabled])').forEach(cb => {
-      // Select all (even if already assigned) so user can bulk end too
-      cb.checked = checkAll.checked;
-    });
-    updateCounts();
-  });
+  assignedCount.textContent = assignedTotal + ' already assigned';
+  checkAll.checked = false;
+  checkAll.disabled = !pid;
+  updateCounts();
+}
 
-  userRows.addEventListener('change', (e) => {
-    if (e.target.classList.contains('u-check')) updateCounts();
-  });
-
-  userFilter.addEventListener('input', () => {
-    const q = userFilter.value.trim().toLowerCase();
-    userRows.querySelectorAll('tr').forEach(tr => {
-      const u = tr.getAttribute('data-username') || '';
-      const t = tr.getAttribute('data-team') || '';
-      tr.style.display = (u.includes(q) || t.includes(q)) ? '' : 'none';
-    });
-  });
-
-  assignBtn.addEventListener('click', (e) => {
-    e.preventDefault();
-    if (!projectSelect.value) return;
-    actionHidden.value = 'bulk_assign';
-    bulkForm.submit();
-  });
-
-  endBtn.addEventListener('click', (e) => {
-    e.preventDefault();
-    if (!projectSelect.value) return;
-    actionHidden.value = 'bulk_end';
-    bulkForm.submit();
-  });
-
-  // Initial
+projectSelect.addEventListener('change', () => {
+  projectHidden.value = projectSelect.value || '';
+  userRows.querySelectorAll('.u-check').forEach(cb => { cb.checked = false; });
   renderAssignmentBadges();
+});
+
+checkAll.addEventListener('change', () => {
+  const pid = projectSelect.value;
+  userRows.querySelectorAll('.u-check:not([disabled])').forEach(cb => {
+    cb.checked = checkAll.checked;
+  });
+  updateCounts();
+});
+
+userRows.addEventListener('change', (e) => {
+  if (e.target.classList.contains('u-check')) updateCounts();
+});
+
+userFilter.addEventListener('input', () => {
+  const q = userFilter.value.trim().toLowerCase();
+  userRows.querySelectorAll('tr').forEach(tr => {
+    const u = tr.getAttribute('data-username') || '';
+    const t = tr.getAttribute('data-team') || '';
+    tr.style.display = (u.includes(q) || t.includes(q)) ? '' : 'none';
+  });
+});
+
+assignBtn.addEventListener('click', (e) => {
+  e.preventDefault();
+  if (!projectSelect.value) return;
+  actionHidden.value = 'bulk_assign';
+  bulkForm.submit();
+});
+
+endBtn.addEventListener('click', (e) => {
+  e.preventDefault();
+  if (!projectSelect.value) return;
+  actionHidden.value = 'bulk_end';
+  bulkForm.submit();
+});
+
+renderAssignmentBadges();
 </script>
 {% endblock %}

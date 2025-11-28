@@ -77,6 +77,13 @@
     .btn-danger{background:#e11d48;color:#fff;border:1px solid #be123c}
     .btn-danger:hover{background:#be123c}
 
+    /* Active Quick Filter Style */
+    .btn-active-filter {
+        background-color: var(--accent-50);
+        color: var(--accent-700);
+        border-color: var(--accent-300);
+    }
+
     thead.theme-head{background:var(--table-head);color:var(--table-head-t)}
 
     .filter-shell{border:1px solid var(--card-border);border-radius:.75rem;padding:.5rem;background:var(--card-bg)}
@@ -204,11 +211,11 @@
           </div>
 
           <div class="mt-2 flex flex-wrap gap-2">
-            <button id="btn-quick-7" class="btn btn--sm btn-ghost">Last 7d</button>
-            <button id="btn-quick-30" class="btn btn--sm btn-ghost">Last 30d</button>
-            <button id="btn-quick-mtd" class="btn btn--sm btn-ghost">MTD</button>
+            <button id="btn-quick-7" class="btn btn--sm btn-ghost" data-qfilter="7">Last 7d</button>
+            <button id="btn-quick-30" class="btn btn--sm btn-ghost" data-qfilter="30">Last 30d</button>
+            <button id="btn-quick-mtd" class="btn btn--sm btn-ghost" data-qfilter="mtd">MTD</button>
             <!-- ✅ New Yesterday button -->
-            <button id="btn-quick-yesterday" class="btn btn--sm btn-ghost" title="Set both dates to yesterday">Yesterday</button>
+            <button id="btn-quick-yesterday" class="btn btn--sm btn-ghost" title="Set both dates to yesterday" data-qfilter="yesterday">Yesterday</button>
             <button id="btn-browser-refresh" class="btn btn--sm btn-ghost" title="Refresh & clear dates" aria-label="Refresh">
               <i class="bi bi-arrow-clockwise" style="font-size:1rem"></i>
             </button>
@@ -249,8 +256,10 @@
   <!-- MAIN -->
   <main class="mx-auto max-w-7xl px-4 md:px-8 py-6 space-y-6">
     <section class="space-y-3">
-      <div class="flex items-center justify-between">
-        <h2 class="text-lg md:text-xl font-bold text-default">Breakdowns</h2>
+      <div class="flex items-center justify-between flex-wrap gap-2">
+        <div class="flex items-baseline gap-3">
+            <h2 class="text-lg md:text-xl font-bold text-default">Breakdowns</h2>
+        </div>
         <span class="text-xs text-muted">Click an item to drill down</span>
       </div>
       <div id="breakdown-row"></div>
@@ -281,7 +290,7 @@
             </tr>
           </thead>
           <tbody id="logs-body" class="divide-y text-xs" style="border-color:var(--card-border)">
-            <tr><td colspan="8" class="p-8 text-center opacity-80">Select a primary filter above to view records here.</td></tr>
+            <tr><td colspan="10" class="p-8 text-center opacity-80">Select a primary filter above to view records here.</td></tr>
           </tbody>
         </table>
       </div>
@@ -293,14 +302,22 @@
   <script>
     // ⬇️ Inject from Flask
     const FLASK_DEFAULT_START_DATE = '{{ default_start_date }}';
-    const FLASK_DEFAULT_END_DATE   = '{{ default_end_date }}';
-    const FLASK_USER_ROLE = '{{ user_role }}';     // 'superadmin' or 'admin'
-    const FLASK_USER_TEAM = '{{ user_team }}';     // e.g., 'MCTeam'
+    const FLASK_DEFAULT_END_DATE    = '{{ default_end_date }}';
+    const FLASK_USER_ROLE = '{{ user_role }}';      // 'superadmin' or 'admin'
+    const FLASK_USER_TEAM = '{{ user_team }}';      // e.g., 'MCTeam'
 
     let allData = [];
     let allFilters = {};
     let overallTotals = {};
-    let currentFilterKey = null, currentFilterValue = null;
+    
+    // Multi-filter State Object
+    let activeFilters = {
+        project: null,
+        name: null,
+        process: null,
+        sub_process: null
+    };
+    
     let isDataLoaded = false;
 
     // team scope (role-aware)
@@ -331,6 +348,26 @@
 
     const setLoading = (v)=> $('#loading-overlay').classList.toggle('active', !!v);
     const toLocalYMD = (d)=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+
+    // Helper: Ensure we have YYYY-MM-DD for input[type=date]
+    // Handles various input formats gracefully
+    function ensureYMD(val) {
+        if (!val) return '';
+        // If already YYYY-MM-DD
+        if (/^\d{4}-\d{2}-\d{2}$/.test(val)) return val;
+        
+        const d = new Date(val);
+        if (isNaN(d.getTime())) return val; // Fallback
+        return toLocalYMD(d);
+    }
+    
+    // Helper: Safely set date inputs
+    function setDateInputs(start, end) {
+        const s = ensureYMD(start);
+        const e = ensureYMD(end);
+        document.getElementById('start_date').value = s;
+        document.getElementById('end_date').value   = e;
+    }
 
     function themeFor(key){
       switch(key){
@@ -370,10 +407,18 @@
       sel.style.background = 'var(--card-bg)';
       sel.style.borderColor = 'var(--card-border)';
       sel.style.color = 'var(--text)';
-      sel.dataset.filterKey=key; c.appendChild(sel);
+      sel.dataset.filterKey=key; 
+      c.appendChild(sel);
 
       const opt0 = document.createElement('option'); opt0.value=''; opt0.textContent = `All ${label}`; sel.appendChild(opt0);
-      (allFilters[key]||[]).forEach(v=>{ const o=document.createElement('option'); o.value=v; o.textContent=v; sel.appendChild(o); });
+      (allFilters[key]||[]).forEach(v=>{ 
+          const o=document.createElement('option'); 
+          o.value=v; 
+          o.textContent=v;
+          // Maintain selection state if rebuilding
+          if(activeFilters[key] === v) o.selected = true; 
+          sel.appendChild(o); 
+      });
       sel.onchange = (e)=> onFilterChange(key, e.target.value);
     }
 
@@ -403,8 +448,11 @@
       buildSelect('filter-select-sub_process','sub_process','Sub Process');
     }
 
+    // Render Chips for Multiple Filters
     function renderChips(){
       const box = $('#active-chips'); box.innerHTML='';
+      
+      // Team Chip
       if(selectedTeam){
         const { base, light, dark } = themeFor('team');
         const chip = document.createElement('div');
@@ -421,26 +469,39 @@
         box.appendChild(chip);
       }
 
-      if(currentFilterKey && currentFilterValue){
-        const {base, light, dark} = themeFor(currentFilterKey);
-        const chip = document.createElement('div');
-        chip.className='inline-flex items-center gap-2 px-.2 py-.2 rounded-full text-sm';
-        chip.style.background = light;
-        chip.style.border = `1px solid ${base}`;
-        chip.style.color = dark;
-        chip.innerHTML = `<strong class="font-semibold">${currentFilterKey.replace('_',' ')}</strong><span>${currentFilterValue}</span>`;
-        const x = document.createElement('button'); x.className='ml-1 rounded-full p-1'; x.style.background='transparent'; x.innerHTML='✕';
-        x.onclick = ()=> resetPrimaryFilter();
-        chip.appendChild(x);
-        box.appendChild(chip);
-      }
+      // Loop through Active Filters (Project, Name, etc.)
+      Object.entries(activeFilters).forEach(([key, value]) => {
+          if (value) {
+            const {base, light, dark} = themeFor(key);
+            const chip = document.createElement('div');
+            chip.className='inline-flex items-center gap-2 px-.2 py-.2 rounded-full text-sm';
+            chip.style.background = light;
+            chip.style.border = `1px solid ${base}`;
+            chip.style.color = dark;
+            chip.innerHTML = `<strong class="font-semibold">${key.replace('_',' ')}</strong><span>${value}</span>`;
+            const x = document.createElement('button'); x.className='ml-1 rounded-full p-1'; x.style.background='transparent'; x.innerHTML='✕';
+            
+            // On Click X: clear specific filter, reset dropdown, re-render
+            x.onclick = ()=> { 
+                onFilterChange(key, ""); // Set to empty string
+                const sel = document.querySelector(`select[data-filter-key="${key}"]`);
+                if(sel) sel.value = "";
+            };
+            
+            chip.appendChild(x);
+            box.appendChild(chip);
+          }
+      });
 
-      box.classList.toggle('hidden', !selectedTeam && !(currentFilterKey && currentFilterValue));
+      const hasActiveFilters = Object.values(activeFilters).some(v => v);
+      box.classList.toggle('hidden', !selectedTeam && !hasActiveFilters);
     }
 
     function resetPrimaryFilter(){
+      // Reset logic: clear state, reset dropdowns
+      activeFilters = { project: null, name: null, process: null, sub_process: null };
       $$('select[data-filter-key]').forEach(s=> s.value='');
-      currentFilterKey=null; currentFilterValue=null; renderAll();
+      renderAll();
     }
 
     function breakdownCard(title, entries, key){
@@ -479,22 +540,25 @@
       const host = $('#breakdown-row'); host.innerHTML='';
       if(!isDataLoaded || allData.length===0) return;
 
+      // Start with team scope
       let data = rowsByTeam(allData);
       
-      // --- NEW CHANGE: Filter for MTD (Current Month Only) ---
-      // இப்போதைய மாதம் மற்றும் வருடத்தை எடுக்கிறோம்
+      // APPLY ALL ACTIVE FILTERS (Intersection/AND logic)
+      Object.entries(activeFilters).forEach(([key, val]) => {
+          if(val) {
+             data = data.filter(it => it[key] === val); 
+          }
+      });
+      
+      // --- MTD Logic (Current Month Only) ---
       const now = new Date();
       const currentMonthPrefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-
-      // டேட்டாவில் உள்ள தேதி, இந்த மாதத்தில் இருந்தால் மட்டும் எடுத்துக்கொள்வோம்
       data = data.filter(it => it.date && it.date.startsWith(currentMonthPrefix));
       // -------------------------------------------------------
 
-      if(currentFilterKey && currentFilterValue){ data = data.filter(it=> it[currentFilterKey]===currentFilterValue); }
-
-      // If no data for this month, show a message or keep empty
+      // If no data, show message
       if(data.length === 0) {
-          host.innerHTML = `<div class="col-span-5 text-center text-muted text-sm py-4">No data available for this month (${now.toLocaleString('default', { month: 'long' })}).</div>`;
+          host.innerHTML = `<div class="col-span-5 text-center text-muted text-sm py-4">No data available for this selection.</div>`;
           return;
       }
 
@@ -505,23 +569,24 @@
         host.appendChild( breakdownCard(title, entries, key) );
       });
     }
+
     const fmtTimeStr = (t) => {
       if (!t || typeof t !== 'string') return t || '';
-      
-      // Step 1: Remove "0 days " from the beginning
       let timeStr = t.replace(/^0 days /, ''); 
-      
-      // Step 2: Remove trailing ":00" if it exists
       if (timeStr.endsWith(':00')) {
-        timeStr = timeStr.substring(0, timeStr.length - 3); // Removes the last 3 chars (":00")
+        timeStr = timeStr.substring(0, timeStr.length - 3); 
       }
-      
       return timeStr;
-  };
+    };
+
     function renderTable(rows){
       const tb = $('#logs-body'); tb.innerHTML='';
+      
+      // Check if any filters are active
+      const hasActiveFilters = Object.values(activeFilters).some(v => v);
+
       if(!rows || rows.length===0){
-        tb.innerHTML = `<tr><td colspan="8" class="p-8 text-center text-muted">${!currentFilterKey? 'Select a primary filter above to view records here.' : 'No records found for this filter in the current date range.'}</td></tr>`;
+        tb.innerHTML = `<tr><td colspan="10" class="p-8 text-center text-muted">${!hasActiveFilters? 'Select a primary filter above to view records here.' : 'No records found for these filters.'}</td></tr>`;
         $('#record-count').textContent='Showing 0 records';
         return;
       }
@@ -534,22 +599,15 @@
         const td=document.createElement('td');
         const left=['name','project','process','sub_process','project_type'].includes(k);
         
-        // === Truncation Logic Start ===
-        // Basic classes-ஐ set pannurom
         let baseClasses = `px-4 py-2 whitespace-nowrap ${left?'text-left':'text-center'}`;
-        
-        // Intha columns-ku mattum truncate rules apply aagum
         const longTextCols = ['name', 'project', 'process', 'sub_process', 'project_type'];
         
         if (longTextCols.includes(k)) {
-          // CSS class-kalai serkkirom (e.g., "truncate-cell truncate-name")
           baseClasses += ` truncate-cell truncate-${k}`; 
-          // Hover panna full text kaatta 'title' attribute serkkirom
           td.title = it[k] || ''; 
         }
         
-        td.className = baseClasses; // Final classes-a set pannurom
-        // === Truncation Logic End ===
+        td.className = baseClasses; 
         
         if(['name','project','duration_hhmmss'].includes(k)) td.style.fontWeight='600';
         
@@ -566,9 +624,18 @@
     }
 
     function renderAll(){
+      // Start with Team Scoped Data
       let data = rowsByTeam(allData);
-      if(currentFilterKey && currentFilterValue){ data = data.filter(it=> it[currentFilterKey]===currentFilterValue); }
-      renderTable(currentFilterKey && currentFilterValue ? data : []);
+      
+      // Filter by ALL active filters (Project AND Name AND Process...)
+      Object.entries(activeFilters).forEach(([key, val]) => {
+          if(val) {
+             data = data.filter(it => it[key] === val); 
+          }
+      });
+
+      const hasActiveFilters = Object.values(activeFilters).some(v => v);
+      renderTable(hasActiveFilters ? data : []);
       renderChips();
       renderBreakdowns();
     }
@@ -664,7 +731,7 @@
             <tbody id="modal-tbody">`;
 
       if(rowsFiltered.length===0){
-        html += `<tr><td colspan="8" class="px-3 py-6 text-center text-muted">No rows for current filters.</td></tr>`;
+        html += `<tr><td colspan="10" class="px-3 py-6 text-center text-muted">No rows for current filters.</td></tr>`;
       } else {
         rowsFiltered.forEach(r=>{
           html += `<tr>
@@ -707,7 +774,7 @@
       const tb = $('#modal-tbody');
       if(!tb) return;
       if(rowsFiltered.length===0){
-        tb.innerHTML = `<tr><td colspan="8" class="px-3 py-6 text-center text-muted">No rows for current filters.</td></tr>`;
+        tb.innerHTML = `<tr><td colspan="10" class="px-3 py-6 text-center text-muted">No rows for current filters.</td></tr>`;
       }else{
         tb.innerHTML = rowsFiltered.map(r=>`
           <tr>
@@ -727,7 +794,11 @@
     }
     function openModal(key, value){
       let base = rowsByTeam(allData);
-      if(currentFilterKey && currentFilterValue){ base = base.filter(it=> it[currentFilterKey]===currentFilterValue); }
+      // Filter base by all active filters (except the clicked one if needed, but usually we drill down)
+      Object.entries(activeFilters).forEach(([k, val]) => {
+          if(val) base = base.filter(it => it[k] === val); 
+      });
+
       const rows = base.filter(it=> it[key]===value);
 
       modalState.key = key;
@@ -744,32 +815,54 @@
     }
     function closeModal(){ $('#expanded-modal').classList.remove('active'); }
 
+    // Modified Filter Change Handler
     function onFilterChange(key, value){
-      $$('select[data-filter-key]').forEach(s=>{ if(s.dataset.filterKey!==key) s.value=''; });
+      // 1. Update the state
+      activeFilters[key] = value || null;
+
+      // 2. Do NOT clear other dropdowns. 
+      // (The user requested multi-select capability)
+      
       currentFilterKey = value? key : null;
       currentFilterValue = value || null;
       renderAll();
     }
 
     function resetFilters(){
-      $$('select[data-filter-key]').forEach(s=> s.value='');
-      currentFilterKey=null; currentFilterValue=null;
-      renderAll();
+      resetPrimaryFilter();
+    }
+    
+    // Highlight Active Quick Filter Button
+    function highlightActiveFilter(activeId) {
+        // Remove active class from all quick filters
+        $$('[data-qfilter]').forEach(btn => btn.classList.remove('btn-active-filter'));
+        // Add to active if provided
+        if(activeId) {
+            const btn = document.querySelector(`[data-qfilter="${activeId}"]`);
+            if(btn) btn.classList.add('btn-active-filter');
+        }
     }
 
     function refreshAndClearDates(){
-      const sEl = document.getElementById('start_date');
-      const eEl = document.getElementById('end_date');
-      sEl.value = '';
-      eEl.value = '';
+      const today = new Date();
+      const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+      
+      const s = toLocalYMD(startOfMonth);
+      const e = toLocalYMD(today);
+
+      setDateInputs(s, e);
       resetFilters();
-      fetchData(FLASK_DEFAULT_START_DATE, FLASK_DEFAULT_END_DATE);
+      highlightActiveFilter('mtd'); // Highlight MTD as default
+      fetchData(s, e);
     }
 
     function quickRange(days){
       const end = new Date(), start = new Date(); start.setDate(end.getDate()-(days-1));
-      document.getElementById('start_date').value=toLocalYMD(start);
-      document.getElementById('end_date').value=toLocalYMD(end);
+      const s = toLocalYMD(start);
+      const e = toLocalYMD(end);
+      
+      setDateInputs(s, e);
+      highlightActiveFilter(days.toString());
       applyDates();
     }
     function applyDates(){
@@ -781,6 +874,7 @@
 
     async function fetchData(start, end){
       setLoading(true);
+      
       try{
         const r = await fetch(`/admin/dashboard/api/data?start=${start}&end=${end}`); 
         const j = await r.json();
@@ -798,7 +892,7 @@
         renderAll();
       }catch(err){
         console.error(err); isDataLoaded=false; allData=[];
-        $('#logs-body').innerHTML = `<tr><td colspan="8" class="p-8 text-center" style="color:#e11d48">${err.message||'Failed to load data.'}</td></tr>`;
+        $('#logs-body').innerHTML = `<tr><td colspan="10" class="p-8 text-center" style="color:#e11d48">${err.message||'Failed to load data.'}</td></tr>`;
       }
       finally{ setLoading(false); }
     }
@@ -837,14 +931,10 @@
           const day = Number(el.getAttribute('data-day'));
           const chosen = new Date(y,m,day);
           
-          // --- CHANGE HERE ---
-          // const start = new Date(y,m,1); // Old code-ஐ remove செய்யவும்
-          const chosenYMD = toLocalYMD(chosen); // Click செய்த date-ஐ YMD string-ஆக மாற்றவும்
+          const chosenYMD = toLocalYMD(chosen); 
 
-          $('#start_date').value = chosenYMD; // Start date-ஐயும் click செய்த date-ஆக set செய்யவும்
-          $('#end_date').value   = chosenYMD; // End date-ஐயும் click செய்த date-ஆக setசெய்யவும்
-          // --- END CHANGE ---
-
+          setDateInputs(chosenYMD, chosenYMD);
+          
           $('#calendar-pop').classList.remove('active');
           applyDates();
         };
@@ -859,21 +949,26 @@
       }
 
       document.getElementById('btn-condense').onclick = ()=>{ document.getElementById('logs-body').classList.toggle('text-xs'); };
-      document.getElementById('btn-apply-dates').onclick = applyDates;
-      document.getElementById('btn-quick-7').onclick   = ()=> quickRange(7);
-      document.getElementById('btn-quick-30').onclick  = ()=> quickRange(30);
+      document.getElementById('btn-apply-dates').onclick = () => {
+          highlightActiveFilter(null); // Custom date range
+          applyDates();
+      };
+      document.getElementById('btn-quick-7').onclick    = ()=> quickRange(7);
+      document.getElementById('btn-quick-30').onclick   = ()=> quickRange(30);
       document.getElementById('btn-quick-mtd').onclick = ()=>{
         const today=new Date(); const start=new Date(today.getFullYear(), today.getMonth(), 1);
-        document.getElementById('start_date').value = toLocalYMD(start);
-        document.getElementById('end_date').value   = toLocalYMD(today);
+        const s = toLocalYMD(start);
+        const e = toLocalYMD(today);
+        setDateInputs(s, e);
+        highlightActiveFilter('mtd');
         applyDates();
       };
-      // ✅ Yesterday handler
+      // Yesterday handler
       document.getElementById('btn-quick-yesterday').onclick = ()=>{
         const y = new Date(); y.setDate(y.getDate()-1);
         const yStr = toLocalYMD(new Date(y.getFullYear(), y.getMonth(), y.getDate()));
-        document.getElementById('start_date').value = yStr;
-        document.getElementById('end_date').value   = yStr;
+        setDateInputs(yStr, yStr);
+        highlightActiveFilter('yesterday');
         applyDates();
       };
       document.getElementById('btn-browser-refresh').onclick = ()=> refreshAndClearDates();
@@ -886,9 +981,9 @@
       document.getElementById('cal-last3').onclick = ()=>{
         const end = new Date();
         const start = new Date(); start.setMonth(start.getMonth()-3); start.setDate(start.getDate()+1);
-        $('#start_date').value = toLocalYMD(start);
-        $('#end_date').value   = toLocalYMD(end);
+        setDateInputs(toLocalYMD(start), toLocalYMD(end));
         $('#calendar-pop').classList.remove('active');
+        highlightActiveFilter(null);
         applyDates();
       };
 
@@ -902,10 +997,20 @@
       document.getElementById('btn-modal-close').onclick = closeModal;
       document.getElementById('expanded-modal').addEventListener('click',e=>{ if(e.target.id==='expanded-modal') closeModal(); });
 
-      fetchData(FLASK_DEFAULT_START_DATE, FLASK_DEFAULT_END_DATE);
+      // Set default dates explicitly to MTD (Month-To-Date)
+      const today = new Date();
+      const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+      const s = toLocalYMD(startOfMonth);
+      const e = toLocalYMD(today);
+
+      setDateInputs(s, e);
+      highlightActiveFilter('mtd'); // Highlight MTD on load
+      
+      // Fetch data using calculated MTD dates instead of Flask defaults
+      fetchData(s, e);
     });
 
-    
+     
   </script>
 </body>
 </html>

@@ -55,8 +55,6 @@ def send_slack_alert(user_email, message_text):
 # 🆕 HIERARCHY NOTIFICATION SYSTEM
 def notify_hierarchy(actor_user, message):
     """Notify Superadmins and relevant Team Admins."""
-    # 🔴 DISABLED FOR DAILY LOGS PER USER REQUEST
-    # Only enable this if you want admins to know about critical account changes (like Registration)
     try:
         supers = User.query.filter_by(role="superadmin").all()
         for s in supers:
@@ -72,100 +70,6 @@ def notify_hierarchy(actor_user, message):
         print(f"Hierarchy Notification Error: {e}")
 
 # ── AUTOMATION / SCHEDULER FUNCTIONS ─────────────────────────────────────
-
-def check_gaps_and_inactivity():
-    """
-    1. Checks if user has been idle for > 2 hours (Last entry end time vs Now).
-    2. Checks for gaps between entries (e.g., 11:00 AM to 12:00 PM empty).
-    """
-    with app.app_context():
-        print("Checking gaps and inactivity...")
-        now = datetime.now()
-        today_str = now.strftime("%Y-%m-%d")
-        
-        # Skip weekends if needed, currently checking daily
-        # if now.weekday() > 5: return 
-
-        users = User.query.all()
-        
-        for user in users:
-            if not user.email: continue
-
-            # Fetch today's logs for this user
-            cur = mysql.connection.cursor()
-            cur.execute("""
-                SELECT start_time, end_time 
-                FROM timesheetlogs 
-                WHERE name = %s AND date = %s 
-                ORDER BY start_time ASC
-            """, (user.username, today_str))
-            logs = cur.fetchall()
-            cur.close()
-
-            # Logic 1: If no logs at all and it's past 11:30 AM
-            if not logs:
-                if now.hour >= 11 and now.minute >= 30:
-                     send_slack_alert(user.email, f"⚠️ *Missing Timesheet Alert*\nDate: {today_str}\nHello {user.username}, you haven't logged any entries for today. Please update your status.")
-                continue
-
-            # Logic 2 & 3: Gap Detection and Idle Detection
-            last_end_dt = None
-            
-            # Convert logs to datetime objects for comparison
-            parsed_logs = []
-            for row in logs:
-                s_str, e_str = row[0], row[1]
-                if not s_str: continue
-                
-                # Parse Start Time
-                s_dt = datetime.strptime(f"{today_str} {s_str}", "%Y-%m-%d %H:%M")
-                
-                # Parse End Time (Handle ongoing/NULL timers)
-                if not e_str: 
-                    # Timer is running currently, so user is active. Set end to NOW.
-                    e_dt = now 
-                else:
-                    e_dt = datetime.strptime(f"{today_str} {e_str}", "%Y-%m-%d %H:%M")
-                
-                parsed_logs.append((s_dt, e_dt))
-
-            # Check for Gaps between entries
-            for i in range(len(parsed_logs)):
-                curr_start = parsed_logs[i][0]
-                curr_end = parsed_logs[i][1]
-
-                if last_end_dt:
-                    # Calculate gap
-                    gap = curr_start - last_end_dt
-                    gap_minutes = gap.total_seconds() / 60
-                    
-                    # If gap is greater than 15 minutes (allowing small break)
-                    if gap_minutes > 15:
-                        msg = (f"⚠️ *Missing Entry Detected*\n"
-                               f"Date: {today_str}\n"
-                               f"Gap found between: *{last_end_dt.strftime('%I:%M %p')}* and *{curr_start.strftime('%I:%M %p')}*.\n"
-                               f"Please fill in this missing time slot.")
-                        send_slack_alert(user.email, msg)
-                
-                last_end_dt = curr_end
-
-            # Check for Idle Time (Last entry end time vs Now)
-            # Only if the last entry is actually finished (end_time was not created artificially from 'now')
-            # Check the raw last log from DB
-            last_raw_end = logs[-1][1] 
-            
-            if last_raw_end: # If the last timer is STOPPED
-                last_real_end_dt = datetime.strptime(f"{today_str} {last_raw_end}", "%Y-%m-%d %H:%M")
-                idle_duration = now - last_real_end_dt
-                idle_hours = idle_duration.total_seconds() / 3600
-                
-                if idle_hours >= 2:
-                    msg = (f"⏳ *Inactivity Alert*\n"
-                           f"Date: {today_str}\n"
-                           f"You haven't logged any tasks for over 2 hours.\n"
-                           f"Last entry ended at: *{last_real_end_dt.strftime('%I:%M %p')}*.\n"
-                           f"Please update your timesheet.")
-                    send_slack_alert(user.email, msg)
 
 def check_long_running_timers():
     """
@@ -297,10 +201,6 @@ def create_scheduler():
     sched = BackgroundScheduler(timezone=ist)
     sched.add_job(refresh_data, CronTrigger(hour=12, minute=22, timezone=ist))
     sched.add_job(check_long_running_timers, 'interval', minutes=60, timezone=ist)
-    
-    # 🆕 NEW JOB: Check gaps and 2-hour inactivity every 30 minutes
-    sched.add_job(check_gaps_and_inactivity, 'interval', minutes=30, timezone=ist)
-    
     sched.add_job(check_missing_entries, CronTrigger(day_of_week='mon-fri', hour=19, minute=0, timezone=ist))
     sched.add_job(send_weekly_summary, CronTrigger(day_of_week='fri', hour=19, minute=30, timezone=ist))
     sched.add_job(send_admin_daily_report, CronTrigger(day_of_week='mon-fri', hour=20, minute=0, timezone=ist))
@@ -342,6 +242,58 @@ mysql = MySQL(app)
 engine = create_engine(DB_URI)
 # #__________________________App_dep_DB_______________________________
 
+# def refresh_data():
+#     print("Refreshing data @07:30 AM IST")
+#     # 👉 put your refresh logic here (DB update, cache clear, etc.)
+
+# def create_scheduler():
+#     from apscheduler.schedulers.background import BackgroundScheduler
+#     from apscheduler.triggers.cron import CronTrigger
+#     from pytz import timezone
+
+#     ist = timezone("Asia/Kolkata")
+#     sched = BackgroundScheduler(timezone=ist)
+#     # every day at 12:22 PM IST
+#     sched.add_job(refresh_data, CronTrigger(hour=12, minute=22, timezone=ist))
+#     sched.start()
+#     return sched
+
+# @app.route("/")
+# def landing():
+#     return render_template("landing.html")
+
+# # ── SECRET KEY ──────────────────────────────────────────────
+# app.secret_key = os.environ.get("SECRET_KEY", "dev-secret")
+
+# # ── DB CONFIG (Cloud SQL via Unix Socket) ───────────────────
+# DB_USER = os.environ.get("DB_USER", "appsadmin")
+# DB_PASS = os.environ.get("DB_PASS", "appsadmin2025")
+# DB_NAME = os.environ.get("DB_NAME", "timesheet")
+# INSTANCE_UNIX_SOCKET = os.environ.get(
+#     "INSTANCE_UNIX_SOCKET",
+#     "/cloudsql/theta-messenger-459613-p7:asia-south1:appsadmin"
+# )
+
+# # SQLAlchemy URI (pymysql + unix socket)
+# DB_URI = (
+#     f"mysql+pymysql://{DB_USER}:{DB_PASS}@/{DB_NAME}"
+#     f"?unix_socket={INSTANCE_UNIX_SOCKET}"
+# )
+
+# app.config["SQLALCHEMY_DATABASE_URI"] = DB_URI
+# app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+# db = SQLAlchemy(app)
+
+# # Flask-MySQLdb config (if you still use mysql.cursor())
+# app.config["MYSQL_USER"] = DB_USER
+# app.config["MYSQL_PASSWORD"] = DB_PASS
+# app.config["MYSQL_DB"] = DB_NAME
+# app.config["MYSQL_UNIX_SOCKET"] = INSTANCE_UNIX_SOCKET
+# mysql = MySQL(app)
+
+# # Raw engine (if you use create_engine anywhere)
+# engine = create_engine(DB_URI)
+# # #__________________________App_dep_end________________________________
 SMTP_SERVER  = os.getenv("SMTP_SERVER", "smtp.datasolve-analytics.com")
 SMTP_PORT    = int(os.getenv("SMTP_PORT", "587"))
 WEBMAIL_USER = os.getenv("SMTP_USER", "apps.admin@datasolve-analytics.com")
@@ -443,7 +395,7 @@ def get_profile_for_email(email: str):
 def gravatar_url(email: str, size=64, default="identicon"):
     if not email: return ""
     h = hashlib.md5(email.strip().lower().encode("utf-8")).hexdigest()
-    return f"[https://www.gravatar.com/avatar/](https://www.gravatar.com/avatar/){h}?s={size}&d={default}&r=g"
+    return f"https://www.gravatar.com/avatar/{h}?s={size}&d={default}&r=g"
 
 @app.context_processor
 def inject_gravatar():
@@ -556,7 +508,7 @@ def register():
         db.session.add(new_user)
         db.session.commit()
 
-        # 🆕 NOTIFY ADMINS (HIERARCHY) - KEPT ENABLED FOR REGISTRATION
+        # 🆕 NOTIFY ADMINS (HIERARCHY)
         notify_hierarchy(new_user, f"New User Registration\nName: {u}\nTeam: {t}")
 
         send_otp(e, code)
@@ -1007,8 +959,8 @@ def start():
         """, (name, date_str, day, team, project, proj_type_db, process, sub_proc, start_time, end_time, duration_str, total_h, proj_code, proj_type_mc, disease, country))
         mysql.connection.commit()
         
-        # 🆕 NOTIFY HIERARCHY - DISABLED FOR EVERY EDIT
-        # notify_hierarchy(current_user, f"Manual Time Entry Created\nUser: {name}\nProject: {project}\nProcess: {process}\nTime: {start_time} - {end_time}")
+        # 🆕 NOTIFY HIERARCHY
+        notify_hierarchy(current_user, f"Manual Time Entry Created\nUser: {name}\nProject: {project}\nProcess: {process}\nTime: {start_time} - {end_time}")
 
     except Exception as e:
         mysql.connection.rollback()
@@ -1126,8 +1078,8 @@ def update_entry():
         cur.execute(f"""UPDATE timesheetlogs SET project=%s, process=%s, sub_process=%s, start_time=%s, end_time=%s, duration=%s, total_hours=%s, project_code=%s, project_type_mc=%s, disease=%s, country=%s {where_clause}""", tuple(params))
         mysql.connection.commit()
         
-        # 🆕 NOTIFY HIERARCHY (Log Update) - DISABLED FOR EVERY EDIT
-        # notify_hierarchy(current_user, f"Log Entry Updated\nEditor: {current_user.username}\nProject: {project}")
+        # 🆕 NOTIFY HIERARCHY (Log Update)
+        notify_hierarchy(current_user, f"Log Entry Updated\nEditor: {current_user.username}\nProject: {project}")
 
     except Exception as e:
         mysql.connection.rollback()
@@ -1280,7 +1232,7 @@ def delete_log(log_id):
         mysql.connection.commit()
         cur.close()
         flash("Log deleted.", "success")
-        # notify_hierarchy(current_user, f"Log Entry Deleted\nID: {log_id}\nDeleted by Superadmin {current_user.username}.")
+        notify_hierarchy(current_user, f"Log Entry Deleted\nID: {log_id}\nDeleted by Superadmin {current_user.username}.")
     except Exception as e:
         flash(f"Error: {str(e)}", "error")
     return redirect(url_for('view_team_logs'))
@@ -1575,8 +1527,8 @@ def start_timer():
         mysql.connection.commit()
         cur.close()
         
-        # 🆕 NOTIFY HIERARCHY - DISABLED
-        # notify_hierarchy(user, f"Quick Timer Started\nUser: {name}\nPreset: {preset.name}\nProject: {preset.project}")
+        # 🆕 NOTIFY HIERARCHY
+        notify_hierarchy(user, f"Quick Timer Started\nUser: {name}\nPreset: {preset.name}\nProject: {preset.project}")
 
     except Exception as e:
         mysql.connection.rollback()
@@ -1607,9 +1559,9 @@ def stop_timer():
         mysql.connection.commit()
         cur.close()
         
-        # 🆕 NOTIFY HIERARCHY - DISABLED
-        # user = User.query.filter_by(username=session["username"]).first()
-        # notify_hierarchy(user, f"Timer Stopped\nUser: {session['username']}\nProject: {timer_data['project']}\nDuration: {duration_str}")
+        # 🆕 NOTIFY HIERARCHY
+        user = User.query.filter_by(username=session["username"]).first()
+        notify_hierarchy(user, f"Timer Stopped\nUser: {session['username']}\nProject: {timer_data['project']}\nDuration: {duration_str}")
 
     except Exception as e:
         mysql.connection.rollback()
@@ -1648,8 +1600,8 @@ def start_manual_timer():
         mysql.connection.commit()
         cur.close()
         
-        # 🆕 NOTIFY HIERARCHY - DISABLED
-        # notify_hierarchy(user, f"Manual Time Entry Created\nUser: {name}\nProject: {data.get('project')}")
+        # 🆕 NOTIFY HIERARCHY
+        notify_hierarchy(user, f"Manual Time Entry Created\nUser: {name}\nProject: {data.get('project')}")
 
     except Exception as e:
         mysql.connection.rollback()
@@ -1679,9 +1631,9 @@ def stop_manual_timer():
         mysql.connection.commit()
         cur.close()
         
-        # 🆕 NOTIFY HIERARCHY - DISABLED
-        # user = User.query.filter_by(username=session["username"]).first()
-        # notify_hierarchy(user, f"Manual Timer Stopped\nUser: {session['username']}\nDuration: {duration_str}")
+        # 🆕 NOTIFY HIERARCHY
+        user = User.query.filter_by(username=session["username"]).first()
+        notify_hierarchy(user, f"Manual Timer Stopped\nUser: {session['username']}\nDuration: {duration_str}")
 
     except Exception as e:
         mysql.connection.rollback()

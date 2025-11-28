@@ -4,519 +4,345 @@
 {% block content %}
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 <style>
-    /* New styling for the dashboard cards */
-    .dashboard-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); /* Tighter minmax */
-        gap: 16px; /* OLD: 20px */
-        margin-bottom: 20px; /* OLD: 25px */
+    :root {
+        --primary: #ffd24d;
+        --primary-hover: #ffdf85;
+        --accent: #10b981; /* Sharper green */
+        --danger: #ef4444;
+        --bg: #0b1120; /* Deep dark blue-black */
+        --surface: #151e32; /* Slightly lighter */
+        --panel: #1e293b; /* Panel color */
+        --text: #e2e8f0;
+        --muted: #94a3b8;
+        --line: #334155;
+        --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.15);
+        
+        /* Sidebar-aware layout */
+        --sbw: 0px;
+        --page-pad: 10px; /* Reduced page padding */
     }
-    .dashboard-card {
-        background: #161d27;
-        border: 1px solid #232c3a;
-        border-radius: 12px; /* OLD: 16px */
-        padding: 16px; /* OLD: 18px */
-        box-shadow: 0 8px 15px rgba(0,0,0,.15); /* Softer shadow */
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        transition: transform 0.2s ease, box-shadow 0.2s ease; /* Hover Effect */
-    }
-    .dashboard-card:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 12px 20px rgba(0,0,0,.2);
-    }
-    .dashboard-card.pending {
-        background: #fff8e1;
-        border-color: #f0bf1f;
-        color: #333;
-    }
-    .dashboard-card .title {
-        font-size: 14px; /* OLD: 16px */
-        font-weight: 600;
-        color: #e7ecf2;
-        margin-bottom: 8px; /* OLD: 10px */
-    }
-    .dashboard-card .title .fa { /* Icon style */
-        margin-right: 8px;
-        color: var(--primary);
-    }
-    .dashboard-card.pending .title .fa { /* Pending Icon style */
-        color: #795548;
-    }
-    .dashboard-card.pending .title {
-        color: #795548;
-    }
-    .dashboard-card .main-value {
-        font-size: 28px; /* OLD: 32px */
-        font-weight: 800;
-        letter-spacing: -0.5px; /* Tighter */
-        color: #fff;
-    }
-    .dashboard-card.pending .main-value {
-        color: #ff9800;
-    }
-    .dashboard-card .subtitle {
-        font-size: 13px; /* OLD: 14px */
-        font-weight: 500;
-        margin-top: 4px;
-    }
-    .dashboard-card .subtitle.positive {
-        color: #2ecc71;
-    }
-    .dashboard-card .subtitle.negative {
-        color: #e74c3c;
-    }
-    .dashboard-card .details {
-        font-size: 13px; /* OLD: 14px */
-        color: #9fb0c6;
-        margin-top: 6px; /* OLD: 8px */
-    }
-    .dashboard-card.pending .details {
-        color: #a1887f;
-    }
-    .pending-button {
-        background: #ff9800;
-        color: #fff;
-        border: none;
-        padding: 10px 18px; /* OLD: 12px 20px */
-        border-radius: 8px;
-        font-weight: 700;
-        font-size: 14px; /* OLD: 15px */
-        cursor: pointer;
-        margin-top: 12px; /* OLD: 15px */
-        box-shadow: 0 4px 10px rgba(0,0,0,.1);
-    }
-    .pending-button:hover {
-        background: #fb8c00;
-    }
-    .pending-icon {
-        color: #ff9800 !important; /* Overriding other .fa rules */
-        margin-left: auto;
-        font-size: 16px;
-    }
-    /* NEW: Progress Bar Styles */
-    .dashboard-card {
-        flex-direction: column;
-        justify-content: flex-start;
-        align-items: flex-start;
-    }
-    .dashboard-card .main-value {
-        margin-bottom: 5px;
-    }
-    .progress-bar-container {
-        width: 100%;
-    }
-    .progress-bar-label {
-        font-size: 12px; /* OLD: 13px */
-        font-weight: 600;
-        color: var(--accent);
-        margin-bottom: 4px; /* OLD: 5px */
-        text-align: right;
-    }
-    .progress-bar-bg {
-        height: 6px; /* OLD: 8px */
-        background: #2a3240;
-        border-radius: 3px; /* OLD: 4px */
-        overflow: hidden;
-    }
-    .progress-bar-fg {
-        height: 100%;
-        background: var(--accent);
-        transition: width 0.5s ease-in-out;
-        border-radius: 3px; /* OLD: 4px */
-    }
-    /* NEW: Quick Add Button Style */
-    .quick-preset-btn {
-        background: #2a3240;
-        color: var(--text);
-        border: 1px solid #374151;
-        font-weight: 500;
-        padding: 8px 12px; /* OLD: 10px 15px */
-        border-radius: 8px;
-        cursor: pointer;
-        transition: background-color 0.1s;
-    }
-    .quick-preset-btn:hover {
-        background: #374151;
-    }
-    /* END NEW */
-    
-    /* NEW: Calendar Styling */
-    .calendar-box {
-        padding: 16px; /* OLD: 20px 24px */
-        background: #10151c;
-        border: 1px solid #232c3a;
-        border-radius: 10px; /* Added radius to match box */
-    }
-    .calendar-box h2 {
-        font-size: 16px; /* OLD: 18px */
-        margin-bottom: 12px; /* OLD: 15px */
-        color: #e7ecf2;
-    }
-    .calendar-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 12px; /* OLD: 15px */
-        padding: 0 2px; /* OLD: 0 4px */
-        font-weight: 700;
-    }
-    .month-year-label {
-        font-size: 16px; /* OLD: 18px */
-        color: #fff;
-        letter-spacing: 0.5px;
-    }
-    .team-label {
-        font-size: 12px; /* OLD: 13px */
-        color: var(--muted);
-        font-weight: 500;
-    }
-    .calendar-grid {
-        display: grid;
-        grid-template-columns: repeat(7, 1fr);
-        text-align: center;
-        gap: 5px 0; /* OLD: 10px 0 */
-    }
-    .day-label {
-        font-size: 11px; /* OLD: 12px */
-        font-weight: 600;
-        color: var(--muted);
-        padding-bottom: 4px; /* OLD: 5px */
-    }
-    .date-cell, .empty-cell {
-        padding: 4px 0; /* OLD: 8px 0 */
-        font-size: 13px; /* OLD: 14px */
-        font-weight: 500;
-        color: var(--text);
-        cursor: pointer;
-        border-radius: 4px;
-        transition: background-color 0.1s;
-    }
-    .empty-cell {
-        cursor: default;
-    }
-    .date-cell:hover {
-        background: #18212e;
-    }
-    .date-cell.current-day {
-        border: 2px solid #fff;
-        background: transparent;
-        font-weight: 700;
-    }
-    .date-cell.selected-date {
-        background: var(--accent);
-        color: #fff;
-        font-weight: 700;
-        border-radius: 50%;
-        width: 26px; /* OLD: 30px */
-        height: 26px; /* OLD: 30px */
-        line-height: 18px; /* Adjusted for new size */
-        margin: auto;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-    }
-    
-    /* NEW: Calendar Nav Button Style */
-    .cal-nav-btn {
-        background: #2a3240;
-        color: var(--text);
-        border: 1px solid #374151;
-        border-radius: 50%;
-        width: 26px;
-        height: 26px;
-        font-weight: 700;
-        cursor: pointer;
-        line-height: 24px;
+
+    html, body { height: 100%; }
+    body {
+        margin: 0;
+        margin-left: var(--sbw);
+        transition: margin-left .18s ease;
         padding: 0;
-        text-align: center;
-    }
-    .cal-nav-btn:hover { background: #374151; }
-    .cal-nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
-
-
-    /* Existing styles remain here */
-    .footer {
-    margin-top: 20px;
-    padding: 15px 0;
-    text-align: center;
-    font-size: 13px; /* OLD: 14px */
-    color: #fff;
-    }
-    .footer p {
-    margin:0;
-    font-weight:500;
-    letter-spacing:0.5px;
-    }
-    :root{
-    --primary:#ffd24d; --primary-hover:#ffdf85;
-    --accent:#2ecc71;--danger:#e74c3c;
-    --bg:#0e1319; --surface:#161d27; --panel:#111722;
-    --text:#e7ecf2;--muted:#9fb0c6; --line:#232c3a;
-
-    /* Sidebar-aware layout */
-    --sbw: 0px;
-    --page-pad: 14px;
+        font-family: 'Inter', system-ui, -apple-system, sans-serif; /* Modern font stack */
+        background: var(--bg);
+        color: var(--text);
+        line-height: 1.4;
+        overflow-x: hidden;
+        overflow-y: auto;
+        font-size: 13px; /* Slightly smaller base font */
     }
 
-    html,body{height:100%;}
-    body{
-    margin:0;
-    margin-left: var(--sbw);
-    transition: margin-left .18s ease;
-    padding:0;
-    font-family: system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
-    background:var(--bg); color:var(--text); line-height:1.45;
-    overflow:auto;
-    }
+    /* Scrollbar Styling */
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #475569; }
 
     /* Wrapper */
     .wrap {
-    width: 100vw !important;
-    max-width: 100% !important;
-    margin: 0 !important;
-    padding: 0 10px;
-    box-sizing: border-box;
+        width: 100vw !important;
+        max-width: 100% !important;
+        margin: 0 !important;
+        padding: 0 var(--page-pad);
+        box-sizing: border-box;
     }
 
-    /* REMOVED: This rule was shrinking the content when the sidebar was open */
-    /* body.sidebar-open .card{ transform:scale(.995); transition:transform .18s ease; transform-origin:left center; } */
-
-    /* Card + Layout */
-    .card{
-    border:1px solid var(--line); background:var(--surface);
-    border-radius: 12px; /* OLD: 16px */
-    overflow:hidden;
-    box-shadow:0 10px 25px rgba(0,0,0,.25); /* OLD: 0 14px 30px */
-    margin: 14px 0; /* OLD: 18px */
-    }
-    .card-head{ padding: 14px 16px; /* OLD: 16px 18px */
-    border-bottom:1px solid var(--line);
-    background:linear-gradient(180deg,#1a2230,#151c27);
-    }
-    .card-head h1{ margin:0; font-size: 20px; /* OLD: 22px */
-    letter-spacing:.2px; font-weight:800; color:#eaf4ff; }
-    
-    .card-body{ padding: 16px 18px; /* OLD: 18px 0 */ }
-    
-    /* NEW: 20/50/30 Top Layout Grid */
-    .top-layout-grid {
-        display: grid;
-        grid-template-columns: 2fr 5fr 3fr; /* 20% 50% 30% */
-        gap: 16px;
-        margin: 14px 0; /* Replaces card margin */
-        align-items: start; /* Align tops */
-    }
-    @media (max-width:1200px){ .top-layout-grid { grid-template-columns: 1fr; } }
-    @media (max-width:820px){  .top-layout-grid { grid-template-columns: 1fr; } }
-
-
-    .box{
-        border:1px solid var(--line); background:var(--panel);
-        border-radius: 10px; /* OLD: 12px */
-        padding: 14px; /* OLD: 16px */
-        height: 100%; /* Make boxes fill grid cell */
-    }
-    .box h2{ margin:0 0 10px; /* OLD: 12px */
-        font-size: 14px; /* OLD: 15px */
-        color:#cfe1ff; letter-spacing:.15px; font-weight:700;
-    }
-    .box h2 .fa { /* Icon in box header */
-        margin-right: 8px;
-        color: var(--primary);
+    /* Common Card Styles */
+    .card, .dashboard-card, .table-card, .box {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 8px; /* Tighter radius */
+        box-shadow: var(--shadow);
     }
 
-    .form-row{
-        display:grid;
-        grid-template-columns: 120px 1fr; /* OLD: 100px */
-        gap: 8px; /* OLD: 10px */
-        align-items:center;
-        margin-bottom: 10px; /* OLD: 12px */
+    /* === STICKY HEADER CONTAINER === */
+    /* This creates the frozen top section effect */
+    .sticky-header-container {
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        background: rgba(11, 17, 32, 0.95); /* Semi-transparent background */
+        backdrop-filter: blur(8px); /* Cool blur effect */
+        border-bottom: 1px solid var(--line);
+        margin-left: calc(var(--page-pad) * -1);
+        margin-right: calc(var(--page-pad) * -1);
+        padding: 10px var(--page-pad);
+        box-shadow: 0 4px 20px rgba(0,0,0,0.4);
     }
-    .form-row:last-child{ margin-bottom:0; }
-    .form-row label{
-        color:var(--muted);
-        font-size: 12.5px; /* OLD: 13px */
-        text-align: left; /* OLD: right */
-        padding-right: 0;
-        display: flex; /* For icon alignment */
+
+    .card-head {
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--line);
+        background: linear-gradient(180deg, #1e293b, #151e32);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-radius: 8px 8px 0 0;
+        margin-top: 10px;
+    }
+    .card-head h1 {
+        margin: 0;
+        font-size: 16px; /* Compact Title */
+        font-weight: 700;
+        color: #f1f5f9;
+        display: flex;
         align-items: center;
     }
-    .form-row label .fa { /* Icon in form label */
-        margin-right: 8px;
+
+    .card-body { padding: 12px; }
+
+    /* === TOP GRID LAYOUT (Compact) === */
+    .top-layout-grid {
+        display: grid;
+        grid-template-columns: 220px 1fr 280px; /* Fixed width sides, flexible middle */
+        gap: 10px; /* Tighter gap */
+        align-items: stretch;
+    }
+    @media (max-width: 1200px) { .top-layout-grid { grid-template-columns: 1fr 1fr; } }
+    @media (max-width: 850px) { .top-layout-grid { grid-template-columns: 1fr; } }
+
+    /* Boxes inside Grid */
+    .box {
+        padding: 12px;
+        background: var(--panel);
+        height: 100%;
+        box-sizing: border-box;
+        display: flex;
+        flex-direction: column;
+    }
+    .box h2 {
+        margin: 0 0 10px;
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
         color: var(--muted);
-        width: 14px;
-        text-align: center;
+        font-weight: 700;
+        border-bottom: 1px solid var(--line);
+        padding-bottom: 6px;
     }
+    .box h2 .fa { margin-right: 8px; color: var(--primary); }
 
-    input,select{
-    width:100%;
-    padding: 8px 10px; /* OLD: 10px 12px */
-    border-radius: 8px; border:1px solid #2a3240;
-    background:#0f1520; color:#e7ecf2;
-    font-size: 13.5px; /* OLD: 14px */
+    /* Form Elements (Compact) */
+    .form-row {
+        display: grid;
+        grid-template-columns: 90px 1fr; /* Smaller label width */
+        gap: 8px;
+        align-items: center;
+        margin-bottom: 8px; /* Tighter vertical spacing */
     }
-    input[readonly], select[disabled]{ background:#101726; opacity:.95; }
-
-    .helper{ font-size: 11px; /* OLD: 12px */
-        color:var(--muted); margin-top:5px; /* OLD: 6px */
+    .form-row:last-child { margin-bottom: 0; }
+    
+    .form-row label {
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 500;
+        white-space: nowrap;
+        display: flex; align-items: center;
     }
-    .inline{ display:flex; gap: 8px; /* OLD: 10px */
-        align-items:center;
-    }
-    .inline button{
-    padding: 8px 10px; /* OLD: 10px 12px */
-    border:none; border-radius:8px; font-weight:700; cursor:pointer;
-    background:var(--accent); color:#061016;
-    }
-    .inline button:hover{ filter:brightness(1.05); }
-
-    .actions{
-    display:flex; justify-content:center; padding:12px; /* OLD: 14px */
-    gap:10px;
-    border-top:1px solid var(--line); background:#131a25;
-    }
-    .primary{
-    background:var(--primary); color:#101010; border:none; border-radius:10px;
-    font-weight:800; padding: 10px 20px; /* OLD: 12px 22px */
-    cursor:pointer;
-    box-shadow:0 6px 15px rgba(255,210,77,.18); /* OLD: 0 8px 20px */
-    transition: all 0.2s ease; /* Hover effect */
-    }
-    .primary:hover{
-        background:var(--primary-hover);
-        transform: translateY(-2px);
-        box-shadow: 0 10px 20px rgba(255,210,77,.25);
-    }
-    .primary:disabled{ opacity:.45; cursor:not-allowed; transform: none; box-shadow: 0 6px 15px rgba(255,210,77,.18); }
-    .primary .fa { /* Icon in button */
-        margin-left: 8px;
-    }
-
-    .flash{ margin:10px 0 14px; }
-    .flash .msg{
-    background:#0f1520; border:1px dashed #334155; color:#cfe6ff;
-    padding:10px 12px; border-radius:10px; font-size:13px; /* OLD: 13.5px */
-    }
-    .flash .msg.success{ border-color: #2ecc71; color: #b7e8c8; background: #132a1e; }
-    .flash .msg.error{ border-color: #e74c3c; color: #ffd1d1; background: #351a1a; }
-    .flash .msg.info{ border-color: #0ea5e9; color: #bfe8ff; background: #122137; }
-
-
-    /* ===== Table ===== */
-    .table-card { border: 1px solid var(--line); background: #0f1520; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.35); }
-    .table-head { padding: 8px 12px; border-bottom: 1px solid var(--line); background: #131a25; color: #cfe6ff; font-weight: 700; font-size: 13px; }
-    .table-wrap { overflow-x: auto; max-height: none; }
-    table { width: 100%; border-collapse: collapse; font-size: 12.5px; min-width: 800px; }
-    th, td {
-        padding: 6px 8px; /* OLD: 2px 2px. This was too tight. */
-        border-bottom: 1px solid #1f2937;
-        text-align: left;
-        vertical-align: middle; /* NEAT: Align vertically */
-    }
-    thead th {
-        background: linear-gradient(180deg,#ffd24d,#ffecae); color: #121212;
-        font-weight: 800; position: sticky; top: 0; z-index: 3;
-        font-size: 12.5px; /* OLD: 13px */
-    }
-    thead .filters th { background: #182131; position: sticky; top: 30px; /* Adjusted for new padding */ z-index: 2; }
-    thead .filters select {
+    .form-row label .fa { margin-right: 6px; color: var(--muted); width: 12px; text-align: center; }
+    
+    input, select {
         width: 100%;
-        padding: 4px 6px; /* OLD: 2px 4px */
-        font-size: 12px; border-radius: 6px; background: #0f1520;
-        color: #e7ecf2; border: 1px solid #2a3240;
+        padding: 5px 8px; /* Compact padding */
+        border-radius: 4px;
+        border: 1px solid var(--line);
+        background: #0f172a;
+        color: var(--text);
+        font-size: 13px;
+        transition: border-color 0.2s;
     }
-    tbody tr:nth-child(even) { background: #122034; }
-    tbody tr:hover { background: #18283e; }
-    .no-data { color: #8fa5bf; text-align: center; padding: 10px 0; font-size: 13px; }
+    input:focus, select:focus {
+        border-color: var(--primary);
+        outline: none;
+    }
+    input[readonly] { background: #1e293b; color: #94a3b8; cursor: not-allowed; }
 
-    /* Edit modal */
-    .edit-btn {
-        padding: 3px 6px; /* OLD: 4px 8px */
-        font-size: 12px; /* OLD: 12.5px */
-        border-radius: 6px; /* OLD: 8px */
-        border: 1px solid #3a4557;
-        background: #192231;
-        color: #e7ecf2;
+    /* Inline Start/End Buttons */
+    .inline { display: flex; gap: 5px; align-items: center; }
+    .inline button {
+        padding: 5px 10px;
+        font-size: 11px;
+        text-transform: uppercase;
+        border-radius: 4px;
+        background: var(--accent);
+        color: #0f172a;
+        border: none;
+        font-weight: 700;
         cursor: pointer;
-        transition: all 0.2s ease; /* Added hover transition */
     }
-    .edit-btn:hover{
-        background:#2a3b53;
-        border-color: #4f607a;
-    }
-    
-    /* REMOVED Delete Button Style */
-    
-    .modal-backdrop{ display:none; position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:50; }
-    .modal{ position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); width:min(500px,92vw); /* OLD: 520px */
-    background:#121a26; border:1px solid #2a3444; border-radius:12px; padding:16px; z-index:60; display:none; }
-    .modal h3{ margin:0 0 10px; font-size:16px; color:#eaf4ff; }
-    .modal h3 .fa { margin-right: 8px; } /* Icon in modal title */
-    
-    .modal .row{ display:grid; grid-template-columns: 110px 1fr; /* OLD: 130px */
-        gap:10px; margin-bottom:10px; align-items:center;
-    }
-    .modal input, .modal select{ padding: 8px 10px; /* OLD: 9px 10px */ }
-    .modal .m-actions{ display:flex; justify-content:flex-end; gap:10px; margin-top: 15px; /* Added margin */ }
-    .btn{ padding: 8px 12px; /* OLD: 9px 14px */
-        border-radius:8px; border:1px solid #374151; background:#0f1520; color:#e7ecf2; cursor:pointer;
-    }
-    .btn.primary{ background:var(--primary); color:#111; border:none; font-weight:800; }
-    .btn.danger{ background:var(--danger); color:#fff; border:none; font-weight:800; } /* For delete modal */
+    .helper { font-size: 10px; color: var(--muted); margin-top: 3px; }
 
-    /* ===== 7-DAY HORIZONTAL CHIPS ===== */
-    .strip7{ 
-        display:flex; 
-        gap: 8px; /* OLD: 12px */
-        align-items:stretch; 
-        flex-wrap:nowrap; 
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-        /* Padding is now handled by .card-body */
+    /* Submit Button */
+    .actions { margin-top: auto; padding-top: 10px; }
+    .primary {
+        background: linear-gradient(135deg, var(--primary), #fbbf24);
+        color: #1e293b;
+        border: none;
+        border-radius: 6px;
+        font-weight: 700;
+        padding: 8px 16px;
+        font-size: 13px;
+        width: 100%;
+        cursor: pointer;
+        transition: transform 0.1s;
+        box-shadow: 0 2px 10px rgba(255, 210, 77, 0.1);
     }
-    .chip7{
-    flex: 1 1 150px; /* OLD: 160px */
-    min-width: 150px; /* OLD: 160px */
-    height: 70px; /* OLD: 76px */
-    background:#101824; 
-    border:1px solid #243040; 
-    border-radius: 10px; /* OLD: 14px */
-    display:flex; 
-    flex-direction:column; 
-    justify-content:center; 
-    align-items:center;
-    box-shadow:0 4px 15px rgba(0,0,0,.25); /* OLD: 0 6px 20px */
-    position:relative; 
-    transition: transform 0.2s ease; /* Hover */
-    }
-    .chip7:hover {
-        transform: translateY(-3px);
-    }
-    .chip7 .wday{ font-weight:700; font-size: 12px; /* OLD: 12.5px */
-        color:#cfe1ff; letter-spacing:.2px;
-    }
-    .chip7 .date{ font-size: 11px; /* OLD: 12px */
-        color:#8ea4bf; margin-top:2px;
-    }
-    .chip7 strong{ margin-top: 6px; /* OLD: 8px */
-        font-size: 15px; /* OLD: 16px */
-        color:#fff; letter-spacing:.3px;
-    }
-    .chip7 strong.leave{ color:#ff2d2d; } /* Leave red */
-    .chip7.today::after{
-    content:"Today"; position:absolute; top:5px; right:6px; /* OLD: 6px 8px */
-    font-size: 9px; /* OLD: 10px */
-    background:#0ea5e9; color:#081018;
-    padding: 2px 5px; /* OLD: 2px 6px */
-    border-radius:999px; font-weight:800;
-    }
-    .total-chip7{ background:var(--primary); color:#111; border:none; }
-    .total-chip7 .wday, .total-chip7 strong{ color:#111; }
+    .primary:hover { transform: translateY(-1px); filter: brightness(1.1); }
+    .primary:disabled { opacity: 0.5; transform: none; cursor: not-allowed; }
+    .primary .fa { margin-left: 6px; }
 
-    @media (max-width:1100px){
-    .wrap{ width: calc(100vw - var(--sbw) - var(--page-pad)*2); padding:0 var(--page-pad); }
+    /* === DASHBOARD STAT CARDS === */
+    .dashboard-card {
+        padding: 12px;
+        background: var(--surface);
+        position: relative;
+        overflow: hidden;
+        display: flex; flex-direction: column; justify-content: center;
+    }
+    .dashboard-card::before {
+        content: ''; position: absolute; top: 0; left: 0; width: 3px; height: 100%;
+        background: var(--line);
+    }
+    /* Specific colored borders */
+    .dashboard-card:nth-child(1)::before { background: var(--primary); }
+    .dashboard-card:nth-child(2)::before { background: var(--accent); }
+    
+    .dashboard-card .title { font-size: 11px; text-transform: uppercase; color: var(--muted); font-weight: 600; margin-bottom: 4px; display: block; }
+    .dashboard-card .title .fa { margin-right: 6px; color: var(--text); opacity: 0.7; }
+    .dashboard-card .main-value { font-size: 24px; font-weight: 800; color: #fff; line-height: 1.1; margin-bottom: 2px; }
+    .dashboard-card .subtitle { font-size: 11px; margin-top: 2px; }
+    .dashboard-card .subtitle.positive { color: var(--accent); }
+    .dashboard-card .subtitle.negative { color: var(--danger); }
+    .dashboard-card .details { font-size: 11px; color: var(--muted); margin-top: 4px; }
+    
+    /* Progress Bar (Compact) */
+    .progress-bar-container { margin-top: 8px; width: 100%; }
+    .progress-bar-label { font-size: 10px; text-align: right; color: var(--muted); margin-bottom: 2px; }
+    .progress-bar-bg { height: 4px; background: #334155; border-radius: 2px; overflow: hidden; }
+    .progress-bar-fg { height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.5s ease; }
+
+    /* === CALENDAR (Compact) === */
+    .calendar-box { padding: 12px; }
+    .calendar-header { display: flex; justify-content: space-between; margin-bottom: 8px; align-items: center; }
+    .month-year-label { font-size: 14px; font-weight: 700; color: #fff; }
+    .cal-nav-btn {
+        width: 22px; height: 22px; line-height: 20px; font-size: 14px;
+        background: #334155; color: #fff; border: none; border-radius: 4px; cursor: pointer; padding: 0; text-align: center;
+    }
+    .cal-nav-btn:hover { background: var(--primary); color: #000; }
+    .cal-nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+    .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; gap: 2px 0; }
+    .day-label { font-size: 10px; color: var(--muted); padding-bottom: 2px; font-weight: 600; }
+    .date-cell, .empty-cell { 
+        padding: 4px 0; font-size: 12px; border-radius: 4px; cursor: pointer; color: var(--text);
+    }
+    .empty-cell { cursor: default; }
+    .date-cell:hover { background: #334155; }
+    .date-cell.current-day { border: 1px solid #fff; font-weight: 700; background: transparent; }
+    .date-cell.selected-date { 
+        background: var(--primary); color: #000; font-weight: 700; 
+        width: 24px; height: 24px; line-height: 24px; border-radius: 50%; margin: auto;
+    }
+    .team-label { font-size: 10px; background: #1e293b; padding: 2px 6px; border-radius: 4px; color: var(--muted); margin-top: 6px; display: inline-block; }
+
+    /* === QUICK ADD / PENDING GRID (Compact) === */
+    .dashboard-grid {
+        display: grid;
+        grid-template-columns: 3fr 1fr 1fr;
+        gap: 10px;
+        margin-top: 10px;
+        margin-bottom: 10px;
+        align-items: stretch;
+    }
+    .quick-preset-btn {
+        background: #1e293b; border: 1px solid var(--line); color: var(--text);
+        padding: 6px 10px; font-size: 12px; border-radius: 6px; cursor: pointer; font-weight: 500;
+        transition: background 0.1s;
+    }
+    .quick-preset-btn:hover { background: var(--line); border-color: var(--muted); }
+
+    /* === TABLE (Dense) === */
+    .table-card { margin-top: 10px; border-radius: 8px; overflow: hidden; }
+    .table-head { 
+        padding: 8px 12px; background: #1e293b; font-size: 13px; font-weight: 700; color: #fff; border-bottom: 1px solid var(--line); 
+    }
+    .table-wrap { max-height: 50vh; overflow-y: auto; overflow-x: auto; position: relative; }
+    
+    table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 800px; }
+    th, td { padding: 6px 10px; border-bottom: 1px solid #1e293b; text-align: left; vertical-align: middle; }
+    
+    /* Sticky Table Header */
+    thead th { 
+        position: sticky; top: 0; z-index: 10;
+        background: #0f172a; color: var(--primary); font-weight: 600; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px;
+        border-bottom: 2px solid var(--line);
+    }
+    thead .filters th { top: 29px; background: #1e293b; z-index: 9; padding: 4px 10px; }
+    thead .filters select { font-size: 11px; padding: 2px; height: 24px; width: 100%; border-radius: 4px; background: #0f1520; color: #e2e8f0; border: 1px solid #334155; }
+    
+    tbody tr:nth-child(even) { background: #162032; }
+    tbody tr:hover { background: #1e293b; }
+    .no-data { color: var(--muted); text-align: center; padding: 10px; }
+
+    /* Edit Button */
+    .edit-btn {
+        padding: 2px 8px; font-size: 11px; border-radius: 4px;
+        background: #334155; color: #fff; border: none; cursor: pointer; transition: background 0.2s;
+    }
+    .edit-btn:hover { background: var(--primary); color: #000; }
+
+    /* === 7-DAY CHIPS (Ultra Compact) === */
+    .strip7 { display: flex; gap: 6px; margin-top: 0; padding-bottom: 5px; overflow-x: auto; }
+    .chip7 {
+        flex: 1; min-width: 100px; height: 50px; /* Much smaller */
+        background: #1e293b; border: 1px solid var(--line); border-radius: 6px;
+        display: flex; flex-direction: row; /* Horizontal layout for compactness */
+        justify-content: space-between; align-items: center; padding: 0 10px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2); transition: transform 0.2s;
+    }
+    .chip7:hover { border-color: var(--primary); transform: translateY(-2px); }
+    .chip7 .wday { font-size: 11px; color: var(--muted); font-weight: 700; }
+    .chip7 .date { font-size: 10px; color: #64748b; }
+    .chip7 strong { font-size: 13px; color: #fff; margin: 0; }
+    .chip7 strong.leave { color: var(--danger); }
+    .chip7.today { border-color: var(--accent); background: rgba(16, 185, 129, 0.1); }
+    .chip7.today::after { content: none; } /* Remove 'Today' badge for space */
+    .total-chip7 { background: var(--primary); color: #000; border: none; }
+    .total-chip7 .wday, .total-chip7 strong { color: #000; }
+
+    /* Flash Messages */
+    .flash { margin: 10px 0; }
+    .flash .msg { padding: 8px 12px; border-radius: 6px; font-size: 12px; margin-bottom: 5px; border: 1px dashed; }
+    .flash .msg.success { background: rgba(16, 185, 129, 0.1); border-color: var(--accent); color: var(--accent); }
+    .flash .msg.error { background: rgba(239, 68, 68, 0.1); border-color: var(--danger); color: var(--danger); }
+    .flash .msg.info { background: rgba(59, 130, 246, 0.1); border-color: #3b82f6; color: #3b82f6; }
+
+    /* Modals */
+    .modal-backdrop { display:none; position:fixed; inset:0; background:rgba(0,0,0,.7); z-index:50; backdrop-filter: blur(2px); }
+    .modal { position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); width:min(450px,92vw);
+        background:#1e293b; border:1px solid #334155; border-radius: 8px; padding:16px; z-index:60; display:none; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5); }
+    .modal h3 { margin:0 0 12px; font-size:15px; color:#f1f5f9; display: flex; align-items: center; border-bottom: 1px solid #334155; padding-bottom: 8px; }
+    .modal h3 .fa { margin-right: 8px; color: var(--primary); }
+    .modal .row { display: grid; grid-template-columns: 100px 1fr; gap: 10px; margin-bottom: 10px; align-items: center; }
+    .modal .m-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 15px; border-top: 1px solid #334155; padding-top: 12px; }
+    .btn { padding: 6px 12px; border-radius: 6px; border: 1px solid #334155; background: #0f172a; color: #e2e8f0; cursor: pointer; font-size: 12px; }
+    .btn.primary { background: var(--primary); color: #000; border: none; font-weight: 700; }
+    .btn.danger { background: var(--danger); color: #fff; border: none; }
+
+    /* Footer */
+    .footer { font-size: 11px; color: var(--muted); margin-top: 20px; padding-bottom: 20px; text-align: center; }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .dashboard-grid { grid-template-columns: 1fr; }
+        .form-row { grid-template-columns: 1fr; gap: 4px; }
+        .form-row label { display: none; } /* Hide labels on mobile for extreme compactness? Maybe keep them but small */
+        .chip7 { min-width: 80px; padding: 0 6px; }
     }
 </style>
 
@@ -531,26 +357,39 @@
         {% endif %}
     {% endwith %}
 
-    <div class="card-head" style="border-radius: 12px 12px 0 0; margin-top: 14px;">
-        <h1>
-            <i class="fa fa-clock" style="margin-right: 10px; color: var(--primary);"></i>Logsy
-            <span id="today-logged-time" style="font-size: 14px; font-weight: 500; margin-left: 20px; padding: 5px 10px; background: #374151; border-radius: 6px; color: #ffd24d; vertical-align: middle;">
-                Loading...
-            </span>
-        </h1>
-    </div>
-    
-    <!-- NEW 20/50/30 Layout -->
-    <form method="POST" action="/start" autocomplete="off">
-        <div class="top-layout-grid">
-            
-            <!-- Column 1: Select Date (20%) -->
-            <div class="box calendar-box">
-                <h2>Select Date</h2>
-                <input type="hidden" name="date" id="selected-date-input" value="{{ today }}" required>
+   <div class="card-head" style="display: flex; justify-content: space-between; align-items: center;">
+    <h1 style="display: flex; align-items: center; margin: 0;">
+    <img src="https://storage.googleapis.com/my-react-image-bucket-123/DS_Logos/Logo_Favicon/Logsy_Favicon.png"
+         style="width: 28px; height: 28px; margin-right: 8px;" />
 
-                <div class="calendar-header">
-                    <div style="display: flex; align-items: center; gap: 8px;">
+    Logsy
+</h1>
+
+
+    <!-- 🔹 Move this fully to the left or right as needed -->
+    <span id="today-logged-time"
+        style="
+            font-size: 12px;
+            font-weight: 600;
+            padding: 2px 8px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 4px;
+            color: var(--primary);
+        ">
+        Loading...
+    </span>
+</div>
+
+    
+    <!-- WRAPPED IN STICKY CONTAINER FOR FREEZE EFFECT -->
+    <div class="sticky-header-container">
+        <!-- NEW 20/50/30 Layout -->
+        <form method="POST" action="/start" autocomplete="off">
+            <div class="top-layout-grid">
+                
+                <!-- Column 1: Select Date (20%) -->
+                <div class="box calendar-box">
+                    <div class="calendar-header">
                         <button type="button" id="cal-prev" class="cal-nav-btn">‹</button>
                         <span class="month-year-label" id="calendar-month-year">
                             <span id="current-month-placeholder">{{ today.split('-')[1] }}</span>
@@ -558,219 +397,204 @@
                         </span>
                         <button type="button" id="cal-next" class="cal-nav-btn">›</button>
                     </div>
-                </div>
-                
-                <div class="team-label" title="Your assigned team" style="background: #374151; color: var(--primary); padding: 3px 8px; border-radius: 6px; display: inline-block; margin-top: 5px;">
-                    Team: {% if user_team %}{{ user_team }}{% else %}<span style="color: var(--primary);">N/A</span>{% endif %}
-                </div>
-
-                <div class="calendar-grid" id="main-calendar-grid" style="margin-top: 10px;">
-                    <span class="day-label">Sun</span>
-                    <span class="day-label">Mon</span>
-                    <span class="day-label">Tue</span>
-                    <span class="day-label">Wed</span>
-                    <span class="day-label">Thu</span>
-                    <span class="day-label">Fri</span>
-                    <span class="day-label">Sat</span>
                     
-                    <div class="helper" style="grid-column: 1/span 7; text-align: center;">Loading calendar...</div>
-                </div>
-                
-                {% if user_team %}
-                    <input type="hidden" name="team" value="{{ user_team }}">
-                {% endif %}
-            </div>
+                    <input type="hidden" name="date" id="selected-date-input" value="{{ today }}" required>
 
-            <!-- Column 2: Project, Process & Time (50%) -->
-            <div class="box">
-                <h2><i class="fa fa-tasks"></i> Project, Process & Time</h2>
-                
-                {% set pc_count = user_project_codes|length %}
-                
-                {% if pc_count == 0 %}
-                    <div class="form-row">
-                        <label><i class="fa fa-briefcase"></i> Project</label>
-                        <div>
-                            <input type="text" value="No assigned WIP project" readonly>
-                            <div class="helper">Contact admin to assign a WIP project.</div>
-                        </div>
+                    <div class="calendar-grid" id="main-calendar-grid">
+                        <span class="day-label">S</span>
+                        <span class="day-label">M</span>
+                        <span class="day-label">T</span>
+                        <span class="day-label">W</span>
+                        <span class="day-label">T</span>
+                        <span class="day-label">F</span>
+                        <span class="day-label">S</span>
+                        <div class="helper" style="grid-column: 1/span 7; text-align: center;">Loading...</div>
                     </div>
-                {% elif pc_count == 1 %}
-                    <div class="form-row">
-                        <label><i class="fa fa-briefcase"></i> Project</label>
-                        <div>
-                            <input type="text" value="{{ user_project_codes[0].code }}" readonly>
-                            <input type="hidden" name="project" value="{{ user_project_codes[0].code }}">
-                        </div>
+                    
+                    <div class="team-label" title="Your assigned team">
+                        Team: {% if user_team %}{{ user_team }}{% else %}N/A{% endif %}
                     </div>
-                {% else %}
-                    <div class="form-row">
-                        <label for="project"><i class="fa fa-briefcase"></i> Project</label>
-                        <div>
-                            <select name="project" id="project" required>
-                                <option disabled selected>Select Project</option>
-                                {% for p in user_project_codes %}
-                                    <option value="{{ p.code }}">{{ p.code }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                    </div>
-                {% endif %}
-                
-                <div class="form-row">
-                    <label for="process"><i class="fa fa-cogs"></i> Process</label>
-                    <select id="process" name="process" required>
-                        <option value="">Select Process</option>
-                    </select>
-                </div>
-                
-                <div class="form-row">
-                    <label for="sub_process"><i class="fa fa-code-branch"></i> Sub-Process</label>
-                    <select id="sub_process" name="sub_process" required>
-                        <option value="">Select Sub-Process</option>
-                    </select>
-                </div>
-                
-                <div class="form-row" style="margin-top: 15px;"> <!-- OLD: 20px -->
-                    <label for="start_time"><i class="fa fa-play-circle"></i> Start Time</label>
-                    <div class="inline">
-                        <input type="time" name="start_time" id="start_time" required>
-                        <button type="button" onclick="setCurrentTime('start_time')">Start</button>
-                    </div>
-                </div>
-                
-                <div class="form-row">
-                    <label for="end_time"><i class="fa fa-stop-circle"></i> End Time</label>
-                    <div class="inline">
-                        <input type="time" name="end_time" id="end_time" required>
-                        <button type="button" onclick="setCurrentTime('end_time')">End</button>
-                    </div>
-                </div>
-
-                <div class="actions" style="border-top: none; background: transparent; padding: 12px 0 0;"> <!-- OLD: 14px -->
-                    <button class="primary" type="submit" style="width: 100%;" {% if pc_count == 0 %}disabled title="No assigned WIP project"{% endif %}>
-                        Submit Time Entry <i class="fa fa-paper-plane"></i>
-                    </button>
-                </div>
-            </div>
-
-            <!-- Column 3: Dashboard Stats (30%) -->
-            <div style="display: flex; flex-direction: column; gap: 16px;">
-                <div class="dashboard-card">
-                    <span class="title"><i class="fa fa-chart-pie"></i> Total working hours</span>
-                    <span class="main-value" id="total-this-month-hms">Loading...</span>
-                    <span class="subtitle" id="percent-change"></span>
-                </div>
-                <div class="dashboard-card">
-                    <span class="title"><i class="fa fa-calendar-week"></i> Weekly working hours</span>
-                    <span class="main-value" id="weekly-hours">Loading...</span>
-                    <span class="details" id="weekly-target">Target: 45h</span>
-                    <div class="progress-bar-container" style="margin-top: 12px;"> <!-- OLD: 15px -->
-                        <div class="progress-bar-label">
-                            <span id="weekly-percentage"></span>
-                        </div>
-                        <div class="progress-bar-bg">
-                            <div class="progress-bar-fg" id="weekly-progress-bar" style="width: 0;"></div>
-                        </div>
-                    </div>
-                </div>
-                <!-- PENDING CARD REMOVED FROM HERE -->
-            </div>
-
-        </div> <!-- /top-layout-grid -->
-    </form>
-    <!-- End NEW 20/50/30 Layout -->
-
-    <!-- NEW 60/20/20 Layout for Quick Add, Pending & Compensation -->
-    <div class="dashboard-grid" style="grid-template-columns: 6fr 2fr 2fr; margin-bottom: 14px; align-items: stretch;">
-        <!-- Column 1: Quick Add (60%) -->
-        <div class="card" id="quick-add-panel" style="margin: 0; height: 100%;">
-            <div class="card-head">
-                <h1 style="display:flex; justify-content:space-between; align-items:center;">
-                    Quick Add / Timer
-                    <button class="btn" style="padding: 6px 12px; font-size: 13px; font-weight: 500;"
-                            onclick="showManagePresets()">
-                        <i class="fa fa-plus"></i> Manage Presets
-                    </button>
-                </h1>
-            </div>
-            <div class="card-body" style="padding: 16px 18px;">
-                <div id="quick-presets-container" style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px;">
-                    {% for preset in quick_presets %}
-                    <button class="btn quick-preset-btn" 
-                            data-id="{{ preset.id }}" 
-                            data-name="{{ preset.name }}" 
-                            data-project="{{ preset.project }}" 
-                            data-process="{{ preset.process }}" 
-                            data-sub="{{ preset.sub_process }}">
-                        {{ preset.name }}
-                    </button>
-                    {% endfor %}
-                    {% if not quick_presets %}
-                    <div class="helper">No Quick Add presets found. Click 'Manage Presets' to add one.</div>
+                    
+                    {% if user_team %}
+                        <input type="hidden" name="team" value="{{ user_team }}">
                     {% endif %}
                 </div>
-                
-                <div id="active-timer-display" style="display:none; border:1px solid var(--accent); background:#1e382b; border-radius:12px; padding:15px; display:flex; align-items:center; justify-content:space-between;">
-                    <div style="display:flex; gap:10px; align-items:center;">
-                        <span style="height:10px; width:10px; background:var(--accent); border-radius:50%; animation: pulse 1.5s infinite;"></span>
-                        <style>@keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }</style>
-                        <div>
-                            <div id="timer-preset-name" style="font-weight:600; font-size:15px; color: #cfe1ff;"></div>
-                            <div id="elapsed-time" style="font-size:18px; font-weight:700; color:#fff;">00:00:00</div>
+
+                <!-- Column 2: Project, Process & Time (50%) -->
+                <div class="box">
+                    <h2><i class="fa fa-tasks"></i> Project, Process & Time</h2>
+                    
+                    {% set pc_count = user_project_codes|length %}
+                    
+                    <div class="form-row">
+                        <label><i class="fa fa-briefcase"></i> Project</label>
+                        {% if pc_count == 0 %}
+                            <div>
+                                <input type="text" value="No assigned WIP project" readonly>
+                                <div class="helper">Contact admin to assign a WIP project.</div>
+                            </div>
+                        {% elif pc_count == 1 %}
+                            <div>
+                                <input type="text" value="{{ user_project_codes[0].code }}" readonly>
+                                <input type="hidden" name="project" value="{{ user_project_codes[0].code }}">
+                            </div>
+                        {% else %}
+                            <div>
+                                <select name="project" id="project" required>
+                                    <option disabled selected>Select Project</option>
+                                    {% for p in user_project_codes %}
+                                        <option value="{{ p.code }}">{{ p.code }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="form-row">
+                        <label for="process"><i class="fa fa-cogs"></i> Process</label>
+                        <select id="process" name="process" required>
+                            <option value="">Select Process</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-row">
+                        <label for="sub_process"><i class="fa fa-code-branch"></i> Sub-Process</label>
+                        <select id="sub_process" name="sub_process" required>
+                            <option value="">Select Sub-Process</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Compact Time Row -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 5px;">
+                        <div class="form-row" style="grid-template-columns: 40px 1fr;">
+                            <label>Start</label>
+                            <div class="inline">
+                                <input type="time" name="start_time" id="start_time" required>
+                                <button type="button" onclick="startManualLiveTimer()">Start</button>
+                            </div>
+                        </div>
+                        <div class="form-row" style="grid-template-columns: 40px 1fr;">
+                            <label>End</label>
+                            <div class="inline">
+                                <input type="time" name="end_time" id="end_time" required>
+                                <button type="button" onclick="fillCurrentTime('end_time')">End</button>
+                            </div>
                         </div>
                     </div>
-                    <div style="display:flex; gap:10px;">
-                        <button class="btn" onclick="showStopConfirmation()" style="background:var(--danger); color:#fff; border:none; padding:10px 15px;">Stop & Log</button>
+
+                    <div class="actions" style="border-top: none; background: transparent; padding: 12px 0 0;">
+                        <button class="primary" type="submit" {% if pc_count == 0 %}disabled title="No assigned WIP project"{% endif %}>
+                            Submit Time Entry <i class="fa fa-paper-plane"></i>
+                        </button>
                     </div>
                 </div>
-                
-                <div style="text-align:center; margin-top:16px;">
-                    <button class="primary" onclick="document.querySelector('form').scrollIntoView({behavior: 'smooth'})" style="width:100%; display: none;">
-                        Add Manual Entry
-                    </button>
+
+                <!-- Column 3: Dashboard Stats (30%) -->
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <div class="dashboard-card">
+                        <span class="title"><i class="fa fa-chart-pie"></i> Total (Month)</span>
+                        <div style="display: flex; justify-content: space-between; align-items: baseline;">
+                            <span class="main-value" id="total-this-month-hms">Loading...</span>
+                            <span class="subtitle" id="percent-change"></span>
+                        </div>
+                    </div>
+                    <div class="dashboard-card">
+                        <span class="title"><i class="fa fa-calendar-week"></i> Weekly Progress</span>
+                        <div style="display: flex; justify-content: space-between; align-items: baseline;">
+                            <span class="main-value" id="weekly-hours">Loading...</span>
+                            <span class="details" id="weekly-target">Target: 45h</span>
+                        </div>
+                        <div class="progress-bar-container">
+                            <div class="progress-bar-bg">
+                                <div class="progress-bar-fg" id="weekly-progress-bar" style="width: 0;"></div>
+                            </div>
+                            <div class="progress-bar-label"><span id="weekly-percentage"></span></div>
+                        </div>
+                    </div>
                 </div>
+
+            </div> <!-- /top-layout-grid -->
+        </form>
+    </div>
+    <!-- END STICKY CONTAINER -->
+
+    <!-- NEW 60/20/20 Layout for Quick Add, Pending & Compensation -->
+    <div class="dashboard-grid">
+        <!-- Column 1: Quick Add (60%) -->
+        <div class="card" id="quick-add-panel" style="margin: 0; height: 100%; padding: 12px; display: flex; flex-direction: column; justify-content: center;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
+                <span style="font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase;">Quick Timer</span>
+                <button class="btn" style="padding: 4px 8px; font-size: 11px;" onclick="showManagePresets()">
+                    <i class="fa fa-plus"></i> Manage
+                </button>
+            </div>
+            
+            <div id="quick-presets-container" style="display: flex; flex-wrap: wrap; gap: 6px;">
+                {% for preset in quick_presets %}
+                <button class="btn quick-preset-btn" 
+                        data-id="{{ preset.id }}" 
+                        data-name="{{ preset.name }}" 
+                        data-project="{{ preset.project }}" 
+                        data-process="{{ preset.process }}" 
+                        data-sub="{{ preset.sub_process }}">
+                    {{ preset.name }}
+                </button>
+                {% endfor %}
+                {% if not quick_presets %}
+                <div class="helper">No Quick Add presets found. Click 'Manage' to add one.</div>
+                {% endif %}
+            </div>
+            
+            <div id="active-timer-display" style="display:none; margin-top: 8px; background: rgba(16, 185, 129, 0.1); border: 1px solid var(--accent); border-radius: 6px; padding: 8px; align-items: center; justify-content: space-between;">
+                <div style="display:flex; gap:8px; align-items:center;">
+                    <div style="width: 8px; height: 8px; background: var(--accent); border-radius: 50%; animation: pulse 1s infinite;"></div>
+                    <style>@keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }</style>
+                    <div>
+                        <div id="timer-preset-name" style="font-size: 11px; color: var(--accent); font-weight: 700;">Running</div>
+                        <div id="elapsed-time" style="font-size: 16px; font-weight: 800; color: #fff; line-height: 1;">00:00:00</div>
+                    </div>
+                </div>
+                <button class="btn" onclick="showStopConfirmation()" style="background:var(--danger); color:#fff; border:none; padding:4px 8px; font-size: 10px; font-weight: 700;">STOP & LOG</button>
+            </div>
+            
+            <div style="text-align:center; margin-top:16px;">
+                <button class="primary" onclick="document.querySelector('form').scrollIntoView({behavior: 'smooth'})" style="width:100%; display: none;">
+                    Add Manual Entry
+                </button>
             </div>
         </div>
 
         <!-- Column 2: Pending Hours (20%) -->
-        <div class="dashboard-card pending" style="margin: 0; justify-content: center; height: 100%; padding: 12px;">
-            <span class="title" style="font-size: 13px;"><i class="fa fa-hourglass-half"></i> Pending</span>
-            <span class="main-value" id="pending-hours-value" style="font-size: 26px;">Loading...</span> <!-- OLD: 24px -->
+        <div class="dashboard-card" style="margin: 0; justify-content: center; height: 100%; border-left: 3px solid #f59e0b;">
+            <span class="title" style="color: #f59e0b;"><i class="fa fa-hourglass-half"></i> Pending</span>
+            <span class="main-value" id="pending-hours-value" style="color: #f59e0b; font-size: 20px;">Loading...</span>
         </div>
         
         <!-- Column 3: Compensation (20%) -->
-        <div class="dashboard-card" style="margin: 0; background: #10151c; height: 100%; justify-content: space-between; padding: 12px;">
+        <div class="dashboard-card" style="margin: 0; background: #10151c; height: 100%; justify-content: space-between; border-left: 3px solid var(--primary);">
             <div>
-                <span class="title" style="color: var(--primary); font-size: 13px;"><i class="fa fa-balance-scale"></i> Compensation</span>
-                <div style="display: grid; grid-template-columns: auto 1fr; gap: 4px 8px; align-items: center; margin-top: 8px;">
-                    <span style="font-size: 12px; color: var(--muted);">Permission:</span>
-                    <span style="font-size: 13px; font-weight: 700; text-align: right;" id="permission-total-hms">0h 0m</span>
+                <span class="title" style="color: var(--primary);"><i class="fa fa-balance-scale"></i> Comp Balance</span>
+                <span class="main-value" id="compensation-balance-hms" style="font-size: 20px;">0h 0m</span>
+                <div style="display: grid; grid-template-columns: auto 1fr; gap: 4px 8px; align-items: center; margin-top: 4px;">
+                    <span style="font-size: 10px; color: var(--muted);">Permission:</span>
+                    <span style="font-size: 11px; font-weight: 700; text-align: right;" id="permission-total-hms">0h 0m</span>
                     
-                    <span style="font-size: 13px; color: var(--muted);">Compensated:</span>
-                    <span style="font-size: 13px; font-weight: 700; text-align: right;" id="compensation-total-hms">0h 0m</span>
-                    
-                    <span style="font-size: 13px; color: var(--text); font-weight: 700;">Balance:</span>
-                    <span style="font-size: 20px; font-weight: 800; text-align: right;" id="compensation-balance-hms">0h 0m</span> <!-- OLD: 16px -->
+                    <span style="font-size: 10px; color: var(--muted);">Compensated:</span>
+                    <span style="font-size: 11px; font-weight: 700; text-align: right;" id="compensation-total-hms">0h 0m</span>
                 </div>
             </div>
-            <span class="details" id="compensation-message" style="text-align: center; font-size: 12px; margin-top: 8px; padding-top: 6px; border-top: 1px dashed #2a3240;">
-                Loading balance...
+            <span class="details" id="compensation-message" style="text-align: center; font-size: 9px; margin-top: 4px; padding-top: 4px; border-top: 1px dashed #2a3240;">
+                Loading...
             </span>
         </div>
     </div>
     <!-- END NEW 60/20/20 Layout -->
 
 
-    <div class="card-body" style="padding: 0 18px 16px 18px;"> <!-- Modified padding -->
-        <h2 style="display:flex;align-items:center;gap:8px; padding: 0;"> <!-- Removed internal padding -->
-            My 7-Day Hours
-            <small id="last7-window" class="helper" style="margin-left:auto"></small>
-        </h2>
-        <div class="strip7" id="weekStrip7" aria-live="polite" style="margin-top: 12px;"> <!-- Added margin-top -->
-            <div class="helper">Loading…</div>
+    <div class="card-body" style="padding: 0;">
+        <div class="strip7" id="weekStrip7" aria-live="polite">
+            <div class="helper" style="padding: 10px;">Loading week view...</div>
         </div>
-        <!-- REMOVED the "Tip: Leave..." helper text as requested -->
     </div>
 
     <div class="table-card">
@@ -782,13 +606,13 @@
                         <th>Date</th>
                         <th>Day</th>
                         <th>Project</th>
-                        <th>Project Type </th>
+                        <th>Type</th>
                         <th>Process</th>
-                        <th>Sub-process</th>
-                        <th>Start Time</th>
-                        <th>End Time</th>
-                        <th>Duration (h)</th>
-                        <th>Actions</th>
+                        <th>Sub</th>
+                        <th>Start</th>
+                        <th>End</th>
+                        <th>Hrs</th>
+                        <th></th>
                     </tr>
                     <tr class="filters">
                         {% for i in range(9) %}
@@ -810,9 +634,8 @@
                             <td>{{ row[8] }}</td>
                             <td>{{ row[9] }}</td>
                             <td>{{ row[10] }}</td>
-                            <td>
+                            <td style="text-align: right;">
                                 <button type="button" class="edit-btn">Edit</button>
-                                <!-- DELETE BUTTON REMOVED -->
                             </td>
                         </tr>
                     {% endfor %}
@@ -841,24 +664,24 @@
         <input type="hidden" name="disease" id="m_disease_hidden"> 
         <input type="hidden" name="country" id="m_country_hidden">
 
-        <div class="row"><label>Project Code</label>
+        <div class="row"><label>Project</label>
             <input type="text" id="m_project_code_display" readonly style="background:#161d27; opacity:1; cursor:default;">
         </div>
-        <div class="row"><label>Project Type</label>
+        <div class="row"><label>Type</label>
             <input type="text" id="m_project_type_display" readonly style="background:#161d27; opacity:1; cursor:default;">
         </div>
         <div class="row"><label>Process</label>
             <select name="process" id="m_process" required>
-                <option value="">Select Process</option>
+                <option value="">Select</option>
             </select>
         </div>
-        <div class="row"><label>Sub-Process</label>
+        <div class="row"><label>Sub</label>
             <select name="sub_process" id="m_sub" required>
-                <option value="">Select Sub-Process</option>
+                <option value="">Select</option>
             </select>
         </div>
-        <div class="row"><label>Start Time</label><input type="time" name="start_time" id="m_start" required></div>
-        <div class="row"><label>End Time</label><input type="time" name="end_time" id="m_end" required></div>
+        <div class="row"><label>Start</label><input type="time" name="start_time" id="m_start" required></div>
+        <div class="row"><label>End</label><input type="time" name="end_time" id="m_end" required></div>
         <div class="m-actions"><button type="button" class="btn" id="m_close">Cancel</button><button type="submit" class="btn primary">Save</button></div>
     </form>
 </div>
@@ -873,10 +696,10 @@
             </div>
             <form id="preset-form" onsubmit="savePreset(event)" autocomplete="off">
                 <input type="hidden" name="preset_id" id="p_preset_id">
-                <div class="row"><label>Preset Name</label><input type="text" name="name" id="p_name" required></div>
+                <div class="row"><label>Name</label><input type="text" name="name" id="p_name" required></div>
                 <div class="row"><label>Project</label>
                     <select name="project" id="p_project" required>
-                        <option value="" disabled selected>Select Project</option>
+                        <option value="" disabled selected>Select</option>
                         {% for p in user_project_codes %}
                             <option value="{{ p.code }}">{{ p.code }}</option>
                         {% endfor %}
@@ -884,39 +707,38 @@
                 </div>
                 <div class="row"><label>Process</label>
                     <select name="process" id="p_process" required>
-                        <option value="" disabled selected>Select Process</option>
+                        <option value="" disabled selected>Select</option>
                     </select>
                 </div>
-                <div class="row"><label>Sub-Process</label>
+                <div class="row"><label>Sub</label>
                     <select name="sub_process" id="p_sub" required>
-                        <option value="" disabled selected>Select Sub-Process</option>
+                        <option value="" disabled selected>Select</option>
                     </select>
                 </div>
                 <div class="m-actions" style="margin-top: 20px;">
                     <button type="button" class="btn" onclick="closePresetModal()">Close</button>
                     <button type="button" id="p_delete_btn" class="btn"
                         style="background:var(--danger); color:#fff; display:none;" onclick="deletePreset()">Delete</button>
-                    <button type="submit" class="btn primary" id="p_save_btn">Add Preset</button>
+                    <button type="submit" class="btn primary" id="p_save_btn">Add</button>
                 </div>
             </form>
         </div>
 
         <div id="start-confirmation-content" style="display:none;">
-            <h3 style="color:#ffd24d;"><i class="fa fa-play-circle"></i> Start Timer Confirmation</h3>
-            <p style="font-size:16px; margin-bottom: 20px;">Do you want to **START** the timer for preset: <strong><span
+            <h3 style="color:#ffd24d;"><i class="fa fa-play-circle"></i> Start Timer</h3>
+            <p style="font-size:14px; margin-bottom: 20px;">Start timer for: <strong><span
                         id="start-confirm-name"></span></strong>?</p>
-            <p style="font-size:14px; color:var(--muted);">Project: <span id="start-confirm-project"></span> | Process:
+            <p style="font-size:12px; color:var(--muted);">Project: <span id="start-confirm-project"></span> | Process:
                 <span id="start-confirm-process"></span></p>
             <div class="m-actions" style="margin-top: 20px;">
                 <button type="button" class="btn" onclick="closePresetModal()">Cancel</button>
-                <button type="button" class="btn primary" id="start-confirm-btn">Start Timer</button>
+                <button type="button" class="btn primary" id="start-confirm-btn">Start</button>
             </div>
         </div>
         
         <div id="stop-confirmation-content" style="display:none;">
-            <h3 style="color:var(--danger);"><i class="fa fa-stop-circle"></i> Stop Timer Confirmation</h3>
-            <p style="font-size:16px; margin-bottom: 20px;">The timer has been running for <strong id="stop-confirm-elapsed">00:00</strong>.</p>
-            <p style="font-size:14px; color:var(--muted);">Do you want to **STOP** the timer and log this entry?</p>
+            <h3 style="color:var(--danger);"><i class="fa fa-stop-circle"></i> Stop Timer</h3>
+            <p style="font-size:14px; margin-bottom: 20px;">Elapsed: <strong id="stop-confirm-elapsed">00:00</strong>. Log this?</p>
             <div class="m-actions" style="margin-top: 20px;">
                 <button type="button" class="btn" onclick="closePresetModal()">Cancel</button>
                 <button type="button" class="btn primary" id="stop-confirm-btn" style="background:var(--danger); border:none;">Stop & Log</button>
@@ -1008,16 +830,12 @@
 
     allButtons.forEach(btn => {
         const onclickAttr = btn.getAttribute('onclick');
-        if (onclickAttr === "setCurrentTime('start_time')") {
+        if (onclickAttr && onclickAttr.includes('startManualLiveTimer')) {
             startButton = btn;
             startButton.id = 'start-time-btn';
-            // 🚀 PUTHU: Onclick-a maathurom
-            startButton.setAttribute('onclick', 'startManualLiveTimer()');
-        } else if (onclickAttr === "setCurrentTime('end_time')") {
+        } else if (onclickAttr && onclickAttr.includes("fillCurrentTime('end_time')")) {
             endButton = btn;
             endButton.id = 'end-time-btn';
-            // 🚀 PUTHU: Onclick-a simple-ah maathurom
-            endButton.setAttribute('onclick', "fillCurrentTime('end_time')");
         }
     });
 
@@ -1819,7 +1637,6 @@ document.addEventListener('keydown', (e)=>{ if(e.key==='Escape'){ closeModal(); 
     /* === 7-day horizontal chips === */
     async function renderLast7(){
         const wrap = document.getElementById('weekStrip7');
-        const meta = document.getElementById('last7-window');
         // const todayTimeEl = document.getElementById('today-logged-time'); // Moved inside the form
 
         if (!wrap) return;
@@ -1870,7 +1687,6 @@ document.addEventListener('keydown', (e)=>{ if(e.key==='Escape'){ closeModal(); 
             const totalDisplay = js.total_hours_hms || (js.total_hours_decimal??0).toFixed(2);
             wrap.appendChild(chip({ wday:'Total Hours', sub:`${sLbl}–${eLbl}`, val: totalDisplay, total:true }));
 
-            meta.textContent = `Window: ${js.start_date} — ${js.end_date}`;
         }catch(e){
             wrap.innerHTML = '<div class="helper">Couldn’t load 7-day hours.</div>';
             const todayTimeEl = document.getElementById('today-logged-time');
@@ -1923,13 +1739,13 @@ document.addEventListener('keydown', (e)=>{ if(e.key==='Escape'){ closeModal(); 
             pctEl.classList.remove('positive','negative');
             const change = parseFloat(monthlyData.percent_change) || 0;
             if (change > 0) {
-                pctEl.textContent = `+${change.toFixed(1)}% from last month`;
+                pctEl.textContent = `+${change.toFixed(1)}%`;
                 pctEl.classList.add('positive');
             } else if (change < 0) {
-                pctEl.textContent = `${change.toFixed(1)}% from last month`;
+                pctEl.textContent = `${change.toFixed(1)}%`;
                 pctEl.classList.add('negative');
             } else {
-                pctEl.textContent = `0% change`;
+                pctEl.textContent = `0%`;
             }
 
             // ----- Weekly (Mon–Sat) -----
@@ -1975,7 +1791,7 @@ document.addEventListener('keydown', (e)=>{ if(e.key==='Escape'){ closeModal(); 
             }
             
             const pendingSecs = Math.max(0, Math.round(DAILY_TARGET_HOURS*3600 - todaySecs));
-            document.getElementById('pending-hours-value').textContent = pendingSecs > 0 ? toHM(pendingSecs) : 'completed!';
+            document.getElementById('pending-hours-value').textContent = pendingSecs > 0 ? toHM(pendingSecs) : 'Done!';
 
             // --- NEW: Compensation Calculation ---
             const todayForComp = new Date();
