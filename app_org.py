@@ -617,69 +617,6 @@ from datetime import datetime
 @app.template_filter("todatetime")
 def todatetime(value, fmt="%Y-%m-%d"):
     return datetime.strptime(value, fmt)
-# ── DASHBOARD ROUTE (dynamic) ─────────────────────────────────────────────
-# @app.route("/home", methods=["GET"])
-# @login_required
-# def dashboard():
-#     today = datetime.now().strftime("%Y-%m-%d")
-
-#     # current user & role
-#     user = User.query.filter_by(username=session["username"]).first()
-#     role = user.role
-
-#     # last 10 entries for this user
-#     cur = mysql.connection.cursor()
-#     cur.execute("""
-#         SELECT name, date, day, project, project_type, team, process, sub_process,
-#             start_time, end_time, duration, duration, project_code, project_type_mc, disease, country, id
-#         FROM   timesheetlogs
-#         WHERE  name = %s
-#         ORDER  BY id DESC
-#         LIMIT  30
-#     """, (user.username,))
-#     entries = cur.fetchall()
-#     cur.close()
-
-#     # Team → Process → Sub‑Process map
-#     team_map = {}
-#     for row in ProcessTable.query.all():
-#         team_map.setdefault(row.team, {}) \
-#                 .setdefault(row.process, set()) \
-#                 .add(row.sub_process)
-
-#     team_json = {
-#         team: {proc: sorted(list(subs)) for proc, subs in proc_dict.items()}
-#         for team, proc_dict in team_map.items()
-#     }
-
-#     # Assigned WIP project codes for this user
-#     user_project_codes = get_visible_project_codes_for(user)
-
-#     # 🆕 Quick Timer Presets
-#     # Fetch SQLAlchemy objects
-#     raw_presets = QuickTimerPreset.query.filter_by(user_id=user.id).all()
-
-#     # 💥 FIX: Convert SQLAlchemy objects to a list of dictionaries for safe template passing
-#     quick_presets = [{
-#         "id": p.id,
-#         "name": p.name,
-#         "project": p.project,
-#         "process": p.process,
-#         "sub_process": p.sub_process,
-#     } for p in raw_presets]
-    
-#     return render_template(
-#         "dashboard.html",
-#         username=user.username,
-#         role=role,
-#         entries=entries,
-#         user_email=user.email,  
-#         today=today,
-#         team_json=team_json,
-#         user_project_codes=user_project_codes,
-#         user_team=user.team, # 👈 send logged-in user's team to auto-select in UI
-#         quick_presets=quick_presets  # 👈 Now a safe list of dictionaries
-#     )
 
 # 💡 Marakama file-oda mela intha imports irukkanu check pannikonga
 from datetime import datetime, timedelta, date
@@ -2506,68 +2443,9 @@ def api_my_7day_hours():
         "total_hours_decimal": round(total_secs / 3600.0, 2)
     })
 
-# @app.route("/api/my-7day-hours", methods=["GET"])
-# @login_required
-# def api_my_7day_hours():
-#     end_dt   = _date.today()               # always today
-#     start_dt = end_dt - timedelta(days=6)
-#     user     = User.query.filter_by(username=session["username"]).first()
-
-#     # Sum in SECONDS; prefer duration (HH:MM or TIME) else fallback to total_hours
-#     cur = mysql.connection.cursor()
-#     q = """
-#         SELECT date,
-#                SUM(
-#                  CASE
-#                     WHEN duration IS NOT NULL AND duration <> '' THEN TIME_TO_SEC(duration)
-#                     WHEN total_hours IS NOT NULL THEN ROUND(total_hours * 3600)
-#                     ELSE 0
-#                  END
-#                ) AS total_secs
-#         FROM timesheetlogs
-#         WHERE name = %s
-#           AND date BETWEEN %s AND %s
-#         GROUP BY date
-#         ORDER BY date ASC
-#     """
-#     cur.execute(q, (user.username, start_dt, end_dt))
-#     rows = cur.fetchall()
-#     cur.close()
-
-#     by_date_secs = {str(r[0]): int(r[1] or 0) for r in rows}
-
-#     # build last 7 days, force missing days to 0 ("Leave")
-#     series = []
-#     total_secs = 0
-#     d = start_dt
-#     for _ in range(7):
-#         k = d.isoformat()
-#         s = by_date_secs.get(k, 0)
-#         series.append({
-#             "date": k,
-#             "hours_hms": _sec_to_hm(s),        # "HH:MM"
-#             "hours_decimal": round(s/3600.0, 2)  # optional
-#         })
-#         total_secs += s
-#         d += timedelta(days=1)
-
-#     return jsonify({
-#         "start_date": start_dt.isoformat(),
-#         "end_date":   end_dt.isoformat(),
-#         "by_day":     series,
-#         "total_hours_hms": _sec_to_hm(total_secs),
-#         "total_hours_decimal": round(total_secs/3600.0, 2)
-#     })
-
 #__________________________________________________________
 from dateutil.relativedelta import relativedelta
 
-# def _sec_to_hm(total_seconds: int) -> str:
-#      """Helper: Converts total seconds to 'HHh MMm' format."""
-#      total_seconds = int(total_seconds or 0)
-#      h = total_seconds // 3600
-#      m = (total_seconds % 3600) // 60
-#      return f"{h}h {m}m"
 
 def _get_monthly_hours(username: str, start_date: date, end_date: date) -> float:
     """Helper: Queries DB for total hours (in seconds) for a given date range."""
@@ -2644,8 +2522,7 @@ def add_quick_preset():
     if not all(data.get(k) for k in ["name", "project", "process", "sub_process"]):
         return jsonify({"success": False, "message": "Missing required fields"}), 400
 
-    # Optional: Check if the project is actually assigned and WIP before adding preset
-    # (Skipping for brevity, but recommended in a production environment)
+   
     
     new_preset = QuickTimerPreset(
         user_id=user.id,

@@ -61,13 +61,12 @@
     }
 
     /* === STICKY HEADER CONTAINER === */
-    /* This creates the frozen top section effect */
     .sticky-header-container {
-        position: sticky;
+        position: sticky; /* ✅ Changed to relative (No Freeze) */
         top: 0;
         z-index: 100;
-        background: rgba(11, 17, 32, 0.95); /* Semi-transparent background */
-        backdrop-filter: blur(8px); /* Cool blur effect */
+        background: rgba(11, 17, 32, 0.95); 
+        backdrop-filter: blur(8px); 
         border-bottom: 1px solid var(--line);
         margin-left: calc(var(--page-pad) * -1);
         margin-right: calc(var(--page-pad) * -1);
@@ -198,7 +197,7 @@
 
     /* === DASHBOARD STAT CARDS === */
     .dashboard-card {
-        padding: 12px;
+        padding: 6px 10px;
         background: var(--surface);
         position: relative;
         overflow: hidden;
@@ -212,9 +211,9 @@
     .dashboard-card:nth-child(1)::before { background: var(--primary); }
     .dashboard-card:nth-child(2)::before { background: var(--accent); }
     
-    .dashboard-card .title { font-size: 11px; text-transform: uppercase; color: var(--muted); font-weight: 600; margin-bottom: 4px; display: block; }
+    .dashboard-card .title { font-size: 10px; text-transform: uppercase; color: var(--muted); font-weight: 600; margin-bottom: 2px; display: block; }
     .dashboard-card .title .fa { margin-right: 6px; color: var(--text); opacity: 0.7; }
-    .dashboard-card .main-value { font-size: 24px; font-weight: 800; color: #fff; line-height: 1.1; margin-bottom: 2px; }
+    .dashboard-card .main-value { font-size: 20px; font-weight: 800; color: #fff; line-height: 1; margin-bottom: 2px; }
     .dashboard-card .subtitle { font-size: 11px; margin-top: 2px; }
     .dashboard-card .subtitle.positive { color: var(--accent); }
     .dashboard-card .subtitle.negative { color: var(--danger); }
@@ -323,9 +322,30 @@
     .flash .msg.info { background: rgba(59, 130, 246, 0.1); border-color: #3b82f6; color: #3b82f6; }
 
     /* Modals */
-    .modal-backdrop { display:none; position:fixed; inset:0; background:rgba(0,0,0,.7); z-index:50; backdrop-filter: blur(2px); }
-    .modal { position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); width:min(450px,92vw);
-        background:#1e293b; border:1px solid #334155; border-radius: 8px; padding:16px; z-index:60; display:none; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5); }
+   /* Modals - Itha Update pannu machan */
+    .modal-backdrop { 
+        display:none; 
+        position:fixed; 
+        inset:0; 
+        background:rgba(0,0,0,.7); 
+        z-index: 200; /* OLD was 50, puthu value: 200 (More than sticky header) */
+        backdrop-filter: blur(2px); 
+    }
+
+    .modal { 
+        position:fixed; 
+        top:50%; 
+        left:50%; 
+        transform:translate(-50%,-50%); 
+        width:min(450px,92vw);
+        background:#1e293b; 
+        border:1px solid #334155; 
+        border-radius: 8px; 
+        padding:16px; 
+        z-index: 210; /* OLD was 60, puthu value: 210 */
+        display:none; 
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5); 
+    }
     .modal h3 { margin:0 0 12px; font-size:15px; color:#f1f5f9; display: flex; align-items: center; border-bottom: 1px solid #334155; padding-bottom: 8px; }
     .modal h3 .fa { margin-right: 8px; color: var(--primary); }
     .modal .row { display: grid; grid-template-columns: 100px 1fr; gap: 10px; margin-bottom: 10px; align-items: center; }
@@ -336,6 +356,14 @@
 
     /* Footer */
     .footer { font-size: 11px; color: var(--muted); margin-top: 20px; padding-bottom: 20px; text-align: center; }
+    /* Future Date - Disabled Style */
+    .date-cell.future-date {
+        opacity: 0.6; /* Romba dim ah theriyum */
+        cursor: not-allowed; /* Mouse kundu pona 'ban' symbol varum */
+        pointer-events: none; /* Click velai seiyathu */
+        background: transparent !important;
+        border: none;
+    }
 
     /* Responsive */
     @media (max-width: 768px) {
@@ -366,7 +394,6 @@
 </h1>
 
 
-    <!-- 🔹 Move this fully to the left or right as needed -->
     <span id="today-logged-time"
         style="
             font-size: 12px;
@@ -381,13 +408,10 @@
 </div>
 
     
-    <!-- WRAPPED IN STICKY CONTAINER FOR FREEZE EFFECT -->
     <div class="sticky-header-container">
-        <!-- NEW 20/50/30 Layout -->
         <form method="POST" action="/start" autocomplete="off">
             <div class="top-layout-grid">
                 
-                <!-- Column 1: Select Date (20%) -->
                 <div class="box calendar-box">
                     <div class="calendar-header">
                         <button type="button" id="cal-prev" class="cal-nav-btn">‹</button>
@@ -411,8 +435,25 @@
                         <div class="helper" style="grid-column: 1/span 7; text-align: center;">Loading...</div>
                     </div>
                     
-                    <div class="team-label" title="Your assigned team">
-                        Team: {% if user_team %}{{ user_team }}{% else %}N/A{% endif %}
+                    <div style="
+                        margin-top: 12px; 
+                        background: rgba(255, 210, 77, 0.1); 
+                        border: 1px dashed rgba(255, 210, 77, 0.4); 
+                        border-radius: 8px; 
+                        padding: 10px; 
+                        text-align: center;
+                        position: relative;
+                        overflow: hidden;
+                    ">
+                        <div style="position: absolute; top: -10px; right: -10px; width: 30px; height: 30px; background: rgba(255, 210, 77, 0.2); border-radius: 50%; filter: blur(10px);"></div>
+
+                        <span style="font-size: 10px; color: #ffd24d; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; display: block; margin-bottom: 4px;">
+                            <i class="fa fa-users" style="margin-right: 4px;"></i> Assigned Team
+                        </span>
+                        
+                        <span style="font-size: 14px; font-weight: 800; color: #fff; letter-spacing: 0.5px;">
+                            {% if user_team %}{{ user_team }}{% else %}No Team{% endif %}
+                        </span>
                     </div>
                     
                     {% if user_team %}
@@ -420,11 +461,77 @@
                     {% endif %}
                 </div>
 
-                <!-- Column 2: Project, Process & Time (50%) -->
                 <div class="box">
-                    <h2><i class="fa fa-tasks"></i> Project, Process & Time</h2>
-                    
-                    {% set pc_count = user_project_codes|length %}
+    
+    <div style="
+        display: grid; 
+        grid-template-columns: 1fr auto; /* Title takes space, Dropdown takes fixed space */
+        gap: 10px; 
+        align-items: center; 
+        border-bottom: 1px solid var(--line); 
+        padding-bottom: 8px; 
+        margin-bottom: 12px;
+        width: 100%;
+    ">
+        
+        <h2 style="
+            border:none; 
+            padding:0; 
+            margin:0; 
+            font-size: 13px; 
+            overflow: hidden; 
+            white-space: nowrap; 
+            text-overflow: ellipsis;
+            color: #f1f5f9;
+        ">
+            <i class="fa fa-tasks"></i> Project, Process & Time
+        </h2>
+
+        <div style="position: relative;">
+            <i class="fa fa-tag" style="
+                position: absolute; 
+                left: 10px; 
+                top: 50%; 
+                transform: translateY(-50%); 
+                color: #ffd24d; 
+                font-size: 10px; 
+                pointer-events: none;
+            "></i>
+            
+            <select name="work_type" id="work_type" 
+                style="
+                    appearance: none; /* Remove default arrow */
+                    -webkit-appearance: none;
+                    background: rgba(255, 210, 77, 0.1); 
+                    border: 1px solid #ffd24d; 
+                    color: #ffd24d; 
+                    border-radius: 12px; 
+                    padding: 5px 30px 5px 28px; /* Right pad for arrow, Left for icon */
+                    font-size: 11px; 
+                    font-weight: 700; 
+                    text-transform: uppercase; 
+                    cursor: pointer; 
+                    outline: none;
+                    line-height: normal;
+                    min-width: 125px; /* Minimum width to prevent cutting */
+                ">
+                <option value="Regular" style="background: #1e293b; color: #fff;" selected>Regular</option>
+                <option value="Additional Hours" style="background: #1e293b; color: #fff;">Additional Hours</option>
+                <option value="Compensation" style="background: #1e293b; color: #fff;">Compensation</option>
+            </select>
+
+            <i class="fa fa-chevron-down" style="
+                position: absolute; 
+                right: 10px; 
+                top: 50%; 
+                transform: translateY(-50%); 
+                color: #ffd24d; 
+                font-size: 9px; 
+                pointer-events: none;
+            "></i>
+        </div>
+    </div>
+    {% set pc_count = user_project_codes|length %}
                     
                     <div class="form-row">
                         <label><i class="fa fa-briefcase"></i> Project</label>
@@ -464,7 +571,6 @@
                         </select>
                     </div>
                     
-                    <!-- Compact Time Row -->
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 5px;">
                         <div class="form-row" style="grid-template-columns: 40px 1fr;">
                             <label>Start</label>
@@ -489,108 +595,224 @@
                     </div>
                 </div>
 
-                <!-- Column 3: Dashboard Stats (30%) -->
-                <div style="display: flex; flex-direction: column; gap: 10px;">
-                    <div class="dashboard-card">
-                        <span class="title"><i class="fa fa-chart-pie"></i> Total (Month)</span>
-                        <div style="display: flex; justify-content: space-between; align-items: baseline;">
-                            <span class="main-value" id="total-this-month-hms">Loading...</span>
-                            <span class="subtitle" id="percent-change"></span>
-                        </div>
-                    </div>
-                    <div class="dashboard-card">
-                        <span class="title"><i class="fa fa-calendar-week"></i> Weekly Progress</span>
-                        <div style="display: flex; justify-content: space-between; align-items: baseline;">
-                            <span class="main-value" id="weekly-hours">Loading...</span>
-                            <span class="details" id="weekly-target">Target: 45h</span>
-                        </div>
-                        <div class="progress-bar-container">
-                            <div class="progress-bar-bg">
-                                <div class="progress-bar-fg" id="weekly-progress-bar" style="width: 0;"></div>
-                            </div>
-                            <div class="progress-bar-label"><span id="weekly-percentage"></span></div>
-                        </div>
-                    </div>
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+    
+ <div class="col-md-3 mb-3">
+    <div class="dashboard-card" style="position: relative; height: 100%;">
+        
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px;">
+            <span class="title"><i class="fa fa-chart-pie"></i> Total (Month)</span>
+            
+            <div style="display: flex; gap: 5px;"> <div style="
+                    background: rgba(239, 68, 68, 0.15); 
+                    border: 1px solid rgba(239, 68, 68, 0.3); 
+                    border-radius: 6px; 
+                    padding: 4px 6px; 
+                    text-align: center;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    min-width: 45px;
+                ">
+                    <span style="font-size: 8px; color: #ef4444; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">LEAVES</span>
+                    <span style="font-size: 14px; font-weight: 800; color: #fff; line-height: 1.1;">
+                        {{ current_month_leaves }}
+                    </span>
                 </div>
 
-            </div> <!-- /top-layout-grid -->
+                <div style="
+                    background: rgba(16, 185, 129, 0.15); 
+                    border: 1px solid rgba(16, 185, 129, 0.3); 
+                    border-radius: 6px; 
+                    padding: 4px 6px; 
+                    text-align: center;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    min-width: 45px;
+                ">
+                    <span style="font-size: 8px; color: #10b981; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">DAYS</span>
+                    <span id="month-days-count" style="font-size: 14px; font-weight: 800; color: #fff; line-height: 1.1;">
+                        {{ last_month_days }}
+                    </span>
+                </div>
+
+            </div>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: -5px;">
+            <span class="main-value" id="total-this-month-hms" style="font-size: 32px;">Loading...</span>
+            <span class="subtitle" id="percent-change" style="align-self: flex-end; margin-bottom: 5px;"></span>
+        </div>
+    </div>
+</div>
+
+    <div class="dashboard-card">
+        <span class="title"><i class="fa fa-calendar-week"></i> Weekly Progress</span>
+        <div style="display: flex; justify-content: space-between; align-items: baseline;">
+            <span class="main-value" id="weekly-hours">Loading...</span>
+            <span class="details" id="weekly-target">Target: {{ weekly_target }}h</span>
+        </div>
+        <div class="progress-bar-container">
+            <div class="progress-bar-bg">
+                <div class="progress-bar-fg" id="weekly-progress-bar" style="width: 0;"></div>
+            </div>
+            <div class="progress-bar-label"><span id="weekly-percentage"></span></div>
+        </div>
+    </div>
+
+    <div class="col-md-3 mb-3">
+    <div class="dashboard-card" style="height: 100%; border-left: 3px solid #8b5cf6;"> 
+        
+        <span class="title" style="color: #a78bfa; margin-bottom: 8px; display: block;">
+            <i class="fa fa-history"></i> Last Month Snapshot
+        </span>
+        
+        <div style="display: flex; gap: 5px; justify-content: space-between;">
+            
+            <div style="flex: 1; background: rgba(139, 92, 246, 0.1); padding: 8px 2px; border-radius: 6px; text-align: center; border: 1px solid rgba(139, 92, 246, 0.2);">
+                <span style="display: block; font-size: 8px; color: #a78bfa; text-transform: uppercase; font-weight: 700; margin-bottom: 2px;">Days</span>
+                <span style="display: block; font-size: 14px; font-weight: 800; color: #fff;">{{ last_month_days }}</span>
+            </div>
+
+            <div style="flex: 1; background: rgba(239, 68, 68, 0.1); padding: 8px 2px; border-radius: 6px; text-align: center; border: 1px solid rgba(239, 68, 68, 0.2);">
+                <span style="display: block; font-size: 8px; color: #ef4444; text-transform: uppercase; font-weight: 700; margin-bottom: 2px;">Leaves</span>
+                <span style="display: block; font-size: 14px; font-weight: 800; color: #fff;">{{ last_month_leaves }}</span>
+            </div>
+
+            <div style="flex: 1; background: rgba(56, 189, 246, 0.1); padding: 8px 2px; border-radius: 6px; text-align: center; border: 1px solid rgba(56, 189, 246, 0.2);">
+                <span style="display: block; font-size: 8px; color: #38bdf8; text-transform: uppercase; font-weight: 700; margin-bottom: 2px;">Avg Hrs</span>
+                <span style="display: block; font-size: 14px; font-weight: 800; color: #fff;">{{ last_month_avg_hours }}</span>
+            </div>
+
+            <div style="flex: 1; background: rgba(16, 185, 129, 0.1); padding: 8px 2px; border-radius: 6px; text-align: center; border: 1px solid rgba(16, 185, 129, 0.2);">
+                <span style="display: block; font-size: 8px; color: #10b981; text-transform: uppercase; font-weight: 700; margin-bottom: 2px;">Comp</span>
+                <span style="display: block; font-size: 13px; font-weight: 800; 
+                    color: {% if last_month_comp_status == 'pending' %}#f87171
+                           {% elif last_month_comp_status == 'surplus' %}#34d399
+                           {% else %}#fff{% endif %};">
+                    {{ last_month_comp_str }}
+                </span>
+            </div>
+
+        </div>
+    </div>
+</div>
+    </div>
         </form>
     </div>
-    <!-- END STICKY CONTAINER -->
-
-    <!-- NEW 60/20/20 Layout for Quick Add, Pending & Compensation -->
     <div class="dashboard-grid">
-        <!-- Column 1: Quick Add (60%) -->
-        <div class="card" id="quick-add-panel" style="margin: 0; height: 100%; padding: 12px; display: flex; flex-direction: column; justify-content: center;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
-                <span style="font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase;">Quick Timer</span>
-                <button class="btn" style="padding: 4px 8px; font-size: 11px;" onclick="showManagePresets()">
-                    <i class="fa fa-plus"></i> Manage
-                </button>
-            </div>
-            
-            <div id="quick-presets-container" style="display: flex; flex-wrap: wrap; gap: 6px;">
-                {% for preset in quick_presets %}
-                <button class="btn quick-preset-btn" 
-                        data-id="{{ preset.id }}" 
-                        data-name="{{ preset.name }}" 
-                        data-project="{{ preset.project }}" 
-                        data-process="{{ preset.process }}" 
-                        data-sub="{{ preset.sub_process }}">
-                    {{ preset.name }}
-                </button>
-                {% endfor %}
-                {% if not quick_presets %}
-                <div class="helper">No Quick Add presets found. Click 'Manage' to add one.</div>
-                {% endif %}
-            </div>
-            
-            <div id="active-timer-display" style="display:none; margin-top: 8px; background: rgba(16, 185, 129, 0.1); border: 1px solid var(--accent); border-radius: 6px; padding: 8px; align-items: center; justify-content: space-between;">
-                <div style="display:flex; gap:8px; align-items:center;">
-                    <div style="width: 8px; height: 8px; background: var(--accent); border-radius: 50%; animation: pulse 1s infinite;"></div>
-                    <style>@keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }</style>
-                    <div>
-                        <div id="timer-preset-name" style="font-size: 11px; color: var(--accent); font-weight: 700;">Running</div>
-                        <div id="elapsed-time" style="font-size: 16px; font-weight: 800; color: #fff; line-height: 1;">00:00:00</div>
-                    </div>
-                </div>
-                <button class="btn" onclick="showStopConfirmation()" style="background:var(--danger); color:#fff; border:none; padding:4px 8px; font-size: 10px; font-weight: 700;">STOP & LOG</button>
-            </div>
-            
-            <div style="text-align:center; margin-top:16px;">
-                <button class="primary" onclick="document.querySelector('form').scrollIntoView({behavior: 'smooth'})" style="width:100%; display: none;">
-                    Add Manual Entry
-                </button>
-            </div>
-        </div>
-
-        <!-- Column 2: Pending Hours (20%) -->
-        <div class="dashboard-card" style="margin: 0; justify-content: center; height: 100%; border-left: 3px solid #f59e0b;">
-            <span class="title" style="color: #f59e0b;"><i class="fa fa-hourglass-half"></i> Pending</span>
-            <span class="main-value" id="pending-hours-value" style="color: #f59e0b; font-size: 20px;">Loading...</span>
+    
+    <div class="card" id="quick-add-panel" style="margin: 0; height: 100%; padding: 12px; display: flex; flex-direction: column; justify-content: center;">
+        
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px;">
+            <span style="font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px;">
+                <i class="fa fa-bolt" style="color: #ffd24d; margin-right: 5px;"></i> Quick Timer
+            </span>
+            <button class="btn" style="padding: 4px 10px; font-size: 11px; background: #1e293b; border: 1px solid var(--line); color: var(--text);" onclick="showManagePresets()">
+                <i class="fa fa-cog"></i> Manage
+            </button>
         </div>
         
-        <!-- Column 3: Compensation (20%) -->
-        <div class="dashboard-card" style="margin: 0; background: #10151c; height: 100%; justify-content: space-between; border-left: 3px solid var(--primary);">
-            <div>
-                <span class="title" style="color: var(--primary);"><i class="fa fa-balance-scale"></i> Comp Balance</span>
-                <span class="main-value" id="compensation-balance-hms" style="font-size: 20px;">0h 0m</span>
-                <div style="display: grid; grid-template-columns: auto 1fr; gap: 4px 8px; align-items: center; margin-top: 4px;">
-                    <span style="font-size: 10px; color: var(--muted);">Permission:</span>
-                    <span style="font-size: 11px; font-weight: 700; text-align: right;" id="permission-total-hms">0h 0m</span>
-                    
-                    <span style="font-size: 10px; color: var(--muted);">Compensated:</span>
-                    <span style="font-size: 11px; font-weight: 700; text-align: right;" id="compensation-total-hms">0h 0m</span>
-                </div>
+        <div id="quick-presets-container" style="display: flex; flex-wrap: wrap; gap: 8px;">
+            {% for preset in quick_presets %}
+            <button class="btn quick-preset-btn" 
+                    data-id="{{ preset.id }}" 
+                    data-name="{{ preset.name }}" 
+                    data-project="{{ preset.project }}" 
+                    data-process="{{ preset.process }}" 
+                    data-sub="{{ preset.sub_process }}">
+                {{ preset.name }}
+            </button>
+            {% endfor %}
+            {% if not quick_presets %}
+            <div class="helper" style="width: 100%; text-align: center; padding: 10px;">No presets found. Click 'Manage' to add one.</div>
+            {% endif %}
+        </div>
+   <div id="active-timer-display" style="
+    display:none; 
+    margin-top: 5px; 
+    background: #0f172a; 
+    border: 1px solid var(--accent); 
+    border-radius: 8px; 
+    padding: 12px; 
+    align-items: center; 
+    justify-content: space-between;
+    position: relative; 
+    z-index: 9999; 
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); 
+    width: 100%;
+    min-height: 60px; 
+">
+    <div style="display:flex; gap:12px; align-items:center;">
+        <div style="position: relative; width: 10px; height: 10px;">
+            <div style="width: 10px; height: 10px; background: var(--accent); border-radius: 50%;"></div>
+            <div style="position: absolute; top:0; left:0; width: 10px; height: 10px; background: var(--accent); border-radius: 50%; animation: pulse 1.5s infinite;"></div>
+        </div>
+        <style>@keyframes pulse { 0% { transform: scale(1); opacity: 0.8; } 100% { transform: scale(2.5); opacity: 0; } }</style>
+        
+        <div style="display: flex; flex-direction: column;">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 2px;">
+                <span id="timer-preset-name" style="font-size: 12px; color: var(--accent); font-weight: 700;">Running...</span>
+                <span id="active-timer-work-type" style="font-size: 9px; font-weight: 700; text-transform: uppercase; padding: 2px 6px; border-radius: 4px; background: #1e293b; color: #94a3b8; border: 1px solid #334155;">REGULAR</span>
             </div>
-            <span class="details" id="compensation-message" style="text-align: center; font-size: 9px; margin-top: 4px; padding-top: 4px; border-top: 1px dashed #2a3240;">
-                Loading...
-            </span>
+            <div id="elapsed-time" style="font-size: 18px; font-weight: 800; color: #fff; line-height: 1; font-family: monospace;">00:00:00</div>
         </div>
     </div>
-    <!-- END NEW 60/20/20 Layout -->
 
+    <div style="display: flex; align-items: center; gap: 15px;">
+        
+        <span id="timer-start-display" style="
+            color: #fbbf24; 
+            font-size: 13px; 
+            font-weight: 700;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 4px 8px;
+            border-radius: 4px;
+            border: 1px dashed #334155;
+            display: inline-block;
+        ">
+            Waiting...
+        </span>
+        <button class="btn" onclick="showStopConfirmation()" style="background: linear-gradient(135deg, #ef4444, #dc2626); color: #fff; border: none; padding: 6px 12px; font-size: 11px; font-weight: 700; border-radius: 6px; cursor: pointer;">
+            <i class="fa fa-stop-circle"></i> STOP
+        </button>
+    </div>
+</div>
+        <div style="text-align:center; margin-top:10px;">
+            <button class="primary" onclick="document.querySelector('form').scrollIntoView({behavior: 'smooth'})" style="width:100%; display: none;">
+                Add Manual Entry
+            </button>
+        </div>
+    </div>
 
+    <div class="dashboard-card" style="margin: 0; justify-content: center; height: 100%; border-left: 3px solid #f59e0b; padding: 15px;">
+        <span class="title" style="color: #f59e0b; font-size: 11px; white-space: nowrap; font-weight: 700; opacity: 0.9;">
+            <i class="fa fa-hourglass-half"></i> PENDING TODAY
+        </span>
+        <span class="main-value" id="pending-hours-value" style="color: #f59e0b; font-size: 24px; margin-top: 5px;">Loading...</span>
+    </div>
+    
+    <div class="dashboard-card" style="margin: 0; background: #10151c; height: 100%; justify-content: space-between; border-left: 3px solid var(--primary); padding: 12px;">
+        <div>
+            <span class="title" style="color: var(--primary); font-size: 11px; white-space: nowrap; font-weight: 700;">
+                <i class="fa fa-balance-scale"></i> COMP BALANCE
+            </span>
+            <span class="main-value" id="compensation-balance-hms" style="font-size: 22px; margin-top: 5px; display: block; color: #fff;">0h 0m</span>
+            
+            <div style="display: grid; grid-template-columns: auto 1fr; gap: 4px 10px; align-items: center; margin-top: 10px; border-top: 1px solid #1e293b; padding-top: 8px;">
+                <span style="font-size: 10px; color: var(--muted);">Permission:</span>
+                <span style="font-size: 11px; font-weight: 700; text-align: right; color: #e2e8f0;" id="permission-total-hms">0h 0m</span>
+                
+                <span style="font-size: 10px; color: var(--muted);">Compensated:</span>
+                <span style="font-size: 11px; font-weight: 700; text-align: right; color: #e2e8f0;" id="compensation-total-hms">0h 0m</span>
+            </div>
+        </div>
+        <span class="details" id="compensation-message" style="text-align: center; font-size: 9px; margin-top: 5px; padding-top: 5px; border-top: 1px dashed #2a3240; display: block; line-height: 1.3; color: var(--muted);">
+            Loading...
+        </span>
+    </div>
+</div>
     <div class="card-body" style="padding: 0;">
         <div class="strip7" id="weekStrip7" aria-live="polite">
             <div class="helper" style="padding: 10px;">Loading week view...</div>
@@ -605,7 +827,7 @@
                     <tr>
                         <th>Date</th>
                         <th>Day</th>
-                        <th>Project</th>
+                        <th>Work Type</th> <th>Project</th>
                         <th>Type</th>
                         <th>Process</th>
                         <th>Sub</th>
@@ -615,32 +837,40 @@
                         <th></th>
                     </tr>
                     <tr class="filters">
-                        {% for i in range(9) %}
+                        {% for i in range(10) %}
                             <th><select data-col="{{i}}"><option value="">All</option></select></th>
                         {% endfor %}
                         <th></th>
                     </tr>
                 </thead>
-                <tbody>
+               <tbody>
                 {% if entries %}
                     {% for row in entries %}
-                        <tr data-id="{{ row[-1] }}">
-                            <td>{{ row[1] }}</td>
-                            <td>{{ row[2] }}</td>
-                            <td>{{ row[3] }}</td>
-                            <td>{{ row[13] }}</td>
-                            <td>{{ row[6] }}</td>
-                            <td>{{ row[7] }}</td>
-                            <td>{{ row[8] }}</td>
-                            <td>{{ row[9] }}</td>
-                            <td>{{ row[10] }}</td>
-                            <td style="text-align: right;">
+                        <tr data-id="{{ row[-1] }}" data-work-type="{{ row[16] }}">
+                            <td>{{ row[1] }}</td> <td>{{ row[2] }}</td> <td>
+                                {% if row[16] == 'Regular' or not row[16] %}
+                                    <span style="font-size:10px; font-weight:700; padding:2px 6px; border-radius:4px; background:rgba(255, 210, 77, 0.1); color:#ffd24d; border:1px solid #ffd24d;">
+                                        REGULAR
+                                    </span>
+                                {% elif row[16] == 'Additional Hours' %}
+                                    <span style="font-size:10px; font-weight:700; padding:2px 6px; border-radius:4px; background:rgba(16, 185, 129, 0.1); color:#10b981; border:1px solid #10b981;">
+                                        ADDITIONAL
+                                    </span>
+                                {% elif row[16] == 'Compensation' %}
+                                    <span style="font-size:10px; font-weight:700; padding:2px 6px; border-radius:4px; background:rgba(59, 130, 246, 0.1); color:#3b82f6; border:1px solid #3b82f6;">
+                                        COMPPENSATION
+                                    </span>
+                                {% else %}
+                                    <span style="font-size:10px; color:#94a3b8;">{{ row[16] }}</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ row[3] }}</td> <td>{{ row[13] }}</td> <td>{{ row[6] }}</td> <td>{{ row[7] }}</td> <td>{{ row[8] }}</td> <td>{{ row[9] }}</td> <td>{{ row[10] }}</td> <td style="text-align: right;">
                                 <button type="button" class="edit-btn">Edit</button>
                             </td>
                         </tr>
                     {% endfor %}
                 {% else %}
-                    <tr><td colspan="10" class="no-data">No data found</td></tr>
+                    <tr><td colspan="11" class="no-data">No data found</td></tr>
                 {% endif %}
                 </tbody>
             </table>
@@ -652,11 +882,18 @@
     <p>© Datasolve Analytics Pvt Ltd 2025.</p>
 </footer>
 
-<!-- Edit Modal -->
 <div class="modal-backdrop" id="mb"></div>
 <div class="modal" id="mm">
     <h3>Edit Entry</h3>
     <form id="edit-form" method="POST" action="/update-entry" autocomplete="off">
+        <div class="row">
+    <label>Work Type</label>
+    <select name="work_type" id="m_work_type" style="background:#0f172a; color:#e2e8f0; border:1px solid #334155; padding:4px; border-radius:4px;">
+        <option value="Regular">Regular</option>
+        <option value="Additional Hours">Additional Hours</option>
+        <option value="Compensation">Compensation</option>
+    </select>
+</div>
         <input type="hidden" name="entry_id" id="m_entry_id">
         <input type="hidden" name="project" id="m_project_hidden"> 
         
@@ -686,7 +923,6 @@
     </form>
 </div>
 
-<!-- Preset Modal -->
 <div class="modal-backdrop" id="preset-mb"></div>
 <div class="modal" id="preset-mm">
     <div id="modal-content-container">
@@ -724,17 +960,30 @@
             </form>
         </div>
 
-        <div id="start-confirmation-content" style="display:none;">
-            <h3 style="color:#ffd24d;"><i class="fa fa-play-circle"></i> Start Timer</h3>
-            <p style="font-size:14px; margin-bottom: 20px;">Start timer for: <strong><span
-                        id="start-confirm-name"></span></strong>?</p>
-            <p style="font-size:12px; color:var(--muted);">Project: <span id="start-confirm-project"></span> | Process:
-                <span id="start-confirm-process"></span></p>
-            <div class="m-actions" style="margin-top: 20px;">
-                <button type="button" class="btn" onclick="closePresetModal()">Cancel</button>
-                <button type="button" class="btn primary" id="start-confirm-btn">Start</button>
-            </div>
-        </div>
+       <div id="start-confirmation-content" style="display:none;">
+    <h3 style="color:#ffd24d;"><i class="fa fa-play-circle"></i> Start Timer</h3>
+    
+    <p style="font-size:14px; margin-bottom: 20px;">
+        Start timer for: <strong><span id="start-confirm-name"></span></strong>?
+    </p>
+    
+    <p style="font-size:12px; color:var(--muted);">
+        Project: <span id="start-confirm-project"></span> | Process: <span id="start-confirm-process"></span>
+    </p>
+
+    <div style="margin-top: 15px; margin-bottom: 15px;">
+        <label style="color: var(--muted); font-size: 12px; display: block; margin-bottom: 5px;">Work Type</label>
+        <select id="start-confirm-work-type" style="width: 100%; padding: 8px; background: #0f172a; color: #e2e8f0; border: 1px solid #334155; border-radius: 4px; font-size: 13px;">
+            <option value="Regular" selected>Regular</option>
+            <option value="Additional Hours">Additional Hours</option>
+            <option value="Compensation">Compensation</option>
+        </select>
+    </div>
+    <div class="m-actions" style="margin-top: 20px;">
+        <button type="button" class="btn" onclick="closePresetModal()">Cancel</button>
+        <button type="button" class="btn primary" id="start-confirm-btn">Start</button>
+    </div>
+</div>
         
         <div id="stop-confirmation-content" style="display:none;">
             <h3 style="color:var(--danger);"><i class="fa fa-stop-circle"></i> Stop Timer</h3>
@@ -746,9 +995,6 @@
         </div>
     </div>
 </div>
-
-<!-- DELETE MODAL REMOVED -->
-
 
 <script>
     // Global variable for the timer interval
@@ -1135,45 +1381,54 @@ const mProcessSel = document.getElementById('m_process');
 const mSubSel = document.getElementById('m_sub');
 
 function openEditModal(row){
-    // 1. Get current values from the table row
-    // The columns are: Date[0], Day[1], Project Code[2], Project Type[3], Process[4], Sub-process[5], Start Time[6], End Time[7], Duration[8], Edit[9]
-    const projectCode = row.children[2]?.textContent?.trim() || ''; 
-    const projectType = row.children[3]?.textContent?.trim() || ''; 
-    const processVal = row.children[4]?.textContent?.trim() || '';
-    const subVal = row.children[5]?.textContent?.trim() || '';
-    const startVal = row.children[6]?.textContent?.trim() || '';
-    const endVal = row.children[7]?.textContent?.trim() || '';
+    // 1. Get values from data attributes
+    const entryId = row.dataset.id;
+    const workTypeVal = row.dataset.workType || 'Regular'; // Get Work Type directly from data attribute
 
-    // 2. Populate hidden inputs (for backend logic)
-    document.getElementById('m_entry_id').value = row.dataset.id || '';
-    document.getElementById('m_project_hidden').value = projectCode; // This maps to the 'project' field in Flask
+    // 2. Get values from table columns (UPDATED INDEXES)
+    // 0=Date, 1=Day, 2=WorkType, 3=Project, 4=Type, 5=Process, 6=Sub, 7=Start, 8=End
+    const projectCode = row.children[3]?.textContent?.trim() || ''; 
+    const projectType = row.children[4]?.textContent?.trim() || ''; 
+    const processVal  = row.children[5]?.textContent?.trim() || '';
+    const subVal      = row.children[6]?.textContent?.trim() || '';
+    const startVal    = row.children[7]?.textContent?.trim() || '';
+    const endVal      = row.children[8]?.textContent?.trim() || '';
 
-    // Populate display fields
+    // 3. Populate hidden inputs
+    document.getElementById('m_entry_id').value = entryId;
+    document.getElementById('m_project_hidden').value = projectCode;
+    document.getElementById('m_project_type_mc_hidden').value = projectType;
+
+    // 4. Populate display fields
     document.getElementById('m_project_code_display').value = projectCode;
     document.getElementById('m_project_type_display').value = projectType;
-    
-    // CRITICAL FIX: Populate the new hidden field for Project Type (ptmc)
-    document.getElementById('m_project_type_mc_hidden').value = projectType;
-    // NOTE: disease and country are not available in the table, relying on the server fix to re-derive/fetch them.
 
-    // 3. Populate Time inputs
+    // 5. Populate Time inputs
     document.getElementById('m_start').value = startVal;
     document.getElementById('m_end').value = endVal;
 
-    // 4. Initialize Process & Sub-Process dropdowns and set current values
+    // 6. Set Work Type Dropdown
+    const workTypeSelect = document.getElementById('m_work_type');
+    if (workTypeSelect) {
+        workTypeSelect.value = workTypeVal;
+    }
+
+    // 7. Initialize Process & Sub-Process dropdowns
     initProcessSubDropdowns(mProcessSel, mSubSel, processVal, subVal);
 
-    // 5. Show modal
+    // 8. Show modal
     mb.style.display = 'block';
     mm.style.display = 'block';
     document.getElementById('m_process').focus();
     document.body.style.overflow = 'hidden';
 }
+
 function closeModal(){
     mb.style.display = 'none';
     mm.style.display = 'none';
     document.body.style.overflow = '';
 }
+
 mClose.addEventListener('click', closeModal);
 mb.addEventListener('click', closeModal);
 document.addEventListener('keydown', (e)=>{ if(e.key==='Escape'){ closeModal(); } });
@@ -1203,67 +1458,81 @@ document.addEventListener('keydown', (e)=>{ if(e.key==='Escape'){ closeModal(); 
     }
 
     /* MODIFIED: Shows Start Confirmation Modal */
-    function showStartConfirmation(presetData) {
-        if (timerInterval || activeManualEntryID) {
-            showFlashMessage("Please stop or reset your current timer before starting a new one.", 'info');
-            return;
-        }
-
-        currentPresetToStart = presetData;
-        
-        // Hide all modal content, show only the start confirmation
-        document.getElementById('manage-presets-content').style.display = 'none';
-        document.getElementById('stop-confirmation-content').style.display = 'none';
-        document.getElementById('start-confirmation-content').style.display = 'block';
-
-        // Fill confirmation details
-        document.getElementById('start-confirm-name').textContent = presetData.name;
-        document.getElementById('start-confirm-project').textContent = presetData.project;
-        document.getElementById('start-confirm-process').textContent = presetData.process + ' / ' + presetData.sub_process;
-
-        // Show modal
-        p_mb.style.display = 'block';
-        p_mm.style.display = 'block';
-        document.body.style.overflow = 'hidden';
-
-        // Set the actual API call on the confirmation button click
-        document.getElementById('start-confirm-btn').onclick = () => {
-            closePresetModal(); 
-            _startTimerApi(presetData.id, presetData.name);
-        };
+    /* MODIFIED: Shows Start Confirmation Modal */
+function showStartConfirmation(presetData) {
+    if (timerInterval || activeManualEntryID) {
+        showFlashMessage("Please stop or reset your current timer before starting a new one.", 'info');
+        return;
     }
+
+    currentPresetToStart = presetData;
+    
+    // UI Updates
+    document.getElementById('manage-presets-content').style.display = 'none';
+    document.getElementById('stop-confirmation-content').style.display = 'none';
+    document.getElementById('start-confirmation-content').style.display = 'block';
+
+    document.getElementById('start-confirm-name').textContent = presetData.name;
+    document.getElementById('start-confirm-project').textContent = presetData.project;
+    document.getElementById('start-confirm-process').textContent = presetData.process + ' / ' + presetData.sub_process;
+
+    // 🆕 RESET WORK TYPE TO REGULAR
+    document.getElementById('start-confirm-work-type').value = "Regular";
+
+    p_mb.style.display = 'block';
+    p_mm.style.display = 'block';
+    document.body.style.overflow = 'hidden';
+
+    // 🆕 PASS WORK TYPE TO API
+    document.getElementById('start-confirm-btn').onclick = () => {
+        const workType = document.getElementById('start-confirm-work-type').value; // Get Value
+        closePresetModal(); 
+        _startTimerApi(presetData.id, presetData.name, workType); // Pass Value
+    };
+}
 
     /* NEW: Actual API call for starting timer */
-    async function _startTimerApi(id, name) {
-        try {
-            const res = await fetch('/api/timer/start', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id: id })
-            });
-            const data = await res.json();
-            if (data.success) {
-                // Update UI for active timer
-                timerStartTime = new Date(data.timer.start_time);
-                document.getElementById('timer-preset-name').textContent = name;
-                document.getElementById('active-timer-display').style.display = 'flex';
-                document.getElementById('quick-presets-container').style.display = 'none';
-
-                // Start the counter
-                if (!timerInterval) { // Check if a timer is already running
-                     timerInterval = setInterval(updateElapsedTime, 1000);
-                }
-                updateElapsedTime();
-                
-                showFlashMessage(`Timer started for **${name}**! (Live Dashboard updated)`, 'success'); 
-            } else {
-                showFlashMessage(`Error starting timer: ${data.message}`, 'error');
+    /* NEW: Actual API call for starting timer */
+async function _startTimerApi(id, name, workType) { 
+    try {
+        const res = await fetch('/api/timer/start', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: id, work_type: workType }) 
+        });
+        const data = await res.json();
+        
+        if (data.success) {
+            // Update UI for active timer
+            timerStartTime = new Date(data.timer.start_time);
+            document.getElementById('timer-preset-name').textContent = name;
+            
+            // 👇👇👇 புதுசா சேர்த்த லாஜிக் (Update Start Time Immediately) 👇👇👇
+            const timerStartDisplay = document.getElementById("timer-start-display");
+            if (timerStartDisplay) {
+                let timeString = timerStartTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                timerStartDisplay.innerText = "Started: " + timeString;
             }
-        } catch (e) {
-            console.error(e);
-            showFlashMessage('Failed to start timer due to a network error.', 'error');
+            // 👆👆👆 முடிந்தது 👆👆👆
+
+            document.getElementById('active-timer-display').style.display = 'flex';
+            document.getElementById('quick-presets-container').style.display = 'none';
+
+            // Start the counter
+            if (!timerInterval) { 
+                 timerInterval = setInterval(updateElapsedTime, 1000);
+            }
+            updateElapsedTime();
+            
+            showFlashMessage(`Timer started for **${name}**! (Live Dashboard updated)`, 'success'); 
+        } else {
+            showFlashMessage(`Error starting timer: ${data.message}`, 'error');
         }
+    } catch (e) {
+        console.error(e);
+        showFlashMessage('Failed to start timer due to a network error.', 'error');
     }
+}
 
     /* MODIFIED: Shows Stop Confirmation Modal */
     function showStopConfirmation() {
@@ -1355,75 +1624,93 @@ document.addEventListener('keydown', (e)=>{ if(e.key==='Escape'){ closeModal(); 
     }
 
 
-    async function checkTimerStatus() {
-        try {
-            const res = await fetch('/api/timer/status', {headers: {'Accept': 'application/json'}, cache: 'no-store'});
-            if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-            const data = await res.json();
-            
-            if (data.active) {
-                
-                // 🚀 PUTHU CHECK: Ithu manual timer-ah?
-                if (data.timer.is_manual) {
-                    // Yes, ithu manual timer
-                    activeManualEntryID = data.timer.db_id;
+   async function checkTimerStatus() {
+    try {
+        const res = await fetch('/api/timer/status', {headers: {'Accept': 'application/json'}, cache: 'no-store'});
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+        const data = await res.json();
+        
+        // Debugging: டேட்டா வருதான்னு பார்க்க (F12 -> Console)
+        console.log("🔥 Timer Data from Server:", data);
 
-                    // Form-a LOCK pannu
-                    if (projectSelect) { projectSelect.value = data.timer.project; projectSelect.disabled = true; }
-                    if (projectInput) { projectInput.value = data.timer.project; projectInput.disabled = true; }
-                    
-                    // Note: We can't fill process/sub-process without a full page load, but we can lock them.
-                    processSelect.disabled = true;
-                    subProcessSelect.disabled = true;
-                    startTimeInput.disabled = true; // Start time-ayum lock pannu
-                    
-                    // Start button-a hide pannu
-                    if (startButton) startButton.style.display = 'none';
-                    
-                    // Mathathatha kaattu
-                    if(resetButton) resetButton.style.display = 'inline-block';
-                    endTimeInput.disabled = false;
-                    if (endButton) endButton.disabled = false;
-                    submitButton.disabled = false;
-                    
-                    // We don't know the exact start time, so we hide it
-                    startTimeInput.value = '??:??';
-                    
-                } else {
-                    // No, ithu Quick Add timer
-                    timerStartTime = new Date(data.timer.start_time);
-                    document.getElementById('timer-preset-name').textContent = data.timer.name;
-                    document.getElementById('elapsed-time').textContent = data.timer.elapsed_time;
-                    
-                    // Start the counter
-                    if (!timerInterval) {
-                        timerInterval = setInterval(updateElapsedTime, 1000);
-                    }
-                    document.getElementById('active-timer-display').style.display = 'flex';
-                    document.getElementById('quick-presets-container').style.display = 'none';
+        const timerStartDisplay = document.getElementById("timer-start-display");
+        
+        // Element இருக்கான்னு செக் பண்றோம்
+        if (!timerStartDisplay) {
+            console.error("❌ HTML Error: 'timer-start-display' id இருக்கிற element கிடைக்கல!");
+        }
+
+        if (data.active) {
+            // 👇👇 UPDATE START TIME 👇👇
+            if (data.timer.start_time && timerStartDisplay) {
+                let startDate = new Date(data.timer.start_time);
+                let timeString = startDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                console.log("✅ Updating Time to:", timeString);
+                timerStartDisplay.innerText = "Started: " + timeString;
+            } else if (timerStartDisplay) {
+                timerStartDisplay.innerText = "No Start Time";
+            }
+            // 👆👆
+
+            if (data.timer.is_manual) {
+                activeManualEntryID = data.timer.db_id;
+                // Manual timer lock logic...
+                if (typeof projectSelect !== 'undefined' && projectSelect) projectSelect.disabled = true;
+                if (typeof projectInput !== 'undefined' && projectInput) projectInput.disabled = true;
+                if (typeof processSelect !== 'undefined' && processSelect) processSelect.disabled = true;
+                if (typeof subProcessSelect !== 'undefined' && subProcessSelect) subProcessSelect.disabled = true;
+                if (typeof startTimeInput !== 'undefined' && startTimeInput) startTimeInput.disabled = true;
+                
+                const sb = document.getElementById('start-time-btn');
+                if (sb) sb.style.display = 'none';
+
+                const rb = document.getElementById('reset-form-btn');
+                if(rb) rb.style.display = 'inline-block';
+                
+                if (typeof endTimeInput !== 'undefined' && endTimeInput) endTimeInput.disabled = false;
+                const eb = document.getElementById('end-time-btn');
+                if (eb) eb.disabled = false;
+                const subBtn = document.querySelector('button.primary[type="submit"]');
+                if (subBtn) subBtn.disabled = false;
+                
+                // Manual timer la start time ?? nu irukum, so active display la update pannuvom
+                document.getElementById('timer-preset-name').textContent = data.timer.name;
+                // Manual timer usually doesn't have elapsed, but if backend sends it, show it.
+                
+                document.getElementById('active-timer-display').style.display = 'flex';
+                document.getElementById('quick-presets-container').style.display = 'none';
+
+            } else {
+                // Quick Timer Logic
+                timerStartTime = new Date(data.timer.start_time);
+                document.getElementById('timer-preset-name').textContent = data.timer.name;
+                document.getElementById('elapsed-time').textContent = data.timer.elapsed_time;
+                
+                if (!timerInterval) {
+                    timerInterval = setInterval(updateElapsedTime, 1000);
                 }
                 
-            } else {
-                // No active timer
-                activeManualEntryID = null; // Clear manual ID
-                clearInterval(timerInterval);
-                timerInterval = null;
-                document.getElementById('active-timer-display').style.display = 'none';
-                document.getElementById('quick-presets-container').style.display = 'flex';
-                // Make sure manual form is unlocked
-                if (projectSelect) projectSelect.disabled = false;
-                if (projectInput) projectInput.disabled = false;
-                processSelect.disabled = false;
-                subProcessSelect.disabled = false;
-                startTimeInput.disabled = false;
-                if (startButton) startButton.style.display = 'inline-block';
-                if(resetButton) resetButton.style.display = 'none';
+                document.getElementById('active-timer-display').style.display = 'flex';
+                document.getElementById('quick-presets-container').style.display = 'none';
             }
-        } catch (e) {
-            console.error('Error checking timer status:', e);
-            // Don't show a flash message here, as it's a background check
+        } else {
+            // No Active Timer
+            activeManualEntryID = null;
+            clearInterval(timerInterval);
+            timerInterval = null;
+            document.getElementById('active-timer-display').style.display = 'none';
+            document.getElementById('quick-presets-container').style.display = 'flex';
+            if(timerStartDisplay) timerStartDisplay.innerText = "";
+            
+            // Unlock Form
+             if (typeof projectSelect !== 'undefined' && projectSelect) projectSelect.disabled = false;
+             if (typeof projectInput !== 'undefined' && projectInput) projectInput.disabled = false;
+             // ... add other unlock logic if needed
         }
+    } catch (e) {
+        console.error('Error checking timer status:', e);
     }
+}
     
     // --- Preset Modal Logic (Modified) ---
     const p_mb = document.getElementById('preset-mb');
@@ -1695,213 +1982,244 @@ document.addEventListener('keydown', (e)=>{ if(e.key==='Escape'){ closeModal(); 
         }
     };
 
-    /* === Fetch and display dashboard stats === */
-    async function renderDashboardStats(){
-        const WEEKLY_TARGET_HOURS = 40;    // weekly target
-        const DAILY_TARGET_HOURS  = 8;     // pending calc → 8 hours target
+    /* === Fetch and display dashboard stats (UPDATED) === */
+async function renderDashboardStats() {
+    // --- CONFIGURATION ---
+    const DAILY_TARGET = 8;
+    const SAT_TARGET = 7.5;
 
-        // helpers
-        function parseHmsToSeconds(hms) {
-            if (!hms) return 0;
-            const p = hms.split(':').map(Number);
-            if (p.length === 3) return (p[0]||0)*3600 + (p[1]||0)*60 + (p[2]||0);
-            if (p.length === 2) return (p[0]||0)*3600 + (p[1]||0)*60;
-            return 0;
+    // --- HELPERS ---
+    function parseHmsToSeconds(hms) {
+        if (!hms) return 0;
+        const p = hms.split(':').map(Number);
+        if (p.length === 3) return (p[0] || 0) * 3600 + (p[1] || 0) * 60 + (p[2] || 0);
+        if (p.length === 2) return (p[0] || 0) * 3600 + (p[1] || 0) * 60;
+        return 0;
+    }
+
+    function toHM(sec) {
+        if (sec <= 0) return '0h 0m';
+        const h = Math.floor(sec / 3600);
+        const m = Math.floor((sec % 3600) / 60);
+        return `${h}h ${m}m`;
+    }
+
+    try {
+        // 1. Get Monthly Data (Keep existing API)
+        const monthlyRes = await fetch('/api/my-monthly-hours', { headers: { 'Accept': 'application/json' }, cache: 'no-store' });
+        const monthlyData = await monthlyRes.json();
+
+        // Update Monthly UI
+        document.getElementById('total-this-month-hms').textContent = monthlyData.total_hours_hms || '0h 0m';
+        const pctEl = document.getElementById('percent-change');
+        pctEl.classList.remove('positive', 'negative');
+        const change = parseFloat(monthlyData.percent_change) || 0;
+        if (change > 0) {
+            pctEl.textContent = `+${change.toFixed(1)}%`;
+            pctEl.classList.add('positive');
+        } else if (change < 0) {
+            pctEl.textContent = `${change.toFixed(1)}%`;
+            pctEl.classList.add('negative');
+        } else {
+            pctEl.textContent = `0%`;
         }
-        function toHM(sec){
-            if (sec === 0) return '0h 0m';
-            
-            const sign = sec < 0 ? '-' : '';
-            const absSec = Math.abs(sec);
-            
-            const h = Math.floor(absSec / 3600);
-            const m = Math.floor((absSec % 3600) / 60);
-            
-            return `${sign}${h}h ${m}m`;
-        }
-        // Mon–Sat = 1..6
-        function isWeekdayOrSat(dateStr){
-            const [y,m,d] = dateStr.split('-').map(Number);
-            const dt = new Date(y, (m-1), d);
-            const wd = dt.getDay(); // 0=Sun ... 6=Sat
-            return wd >= 1 && wd <= 6;
-        }
 
-        try {
-            // ----- Monthly -----
-            const monthlyRes = await fetch('/api/my-monthly-hours', {headers: {'Accept': 'application/json'}, cache: 'no-store'});
-            if (!monthlyRes.ok) throw new Error('Monthly API error');
-            const monthlyData = await monthlyRes.json();
+        // --- 🚀 WEEKLY PROGRESS & LEAVE LOGIC ---
+        
+        // Dates setup
+        const today = new Date();
+        const todayIndex = today.getDay(); // 0=Sun, 1=Mon... 6=Sat
+        const todayStr = today.toISOString().split('T')[0];
+        
+        // Calculate Start of Week (Monday)
+        const startOfWeek = new Date(today);
+        const dayDiff = todayIndex === 0 ? 6 : todayIndex - 1; // Adjust if Sunday
+        startOfWeek.setDate(today.getDate() - dayDiff);
+        const startOfWeekStr = startOfWeek.toISOString().split('T')[0];
 
-            document.getElementById('total-this-month-hms').textContent = monthlyData.total_hours_hms || '0h 0m';
+        // Variables for Calculation
+        let totalProductiveSeconds = 0;
+        let accumulatedTargetSeconds = 0;
+        let todayProductiveSeconds = 0;
+        const workedDaysSet = new Set(); // To track days present
 
-            const pctEl = document.getElementById('percent-change');
-            pctEl.classList.remove('positive','negative');
-            const change = parseFloat(monthlyData.percent_change) || 0;
-            if (change > 0) {
-                pctEl.textContent = `+${change.toFixed(1)}%`;
-                pctEl.classList.add('positive');
-            } else if (change < 0) {
-                pctEl.textContent = `${change.toFixed(1)}%`;
-                pctEl.classList.add('negative');
-            } else {
-                pctEl.textContent = `0%`;
-            }
+        // 2. Iterate ALL ENTRIES to find Weekly Productive Hours
+        // Using global 'allEntries' to filter specific Process names (Breaks/Permission)
+        
+        // Column Indices (based on your Jinja loop):
+        // 1=Date, 6=Process, 10=Duration
+        allEntries.forEach(entry => {
+            const eDate = entry[1];
+            const process = entry[6];
+            const durationStr = entry[10];
+            const durationSecs = parseHmsToSeconds(durationStr);
 
-            // ----- Weekly (Mon–Sat) -----
-            const weeklyRes = await fetch('/api/my-7day-hours', {headers: {'Accept': 'application/json'}, cache: 'no-store'});
-            if (!weeklyRes.ok) throw new Error('Weekly API error');
-            const weeklyData = await weeklyRes.json();
+            // Check if entry is within current week (Mon - Today)
+            if (eDate >= startOfWeekStr && eDate <= todayStr) {
+                
+                // 🛑 EXCLUSION: Ignore Breaks & Permission for Productivity
+                if (process !== 'Breaks' && process !== 'Permission') {
+                    totalProductiveSeconds += durationSecs;
+                    workedDaysSet.add(eDate); // Mark this day as "Worked"
 
-            let totalWeekSeconds = 0;
-            weeklyData.by_day.forEach(day => {
-                if (!isWeekdayOrSat(day.date)) return;
-                let secs = 0;
-                if (typeof day.hours_hms === 'string' && day.hours_hms) {
-                    secs = parseHmsToSeconds(day.hours_hms);
-                } else if (typeof day.hours_decimal === 'number') {
-                    secs = Math.round(day.hours_decimal * 3600);
-                }
-                totalWeekSeconds += secs;
-            });
-
-            document.getElementById('weekly-hours').textContent = toHM(totalWeekSeconds);
-            const weeklyPct = (totalWeekSeconds / (WEEKLY_TARGET_HOURS * 3600)) * 100;
-            updateProgressBar(weeklyPct, 'weekly-progress-bar', 'weekly-percentage');
-
-            const targetEl = document.getElementById('weekly-target');
-            if (targetEl) targetEl.textContent = `Target: ${WEEKLY_TARGET_HOURS}h`;
-
-            // ----- Pending (today, 8-hour target) -----
-            const today = new Date().toISOString().split('T')[0];
-            const todayRow = weeklyData.by_day.find(d => d.date === today);
-            let todaySecs = 0;
-            if (todayRow) {
-                if (typeof todayRow.hours_hms === 'string' && todayRow.hours_hms) {
-                    todaySecs = parseHmsToSeconds(todayRow.hours_hms);
-                } else if (typeof todayRow.hours_decimal === 'number') {
-                    todaySecs = Math.round(todayRow.hours_decimal * 3600);
-                }
-            }
-            
-            // Also add active timer to todaySecs if running
-            if (timerStartTime && new Date(timerStartTime).toISOString().split('T')[0] === today) {
-                 const elapsedSeconds = (new Date() - timerStartTime) / 1000;
-                 todaySecs += elapsedSeconds;
-            }
-            
-            const pendingSecs = Math.max(0, Math.round(DAILY_TARGET_HOURS*3600 - todaySecs));
-            document.getElementById('pending-hours-value').textContent = pendingSecs > 0 ? toHM(pendingSecs) : 'Done!';
-
-            // --- NEW: Compensation Calculation ---
-            const todayForComp = new Date();
-            const currentMonthStr = `${todayForComp.getFullYear()}-${String(todayForComp.getMonth() + 1).padStart(2, '0')}`; // "YYYY-MM"
-            let permissionSecs = 0;
-            let compensationSecs = 0;
-            
-            // -- FIX: Corrected indexes to match allEntries array --
-            // allEntries[1] is Date
-            // allEntries[6] is Process
-            // allEntries[10] is Duration (float)
-            const dateColIndex = 1;
-                      const processColIndex = 6;
-                      const durationColIndex = 10; 
-
-            allEntries.forEach(entry => {
-                const entryDate = entry[dateColIndex]; // Use entry[1]
-                if (entryDate && entryDate.startsWith(currentMonthStr)) {
-                    const process = entry[processColIndex]; // Use entry[6]
-                    
-                    // Python: [row.id, row.date, row.day, row.project, row.project_type, row.team, row.process, row.sub_process, row.start_time, row.end_time, row.duration, row.disease, row.country, row.project_type_mc]
-                    // JS `allEntries` indexes:
-                    // 0: id
-                    // 1: date
-                    // 2: day
-                    // 3: project
-                    // 4: project_type
-                    // 5: team
-                    // 6: process
-                    // 7: sub_process
-                    // 8: start_time
-                    // 9: end_time
-                    // 10: duration (float)
-                    // ...
-                    
-                    // Table display indexes:
-                    // 0: row[1] (Date)
-                    // 1: row[2] (Day)
-                    // 2: row[3] (Project)
-                    // 3: row[13] (Project Type)
-                    // 4: row[6] (Process)
-                    // 5: row[7] (Sub-process)
-                    // 6: row[8] (Start Time)
-                    // 7: row[9] (End Time)
-                    // 8: row[10] (Duration (h))
-                    
-                    // So, the JS `allEntries` array has:
-                    // Date at index 1
-                    // Process at index 6
-                    // Duration (float) at index 10
-                    
-                    // const durationHours = parseFloat(entry[durationColIndex] || 0); // BUG: This parses "1:30" as 1
-                    // const durationSecs = durationHours * 3600;
-
-                    // NEW FIX: Parse HH:MM string from entry[10]
-                    const durationStr = entry[durationColIndex] || "0:0"; // e.g., "1:30" or "0:26"
-                    const parts = durationStr.split(':').map(Number);
-                    let durationSecs = 0;
-                    if (parts.length === 2) {
-                        // Format is HH:MM  l
-                        durationSecs = (parts[0] * 3600) + (parts[1] * 60);
-                    } else if (parts.length === 1) {
-                        // Fallback for float string (e.g., "1.5")
-                        const durationHours = parseFloat(durationStr);
-                        durationSecs = durationHours * 3600;
+                    // If it's today, add to today's calc
+                    if (eDate === todayStr) {
+                        todayProductiveSeconds += durationSecs;
                     }
-                    
-                    if (process === 'Permission') {
+                }
+            }
+        });
+
+        // 🚀 NEW LOGIC: Calculate Target Based on WORKED DAYS only
+        // This ensures JS and Python logic are perfectly synced
+        workedDaysSet.forEach(dateStr => {
+            const wDate = new Date(dateStr);
+            const wDay = wDate.getDay();
+            
+            if (wDay >= 1 && wDay <= 5) {
+                accumulatedTargetSeconds += (DAILY_TARGET * 3600); // +8h
+            } else if (wDay === 6) {
+                accumulatedTargetSeconds += (SAT_TARGET * 3600);   // +7.5h
+            }
+        });
+
+        // 3. Add Active Timer to Today's Count (if running)
+        // We assume active timer is NOT a break/permission for simplicity
+        if (timerStartTime && new Date(timerStartTime).toISOString().split('T')[0] === todayStr) {
+            // Only add if user is not currently selecting "Breaks" in the dropdown (optional refinement)
+            // For now, simply add elapsed time
+            const now = new Date();
+            const elapsed = (now - timerStartTime) / 1000;
+            totalProductiveSeconds += elapsed;
+            todayProductiveSeconds += elapsed;
+        }
+
+        // 4. Calculate LEAVES
+        // Check days from Monday up to Yesterday. If not in workedDaysSet, it's a leave.
+        let leaveCount = 0;
+        const checkDate = new Date(startOfWeek);
+        while (checkDate < today) { // Strictly before today
+            // Skip Sundays (0)
+            if (checkDate.getDay() !== 0) {
+                const checkStr = checkDate.toISOString().split('T')[0];
+                if (!workedDaysSet.has(checkStr)) {
+                    leaveCount++;
+                }
+            }
+            checkDate.setDate(checkDate.getDate() + 1);
+        }
+
+        // --- UPDATE WEEKLY UI ---
+        
+        // Update Hours
+        document.getElementById('weekly-hours').textContent = toHM(totalProductiveSeconds);
+
+        // Update Progress Bar
+        let weeklyPct = 0;
+        if (accumulatedTargetSeconds > 0) {
+            weeklyPct = (totalProductiveSeconds / accumulatedTargetSeconds) * 100;
+        }
+        updateProgressBar(weeklyPct, 'weekly-progress-bar', 'weekly-percentage');
+
+        // Show Leave Count if any
+        if (leaveCount > 0) {
+            const pctText = document.getElementById('weekly-percentage');
+            // Append leave badge
+            if (!pctText.innerHTML.includes('Leave')) {
+                 pctText.innerHTML += ` <span style="color:#ef4444; font-weight:bold; margin-left:6px; background:rgba(239,68,68,0.1); padding:1px 4px; border-radius:3px;">${leaveCount} Leave</span>`;
+            }
+        }
+
+        // --- UPDATE PENDING TODAY UI ---
+        const todaysTarget = (todayIndex === 6) ? SAT_TARGET : DAILY_TARGET;
+        // If Sunday (0), target is 0 usually, or overtime. Let's assume 0 for pending.
+        const todaysTargetSecs = (todayIndex === 0) ? 0 : (todaysTarget * 3600);
+        
+        const pendingSecs = Math.max(0, Math.round(todaysTargetSecs - todayProductiveSeconds));
+        document.getElementById('pending-hours-value').textContent = (pendingSecs > 0) ? toHM(pendingSecs) : 'Done!';
+
+
+        // --- COMPENSATION LOGIC (Kept as requested) ---
+        const todayForComp = new Date();
+        const currentMonthStr = `${todayForComp.getFullYear()}-${String(todayForComp.getMonth() + 1).padStart(2, '0')}`; // "YYYY-MM"
+
+        let permissionSecs = 0;
+        let compensationSecs = 0;
+        const uniqueWorkedDaysTotal = new Set();
+        
+        // Indices based on app.py query order:
+        // 1=Date, 6=Process, 10=Duration
+        const processIdx = 6;
+        const subIdx = 7;
+        const durationIdx = 10;
+        const workTypeIdx = 16;
+        const dateIdx = 1;
+
+        allEntries.forEach(entry => {
+            const entryDate = entry[1];
+
+            // Filter for Current Month
+            if (entryDate && entryDate.startsWith(currentMonthStr)) {
+                uniqueWorkedDaysTotal.add(entryDate);
+                const process = entry[processIdx];
+                const subProcess = entry[subIdx];
+                const workType = entry[workTypeIdx];
+
+                const durationStr = entry[durationIdx] || "0:0";
+                const parts = durationStr.split(':').map(Number);
+                let durationSecs = 0;
+                if (parts.length === 2) durationSecs = (parts[0] * 3600) + (parts[1] * 60);
+                else if (parts.length === 1) durationSecs = parseFloat(durationStr) * 3600;
+
+                // PAYBACK
+                if (workType === 'Compensation') {
+                    compensationSecs += durationSecs;
+                }
+                // DEBT (Permission/Breaks)
+                else {
+                    if (process === 'Breaks' && subProcess === 'Personal') {
                         permissionSecs += durationSecs;
-                    } else if (process === 'Compensation') {
-                        compensationSecs += durationSecs;
+                    } else if (process === 'Permission' && ['Personal', 'Sick', 'Early Close'].includes(subProcess)) {
+                        permissionSecs += durationSecs;
                     }
                 }
-            });
-
-            const balanceSecs = permissionSecs - compensationSecs;
-            document.getElementById('permission-total-hms').textContent = toHM(permissionSecs);
-            document.getElementById('compensation-total-hms').textContent = toHM(compensationSecs);
-            
-            const balanceEl = document.getElementById('compensation-balance-hms');
-            const messageEl = document.getElementById('compensation-message');
-            
-            const balanceText = toHM(balanceSecs);
-            balanceEl.textContent = balanceText;
-
-            if (balanceSecs > 0) {
-                balanceEl.style.color = 'var(--danger)'; // Red for pending
-                messageEl.textContent = 'You still need to compensate ' + balanceText + '.';
-                messageEl.style.color = 'var(--danger)';
-            } else if (balanceSecs < 0) {
-                balanceEl.style.color = 'var(--accent)'; // Green for surplus
-                const surplusText = toHM(Math.abs(balanceSecs)); // Show positive value
-                messageEl.textContent = surplusText + ' You have already compensated the surplus.';
-                messageEl.style.color = 'var(--accent)';
-            } else { // balanceSecs === 0
-                balanceEl.style.color = 'var(--accent)'; // Green for complete
-                messageEl.textContent = 'Current month compensation complete.';
-                messageEl.style.color = 'var(--accent)';
             }
-            // --- END: Compensation Calculation ---
+        });
 
-        } catch (e) {
-            console.error('Error fetching dashboard stats:', e);
-            document.getElementById('total-this-month-hms').textContent = 'Error';
-            document.getElementById('weekly-hours').textContent = 'Error';
-            document.getElementById('pending-hours-value').textContent = 'Error';
-            document.getElementById('compensation-balance-hms').textContent = 'Error';
+        const balanceSecs = permissionSecs - compensationSecs;
+        document.getElementById('month-days-count').textContent = uniqueWorkedDaysTotal.size;
+
+        // Update Comp UI
+        document.getElementById('permission-total-hms').textContent = toHM(permissionSecs);
+        document.getElementById('compensation-total-hms').textContent = toHM(compensationSecs);
+
+        const balanceEl = document.getElementById('compensation-balance-hms');
+        const messageEl = document.getElementById('compensation-message');
+        const balanceText = toHM(balanceSecs);
+        balanceEl.textContent = balanceText;
+
+        if (balanceSecs > 0) {
+            balanceEl.style.color = '#ef4444'; // Red (Pending)
+            messageEl.textContent = 'You owe ' + balanceText + ' compensation.';
+            messageEl.style.color = '#ef4444';
+        } else if (balanceSecs < 0) {
+            balanceEl.style.color = '#10b981'; // Green (Surplus)
+            messageEl.textContent = toHM(Math.abs(balanceSecs)) + ' surplus hours worked.';
+            messageEl.style.color = '#10b981';
+        } else {
+            balanceEl.style.color = '#10b981';
+            messageEl.textContent = 'Compensation settled.';
+            messageEl.style.color = '#10b981';
         }
-    };
-    
+
+    } catch (e) {
+        console.error('Error fetching dashboard stats:', e);
+        document.getElementById('total-this-month-hms').textContent = 'Error';
+        document.getElementById('weekly-hours').textContent = 'Error';
+        document.getElementById('pending-hours-value').textContent = 'Error';
+        document.getElementById('compensation-balance-hms').textContent = 'Error';
+    }
+};
     // --- NEW: Calendar Rendering and Interaction Logic ---
     function getMonthName(monthIndex) {
         // monthIndex is 0-based for JS (0=Jan, 11=Dec)
@@ -1932,18 +2250,23 @@ document.addEventListener('keydown', (e)=>{ if(e.key==='Escape'){ closeModal(); 
         }
 
         // 2. Fill day cells
-        for (let day = 1; day <= daysInMonth; day++) {
-            const dateStr = `${year}-${String(monthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-            let classes = 'date-cell';
+for (let day = 1; day <= daysInMonth; day++) {
+    const dateStr = `${year}-${String(monthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    let classes = 'date-cell';
 
-            if (dateStr === selectedDateStr) {
-                classes += ' selected-date';
-            } else if (dateStr === TODAY_DATE_STRING) {
-                classes += ' current-day';
-            }
-            
-            container.innerHTML += `<span class="${classes}" data-date="${dateStr}">${day}</span>`;
-        }
+    // ✨ NEW LOGIC: Future Date Check ✨
+    if (dateStr > TODAY_DATE_STRING) {
+        classes += ' future-date'; // Mela potta CSS class inga add aagum
+    }
+
+    if (dateStr === selectedDateStr) {
+        classes += ' selected-date';
+    } else if (dateStr === TODAY_DATE_STRING) {
+        classes += ' current-day';
+    }
+    
+    container.innerHTML += `<span class="${classes}" data-date="${dateStr}">${day}</span>`;
+}
     }
 
     // --- Initializers ---

@@ -1,0 +1,441 @@
+{% extends "base.html" %}
+{% block title %}Audit Registry | Admin{% endblock %}
+
+{% block content %}
+<style>
+    /* --- LAYOUT & CONTAINER --- */
+    .audit-page {
+        padding: 20px 30px;
+        max-width: 100%;
+        margin: 0 auto;
+        height: calc(100vh - 60px); /* Full height minus header offset */
+        display: flex;
+        flex-direction: column;
+    }
+
+    /* --- HEADER SECTION --- */
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        margin-bottom: 20px;
+    }
+    .page-title h1 {
+        font-size: 22px;
+        font-weight: 700;
+        color: #f8fafc;
+        margin: 0 0 5px 0;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .page-title p {
+        margin: 0;
+        font-size: 13px;
+        color: #94a3b8;
+    }
+
+    /* --- FILTER BAR (The Professional Part) --- */
+    .filter-bar {
+        background: #1e293b;
+        border: 1px solid #334155;
+        border-radius: 10px;
+        padding: 10px 15px;
+        display: flex;
+        gap: 15px;
+        align-items: center;
+        margin-bottom: 15px;
+        flex-wrap: wrap;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+    }
+    
+    .filter-group {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+    .filter-label {
+        font-size: 10px;
+        text-transform: uppercase;
+        color: #64748b;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+    }
+    
+    /* Inputs & Selects */
+    .filter-input {
+        background: #0f172a;
+        border: 1px solid #334155;
+        color: #e2e8f0;
+        padding: 6px 10px;
+        border-radius: 6px;
+        font-size: 12px;
+        min-width: 140px;
+        outline: none;
+        transition: border-color 0.2s;
+    }
+    .filter-input:focus {
+        border-color: #ffd24d;
+    }
+    select.filter-input {
+        cursor: pointer;
+        appearance: none;
+        background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+        background-repeat: no-repeat;
+        background-position: right 8px center;
+        background-size: 12px;
+        padding-right: 25px;
+    }
+
+    /* Search Box specific */
+    .search-group {
+        flex-grow: 1; /* Pushes to fill space */
+    }
+    .search-group input {
+        width: 100%;
+        max-width: 300px;
+    }
+
+    /* Reset Button */
+    .btn-reset {
+        background: transparent;
+        border: 1px dashed #475569;
+        color: #94a3b8;
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-size: 11px;
+        cursor: pointer;
+        height: 30px;
+        margin-top: auto;
+    }
+    .btn-reset:hover {
+        border-color: #ffd24d;
+        color: #ffd24d;
+    }
+
+    /* --- DATA TABLE --- */
+    .table-container {
+        flex: 1;
+        background: #1e293b;
+        border: 1px solid #334155;
+        border-radius: 10px;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    }
+    .table-scroll {
+        overflow-y: auto;
+        flex: 1;
+    }
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 12px;
+    }
+    thead th {
+        background: #151e32;
+        color: #94a3b8;
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 11px;
+        padding: 12px 16px;
+        text-align: left;
+        border-bottom: 2px solid #334155;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        white-space: nowrap;
+    }
+    tbody td {
+        padding: 10px 16px;
+        border-bottom: 1px solid #2d3a52;
+        color: #cbd5e1;
+        vertical-align: top;
+    }
+    tbody tr:hover {
+        background: #232d42;
+    }
+
+    /* --- CELL STYLING --- */
+    /* 1. User Profile Cell */
+    .user-cell {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .avatar-circle {
+        width: 32px;
+        height: 32px;
+        background: #334155;
+        color: #fff;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 12px;
+        border: 1px solid #475569;
+    }
+    .user-info {
+        display: flex;
+        flex-direction: column;
+    }
+    .u-name { font-weight: 600; color: #f1f5f9; font-size: 13px; }
+    .u-email { font-size: 11px; color: #94a3b8; }
+
+    /* 2. Role & Team Badges */
+    .meta-badge {
+        display: inline-block;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 10px;
+        font-weight: 600;
+        text-transform: uppercase;
+        margin-right: 4px;
+    }
+    .badge-role { background: rgba(139, 92, 246, 0.15); color: #a78bfa; border: 1px solid rgba(139, 92, 246, 0.3); }
+    .badge-team { background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); }
+
+    /* 3. Action Badges */
+    .action-badge {
+        display: inline-flex; align-items: center; gap: 6px;
+        padding: 4px 10px; border-radius: 20px;
+        font-size: 11px; font-weight: 700; text-transform: uppercase;
+        border: 1px solid transparent; width: fit-content;
+    }
+    .dot { width: 6px; height: 6px; border-radius: 50%; }
+    
+    /* Action Colors */
+    .act-danger { background: rgba(239, 68, 68, 0.1); color: #ef4444; border-color: rgba(239, 68, 68, 0.2); }
+    .act-danger .dot { background: #ef4444; }
+    
+    .act-success { background: rgba(16, 185, 129, 0.1); color: #10b981; border-color: rgba(16, 185, 129, 0.2); }
+    .act-success .dot { background: #10b981; }
+    
+    .act-warning { background: rgba(245, 158, 11, 0.1); color: #fbbf24; border-color: rgba(245, 158, 11, 0.2); }
+    .act-warning .dot { background: #fbbf24; }
+    
+    .act-info { background: rgba(59, 130, 246, 0.1); color: #60a5fa; border-color: rgba(59, 130, 246, 0.2); }
+    .act-info .dot { background: #60a5fa; }
+
+    /* 4. Timestamp */
+    .time-cell {
+        font-family: 'Courier New', monospace;
+        font-size: 11px;
+        color: #94a3b8;
+    }
+    .date-part { color: #cbd5e1; font-weight: 600; display: block; margin-bottom: 2px;}
+
+    /* Footer Stats */
+    .table-footer {
+        padding: 10px 15px;
+        background: #151e32;
+        border-top: 1px solid #334155;
+        font-size: 11px;
+        color: #64748b;
+        display: flex;
+        justify-content: space-between;
+    }
+</style>
+
+<div class="audit-page">
+    <div class="page-header">
+        <div class="page-title">
+            <h1><i class="fa fa-shield-alt" style="color: #ffd24d;"></i> System Audit Registry</h1>
+            <p>Complete traceability of system events, user actions, and security alerts.</p>
+        </div>
+        <div style="font-size: 12px; color: #64748b;">
+            <i class="fa fa-clock"></i> Server Time: {{ logs[0].timestamp.strftime('%H:%M') if logs else '--:--' }}
+        </div>
+    </div>
+
+    <div class="filter-bar">
+        
+        <div class="filter-group search-group">
+            <span class="filter-label">Search Keywords</span>
+            <input type="text" id="searchInput" class="filter-input" placeholder="Search name, details, ID..." onkeyup="applyFilters()">
+        </div>
+
+        <div class="filter-group">
+            <span class="filter-label">Action Type</span>
+            <select id="actionFilter" class="filter-input" onchange="applyFilters()">
+                <option value="">All Actions</option>
+                </select>
+        </div>
+
+        <div class="filter-group">
+            <span class="filter-label">Role</span>
+            <select id="roleFilter" class="filter-input" onchange="applyFilters()">
+                <option value="">All Roles</option>
+                </select>
+        </div>
+
+        <div class="filter-group">
+            <span class="filter-label">Team</span>
+            <select id="teamFilter" class="filter-input" onchange="applyFilters()">
+                <option value="">All Teams</option>
+                </select>
+        </div>
+
+        <button class="btn-reset" onclick="resetFilters()">
+            <i class="fa fa-sync-alt"></i> Reset
+        </button>
+    </div>
+
+    <div class="table-container">
+        <div class="table-scroll">
+            <table id="auditTable">
+                <thead>
+                    <tr>
+                        <th width="15%">Timestamp</th>
+                        <th width="25%">User Profile</th>
+                        <th width="15%">Context</th>
+                        <th width="15%">Action</th>
+                        <th width="30%">Details</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in logs %}
+                    <tr class="audit-row" 
+                        data-action="{{ log.action_type }}" 
+                        data-role="{{ log.role }}" 
+                        data-team="{{ log.team }}"
+                        data-search="{{ log.name }} {{ log.email }} {{ log.details }} {{ log.target_id }}">
+                        
+                        <td class="time-cell">
+                            <span class="date-part">{{ log.timestamp.strftime('%Y-%m-%d') }}</span>
+                            <span>{{ log.timestamp.strftime('%H:%M:%S') }}</span>
+                        </td>
+
+                        <td>
+                            <div class="user-cell">
+                                <div class="avatar-circle">
+                                    {{ log.name[0]|upper if log.name else '?' }}
+                                </div>
+                                <div class="user-info">
+                                    <span class="u-name">{{ log.name or 'System / Guest' }}</span>
+                                    <span class="u-email">{{ log.email }}</span>
+                                </div>
+                            </div>
+                        </td>
+
+                        <td>
+                            <div style="display: flex; flex-direction: column; gap: 4px;">
+                                <span class="meta-badge badge-role">{{ log.role or 'N/A' }}</span>
+                                <span class="meta-badge badge-team">{{ log.team or 'Global' }}</span>
+                            </div>
+                        </td>
+
+                        <td>
+                            {% if 'DELETE' in log.action_type or 'REMOVE' in log.action_type %}
+                                <span class="action-badge act-danger"><div class="dot"></div> {{ log.action_type }}</span>
+                            {% elif 'FAILED' in log.action_type or 'BACKDATED' in log.action_type %}
+                                <span class="action-badge act-warning"><div class="dot"></div> {{ log.action_type }}</span>
+                            {% elif 'LOGIN' in log.action_type or 'SUCCESS' in log.action_type or 'START' in log.action_type %}
+                                <span class="action-badge act-success"><div class="dot"></div> {{ log.action_type }}</span>
+                            {% else %}
+                                <span class="action-badge act-info"><div class="dot"></div> {{ log.action_type }}</span>
+                            {% endif %}
+                        </td>
+
+                        <td>
+                            <div style="font-size: 11px; color: #a78bfa; margin-bottom: 2px;">ID: {{ log.target_id }}</div>
+                            <div style="color: #cbd5e1; line-height: 1.4;">{{ log.details }}</div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" style="text-align: center; padding: 40px; color: #64748b;">
+                            No audit records found.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="table-footer">
+            <span id="showingText">Showing all records</span>
+            <span>Confidential Data • Internal Use Only</span>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- 1. AUTO-POPULATE DROPDOWNS ---
+    document.addEventListener("DOMContentLoaded", function() {
+        populateDropdown('actionFilter', 'data-action');
+        populateDropdown('roleFilter', 'data-role');
+        populateDropdown('teamFilter', 'data-team');
+        updateCount();
+    });
+
+    function populateDropdown(selectId, dataAttr) {
+        const select = document.getElementById(selectId);
+        const rows = document.querySelectorAll('.audit-row');
+        const uniqueValues = new Set();
+
+        rows.forEach(row => {
+            const val = row.getAttribute(dataAttr);
+            if (val && val !== 'None' && val !== 'N/A') {
+                uniqueValues.add(val);
+            }
+        });
+
+        // Sort and add options
+        Array.from(uniqueValues).sort().forEach(val => {
+            const option = document.createElement('option');
+            option.value = val;
+            option.textContent = val;
+            select.appendChild(option);
+        });
+    }
+
+    // --- 2. FILTERING LOGIC ---
+    function applyFilters() {
+        const searchText = document.getElementById('searchInput').value.toLowerCase();
+        const actionVal = document.getElementById('actionFilter').value;
+        const roleVal = document.getElementById('roleFilter').value;
+        const teamVal = document.getElementById('teamFilter').value;
+
+        const rows = document.querySelectorAll('.audit-row');
+        let visibleCount = 0;
+
+        rows.forEach(row => {
+            const rowSearch = row.getAttribute('data-search').toLowerCase();
+            const rowAction = row.getAttribute('data-action');
+            const rowRole = row.getAttribute('data-role');
+            const rowTeam = row.getAttribute('data-team');
+
+            // Logic: Show only if ALL active filters match
+            const matchSearch = rowSearch.includes(searchText);
+            const matchAction = !actionVal || rowAction === actionVal;
+            const matchRole = !roleVal || rowRole === roleVal;
+            const matchTeam = !teamVal || rowTeam === teamVal;
+
+            if (matchSearch && matchAction && matchRole && matchTeam) {
+                row.style.display = '';
+                visibleCount++;
+            } else {
+                row.style.display = 'none';
+            }
+        });
+
+        updateCount(visibleCount);
+    }
+
+    // --- 3. UTILITIES ---
+    function resetFilters() {
+        document.getElementById('searchInput').value = '';
+        document.getElementById('actionFilter').value = '';
+        document.getElementById('roleFilter').value = '';
+        document.getElementById('teamFilter').value = '';
+        applyFilters();
+    }
+
+    function updateCount(count) {
+        const total = document.querySelectorAll('.audit-row').length;
+        const current = count !== undefined ? count : total;
+        document.getElementById('showingText').textContent = `Showing ${current} of ${total} records`;
+    }
+</script>
+{% endblock %}

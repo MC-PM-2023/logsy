@@ -29,79 +29,11 @@ from dashboard_blueprint import dashboard_bp
 # ── CONFIG ────────────────────────────────────────────────────────────────
 import os
 from dotenv import load_dotenv
-load_dotenv()
 app = Flask(__name__)
-# Browser க்ளோஸ் பண்ணா Session அழியறதுக்காக இதை Falseனு வைக்கணும்
-app.config['SESSION_PERMANENT'] = False
 
-#____________________Local_DB____________________________
-# --- secrets & config from ENV (set in app.yaml) ---
-app.secret_key = os.getenv("SECRET_KEY", "dev-secret")
-
-DB_HOST = os.getenv("DB_HOST", "34.93.75.171") 
-DB_PORT = int(os.getenv("DB_PORT", "3306"))
-DB_NAME = os.getenv("DB_NAME", "timesheet")
-DB_USER = os.getenv("DB_USER", "appsadmin")
-DB_PASS = os.getenv("DB_PASS", "appsadmin2025")
-
-DB_URI = f"mysql+pymysql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
-app.config["SQLALCHEMY_DATABASE_URI"] = DB_URI
-app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-db = SQLAlchemy(app)
-
-app.config["MYSQL_HOST"] = DB_HOST
-app.config["MYSQL_USER"] = DB_USER
-app.config["MYSQL_PASSWORD"] = DB_PASS
-app.config["MYSQL_DB"] = DB_NAME
-app.config["MYSQL_PORT"] = DB_PORT
-mysql = MySQL(app)
-
-engine = create_engine(DB_URI)
-#_____________________________END_____________________________
-#XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-
- #__________________________App_dep_DB_______________________________
-# app.secret_key = os.environ.get("SECRET_KEY", "dev-secret")
-
-# # ── DB CONFIG (Cloud SQL via Unix Socket) ───────────────────
-# DB_USER = os.environ.get("DB_USER", "appsadmin")
-# DB_PASS = os.environ.get("DB_PASS", "appsadmin2025")
-# DB_NAME = os.environ.get("DB_NAME", "timesheet")
-# INSTANCE_UNIX_SOCKET = os.environ.get(
-#     "INSTANCE_UNIX_SOCKET",
-#     "/cloudsql/theta-messenger-459613-p7:asia-south1:appsadmin"
-# )
-
-# # SQLAlchemy URI (pymysql + unix socket)
-# DB_URI = (
-#     f"mysql+pymysql://{DB_USER}:{DB_PASS}@/{DB_NAME}"
-#     f"?unix_socket={INSTANCE_UNIX_SOCKET}"
-# )
-
-# app.config["SQLALCHEMY_DATABASE_URI"] = DB_URI
-# app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-# db = SQLAlchemy(app)
-
-# # Flask-MySQLdb config (if you still use mysql.cursor())
-# app.config["MYSQL_USER"] = DB_USER
-# app.config["MYSQL_PASSWORD"] = DB_PASS
-# app.config["MYSQL_DB"] = DB_NAME
-# app.config["MYSQL_UNIX_SOCKET"] = INSTANCE_UNIX_SOCKET
-# mysql = MySQL(app)
-
-# # Raw engine (if you use create_engine anywhere)
-# engine = create_engine(DB_URI)
-
-#XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-#_____________________________________________________________
-
-
-SMTP_SERVER  = os.getenv("SMTP_SERVER", "smtp.datasolve-analytics.com")
-SMTP_PORT    = int(os.getenv("SMTP_PORT", "587"))
-WEBMAIL_USER = os.getenv("SMTP_USER", "apps.admin@datasolve-analytics.com")
-WEBMAIL_PASS = os.getenv("SMTP_PASS", "datasolve@2025")
 # 🆕 SLACK CONFIGURATION
 
+load_dotenv()
 
 SLACK_BOT_TOKEN = os.getenv("SLACK_BOT_TOKEN")
 SLACK_SIGNING_SECRET = os.getenv("SLACK_SIGNING_SECRET")
@@ -120,28 +52,11 @@ def send_slack_alert(user_email, message_text):
         # Log error silently or print to console
         print(f"Slack Error for {user_email}: {e}")
 
-# 🆕 DYNAMIC TARGET HELPER
-def calculate_dynamic_target(worked_dates_list):
-    """
-    Calculates target based on unique worked dates.
-    Mon-Fri = +8 hours
-    Sat = +7.5 hours
-    """
-    unique_days = set(worked_dates_list) # Remove duplicates
-    target = 0
-    for day_obj in unique_days:
-        # 0=Mon, 1=Tue, ..., 5=Sat, 6=Sun
-        w_day = day_obj.weekday()
-        if 0 <= w_day <= 4: # Mon - Fri
-            target += 8.0
-        elif w_day == 5:    # Saturday
-            target += 7.5
-    return target
-
 # 🆕 HIERARCHY NOTIFICATION SYSTEM
 def notify_hierarchy(actor_user, message):
     """Notify Superadmins and relevant Team Admins."""
     # 🔴 DISABLED FOR DAILY LOGS PER USER REQUEST
+    # Only enable this if you want admins to know about critical account changes (like Registration)
     try:
         supers = User.query.filter_by(role="superadmin").all()
         for s in supers:
@@ -160,20 +75,23 @@ def notify_hierarchy(actor_user, message):
 
 def check_gaps_and_inactivity():
     """
-    1. Checks if user has been idle for > 2 hours.
-    2. Checks for gaps between entries.
+    1. Checks if user has been idle for > 2 hours (Last entry end time vs Now).
+    2. Checks for gaps between entries (e.g., 11:00 AM to 12:00 PM empty).
     """
     with app.app_context():
         print("Checking gaps and inactivity...")
         now = datetime.now()
         today_str = now.strftime("%Y-%m-%d")
         
+        # Skip weekends if needed, currently checking daily
+        # if now.weekday() > 5: return 
+
         users = User.query.all()
         
         for user in users:
             if not user.email: continue
 
-            # Fetch today's logs
+            # Fetch today's logs for this user
             cur = mysql.connection.cursor()
             cur.execute("""
                 SELECT start_time, end_time 
@@ -184,50 +102,44 @@ def check_gaps_and_inactivity():
             logs = cur.fetchall()
             cur.close()
 
-            # Logic 1: No logs at all
+            # Logic 1: If no logs at all and it's past 11:30 AM
             if not logs:
                 if now.hour >= 11 and now.minute >= 30:
                      send_slack_alert(user.email, f"⚠️ *Missing Timesheet Alert*\nDate: {today_str}\nHello {user.username}, you haven't logged any entries for today. Please update your status.")
                 continue
 
-            # Logic 2: Gap Detection
+            # Logic 2 & 3: Gap Detection and Idle Detection
             last_end_dt = None
-            parsed_logs = []
             
+            # Convert logs to datetime objects for comparison
+            parsed_logs = []
             for row in logs:
-                s_obj, e_obj = row[0], row[1]
-                if not s_obj: continue
+                s_str, e_str = row[0], row[1]
+                if not s_str: continue
                 
-                s_str = str(s_obj) # Ensure string
+                # Parse Start Time
+                s_dt = datetime.strptime(f"{today_str} {s_str}", "%Y-%m-%d %H:%M")
                 
-                # 🛠️ FIX 1: Parse Start Time (Handle Seconds)
-                try:
-                    s_dt = datetime.strptime(f"{today_str} {s_str}", "%Y-%m-%d %H:%M:%S")
-                except ValueError:
-                    s_dt = datetime.strptime(f"{today_str} {s_str}", "%Y-%m-%d %H:%M")
-                
-                if not e_obj: 
-                    # Timer is running currently
+                # Parse End Time (Handle ongoing/NULL timers)
+                if not e_str: 
+                    # Timer is running currently, so user is active. Set end to NOW.
                     e_dt = now 
                 else:
-                    e_str = str(e_obj) # Ensure string
-                    # 🛠️ FIX 2: Parse End Time (Handle Seconds)
-                    try:
-                        e_dt = datetime.strptime(f"{today_str} {e_str}", "%Y-%m-%d %H:%M:%S")
-                    except ValueError:
-                        e_dt = datetime.strptime(f"{today_str} {e_str}", "%Y-%m-%d %H:%M")
+                    e_dt = datetime.strptime(f"{today_str} {e_str}", "%Y-%m-%d %H:%M")
                 
                 parsed_logs.append((s_dt, e_dt))
 
-            # Check for Gaps
+            # Check for Gaps between entries
             for i in range(len(parsed_logs)):
                 curr_start = parsed_logs[i][0]
                 curr_end = parsed_logs[i][1]
 
                 if last_end_dt:
+                    # Calculate gap
                     gap = curr_start - last_end_dt
                     gap_minutes = gap.total_seconds() / 60
                     
+                    # If gap is greater than 15 minutes (allowing small break)
                     if gap_minutes > 15:
                         msg = (f"⚠️ *Missing Entry Detected*\n"
                                f"Date: {today_str}\n"
@@ -237,33 +149,29 @@ def check_gaps_and_inactivity():
                 
                 last_end_dt = curr_end
 
-            # Logic 3: Idle Detection (The Error was here!)
-            if logs:
-                last_raw_end = logs[-1][1] 
+            # Check for Idle Time (Last entry end time vs Now)
+            # Only if the last entry is actually finished (end_time was not created artificially from 'now')
+            # Check the raw last log from DB
+            last_raw_end = logs[-1][1] 
+            
+            if last_raw_end: # If the last timer is STOPPED
+                last_real_end_dt = datetime.strptime(f"{today_str} {last_raw_end}", "%Y-%m-%d %H:%M")
+                idle_duration = now - last_real_end_dt
+                idle_hours = idle_duration.total_seconds() / 3600
                 
-                if last_raw_end: # If the last timer is STOPPED
-                    last_end_str = str(last_raw_end)
-                    
-                    # 🛠️ FIX 3: Robust Parsing for Last Entry (Handle Seconds)
-                    try:
-                        last_real_end_dt = datetime.strptime(f"{today_str} {last_end_str}", "%Y-%m-%d %H:%M:%S")
-                    except ValueError:
-                        last_real_end_dt = datetime.strptime(f"{today_str} {last_end_str}", "%Y-%m-%d %H:%M")
-
-                    idle_duration = now - last_real_end_dt
-                    idle_hours = idle_duration.total_seconds() / 3600
-                    
-                    if idle_hours >= 2:
-                        msg = (f"⏳ *Inactivity Alert*\n"
-                               f"Date: {today_str}\n"
-                               f"You haven't logged any tasks for over 2 hours.\n"
-                               f"Last entry ended at: *{last_real_end_dt.strftime('%I:%M %p')}*.\n"
-                               f"Please update your timesheet.")
-                        send_slack_alert(user.email, msg)
+                if idle_hours >= 2:
+                    msg = (f"⏳ *Inactivity Alert*\n"
+                           f"Date: {today_str}\n"
+                           f"You haven't logged any tasks for over 2 hours.\n"
+                           f"Last entry ended at: *{last_real_end_dt.strftime('%I:%M %p')}*.\n"
+                           f"Please update your timesheet.")
+                    send_slack_alert(user.email, msg)
 
 def check_long_running_timers():
     """
     Checks for timers running longer than allowed hours.
+    Mon-Fri: > 9 hours
+    Sat: > 8 hours
     """
     with app.app_context():
         print("Checking for long-running timers...")
@@ -279,6 +187,7 @@ def check_long_running_timers():
         hours_threshold = 8 if day_idx == 5 else 9
         
         cur = mysql.connection.cursor()
+        # Get active timers
         cur.execute("""
             SELECT id, name, project, start_time 
             FROM timesheetlogs 
@@ -288,23 +197,9 @@ def check_long_running_timers():
         cur.close()
 
         for row in active_rows:
-            entry_id, username, project, start_time_obj = row
+            entry_id, username, project, start_time_str = row
             try:
-                # 🛠️ FIX START: Handle timedelta vs String
-                st_h, st_m = 0, 0
-                
-                if isinstance(start_time_obj, timedelta):
-                    # If DB returns timedelta (e.g., 9:30:00)
-                    total_seconds = int(start_time_obj.total_seconds())
-                    st_h = total_seconds // 3600
-                    st_m = (total_seconds % 3600) // 60
-                else:
-                    # If DB returns String (e.g., "09:30" or "09:30:00")
-                    parts = str(start_time_obj).split(':')
-                    st_h = int(parts[0])
-                    st_m = int(parts[1])
-                # 🛠️ FIX END
-
+                st_h, st_m = map(int, start_time_str.split(':'))
                 start_dt = now.replace(hour=st_h, minute=st_m, second=0, microsecond=0)
                 
                 duration = now - start_dt
@@ -323,37 +218,23 @@ def check_long_running_timers():
                 print(f"Error checking timer for {username}: {e}")
 
 def check_missing_entries():
+    """
+    Mon-Fri @ 7 PM: Remind users who haven't logged ANYTHING today.
+    """
     with app.app_context():
         print("Checking for missing entries...")
         today_str = datetime.now().strftime("%Y-%m-%d")
         all_users = User.query.all()
         cur = mysql.connection.cursor()
         for user in all_users:
-            
-            # 🔥 EXCLUDE SAGAR'S DATA (No Alert for him)
-            if user.email == "sagar.r@datasolve-analytics.com":
-                continue
-
             cur.execute("SELECT COUNT(*) FROM timesheetlogs WHERE name = %s AND date = %s", (user.username, today_str))
             count = cur.fetchone()[0]
             if count == 0:
-                msg = (f"Timesheet Submission Reminder\nHello {user.username}, no entries logged for today ({today_str}).")
+                msg = (f"Timesheet Submission Reminder\n"
+                       f"Hello {user.username}, no entries have been logged for today ({today_str}).\n"
+                       f"Please ensure your timesheet is updated before end of day.")
                 send_slack_alert(user.email, msg)
         cur.close()
-
-def check_gaps_and_inactivity():
-    with app.app_context():
-        # ... setup ...
-        users = User.query.all()
-        
-        for user in users:
-            if not user.email: continue
-            
-            # 🔥 EXCLUDE SAGAR'S DATA (No Gaps Check for him)
-            if user.email == "sagar.r@datasolve-analytics.com":
-                continue
-
-            # ... rest of the logic ...
 
 def send_weekly_summary():
     """
@@ -382,6 +263,9 @@ def send_weekly_summary():
         cur.close()
 
 def send_admin_daily_report():
+    """
+    Mon-Fri @ 8:00 PM: Admin report.
+    """
     with app.app_context():
         print("Sending Admin Report...")
         today_str = datetime.now().strftime("%Y-%m-%d")
@@ -403,7 +287,6 @@ def send_admin_daily_report():
             supers = User.query.filter_by(role="superadmin").all()
             for s in supers:
                 send_slack_alert(s.email, msg)
-
 # ── WEEKLY REPORT HELPERS ─────────────────────────────────────────────────
 
 # 🆕 Added 'target_hours' to arguments
@@ -413,8 +296,7 @@ def generate_weekly_email_html(user_name, team_name, week_data, total_hours, lea
     # target_hours = 47.5 
     
     pct = min(100, int((total_hours / target_hours) * 100)) if target_hours > 0 else 0
-    bar_color = "#10b981" if total_hours >= (target_hours * 0.85) else "#f59e0b"
-    
+    bar_color = "#10b981" if total_hours >= (target_hours * 0.85) else "#f59e0b" #
     html = f"""
     <!DOCTYPE html>
     <html>
@@ -441,7 +323,7 @@ def generate_weekly_email_html(user_name, team_name, week_data, total_hours, lea
                     <div style="width: {pct}%; background-color: {bar_color}; height: 100%; border-radius: 4px;"></div>
                 </div>
                 <div style="text-align: right; font-size: 11px; color: #94a3b8; margin-bottom: 25px;">
-                    {pct}% of Weekly Target ({target_hours}h)
+                    {pct}% of Weekly Target (47.5h)
                 </div>
 
                 <table style="width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 20px;">
@@ -497,29 +379,30 @@ def weekly_progress_job():
     with app.app_context():
         print("🚀 Running Weekly Progress Report Job...")
         
-        today = date.today()
+        # 1. Calculate Date Range (Mon-Sat of current week)
+        today = date.today() # Assuming this runs on Saturday
+        # If running on Saturday, today is end date.
+        # If testing on another day, adjust accordingly.
+        # Logic: Find last Monday
         start_of_week = today - timedelta(days=today.weekday()) # Monday
         end_of_week = start_of_week + timedelta(days=5) # Saturday
         
         start_str = start_of_week.strftime("%Y-%m-%d")
         end_str = end_of_week.strftime("%Y-%m-%d")
         
+        # 2. Get All Users
         users = User.query.all()
         
+        # Data storage for Admin summaries
+        # { 'AdminEmail': [ 'html_report_user1', 'html_report_user2' ] }
         team_reports = {} 
         super_admin_reports = []
 
         cur = mysql.connection.cursor()
 
-        # 🔥 STEP 1: DATA GENERATION LOOP
         for user in users:
-            
-            # 🛑 EXCLUDE SAGAR'S DATA FROM REPORT
-            # இவர் டேட்டா ரிப்போர்ட்ல கால்குலேட் ஆகாது.
-            if user.email == "sagar.r@datasolve-analytics.com":
-                continue
-
             # 3. Fetch Logs for this user (Mon-Sat)
+            # 🛑 EXCLUDING 'Breaks' and 'Permission'
             cur.execute("""
                 SELECT date, day, duration 
                 FROM timesheetlogs 
@@ -530,37 +413,43 @@ def weekly_progress_job():
             
             logs = cur.fetchall()
             
-            # ... (Process Data Logic - Same as before) ...
-            daily_map = {}
+            # 4. Process Data
+            daily_map = {} # { '2023-10-23': 28800 seconds }
+            
             for row in logs:
                 r_date, r_day, r_dur = row
                 if not r_dur: continue
+                
+                # Parse Duration
                 secs = 0
                 try:
                     parts = str(r_dur).split(':')
                     secs = int(parts[0])*3600 + int(parts[1])*60
                 except: continue
+                
                 d_key = str(r_date)
                 daily_map[d_key] = daily_map.get(d_key, 0) + secs
 
+            # 5. Build 6-Day Structure (Mon-Sat)
             week_data_display = []
             total_week_seconds = 0
             leaves_count = 0
-            worked_dates_list = [] 
-
+            # 🆕 Create a list to store dates for target calculation
+            worked_dates_list = []
             check_date = start_of_week
-            for i in range(6): 
+            for i in range(6): # 0 to 5 (Mon to Sat)
                 d_str = check_date.strftime("%Y-%m-%d")
                 day_name = check_date.strftime("%A")
+                
                 seconds = daily_map.get(d_str, 0)
                 total_week_seconds += seconds
+                
                 status = "Present"
                 if seconds == 0:
                     status = "Leave"
                     leaves_count += 1
-                else:
-                    worked_dates_list.append(check_date)
                 
+                # Format HM
                 h, m = divmod(seconds, 3600)
                 m = divmod(m, 60)[0]
                 hours_str = f"{int(h)}h {int(m)}m" if seconds > 0 else "-"
@@ -570,14 +459,19 @@ def weekly_progress_job():
                     "status": status,
                     "hours": hours_str
                 })
+                
                 check_date += timedelta(days=1)
 
+            # Total Hours String
             th, tm = divmod(total_week_seconds, 3600)
             tm = divmod(tm, 60)[0]
-            total_hours_str = f"{int(th)}.{int((tm/60)*10)}" 
+            total_hours_str = f"{int(th)}.{int((tm/60)*10)}" # Decimal format e.g. 40.5
 
+            # 🆕 Calculate Dynamic Target
             dynamic_target = calculate_dynamic_target(worked_dates_list)
-            
+        
+
+            # 6. Generate HTML for this User
             user_html_card = generate_weekly_email_html(
                 user.username, 
                 user.team, 
@@ -586,11 +480,12 @@ def weekly_progress_job():
                 leaves_count, 
                 start_str, 
                 end_str,
-                dynamic_target
+                dynamic_target # 👈 Pass the new target here
             )
-            
+            # Add to Super Admin List
             super_admin_reports.append(user_html_card)
             
+            # Add to Team Admin List
             if user.team:
                 admins = User.query.filter_by(role='admin', team=user.team).all()
                 for admin in admins:
@@ -601,14 +496,13 @@ def weekly_progress_job():
         cur.close()
 
         # 7. SEND EMAILS 
+        
+        # A. Send to Team Admins
         for admin_email, reports in team_reports.items():
             full_body = "<br><hr><br>".join(reports)
             send_email_report(admin_email, f"Weekly Team Report ({start_str})", full_body)
             
-        # 🔥 STEP 2: SENDING LOOP (NO EXCLUSION HERE)
-        # சாகர் Superadmin ஆக இருந்தால், அவருக்கு மெயில் போகும்.
-        # ஆனா மேல அவர் Data-வை Skip பண்ணிட்டோம், சோ மெயில்ல அவர் பெயர் இருக்காது.
-        
+        # B. Send to Super Admins
         super_admins = User.query.filter_by(role='superadmin').all()
         if super_admins and super_admin_reports:
             full_body_super = "<br><hr><br>".join(super_admin_reports)
@@ -619,40 +513,7 @@ def weekly_progress_job():
 #____________________shedule____________________________
 def refresh_data():
     print("Refreshing data @07:30 AM IST")
-#___________________________________________________________
-# # ── UPDATED SCHEDULER FOR TESTING ─────────────────────────────────────────
-# def create_scheduler():
-#     ist = timezone("Asia/Kolkata")
-#     sched = BackgroundScheduler(timezone=ist)
-    
-#     # 1. Refresh Data (Daily)
-#     sched.add_job(refresh_data, CronTrigger(hour=12, minute=44, timezone=ist))
-    
-#     # 2. Timer Checks (Intervals)
-#     sched.add_job(check_long_running_timers, 'interval', minutes=60, timezone=ist)
-#     sched.add_job(check_gaps_and_inactivity, 'interval', minutes=30, timezone=ist)
-    
-#     # 3. Daily/Weekly Reports
-#     sched.add_job(check_missing_entries, CronTrigger(day_of_week='mon-fri', hour=12, minute=44, timezone=ist))
-#     sched.add_job(send_weekly_summary, CronTrigger(day_of_week='tue', hour=12, minute=59, timezone=ist))
-#     sched.add_job(weekly_progress_job, CronTrigger(day_of_week='tue', hour=13, minute=11, timezone=ist))
 
-#     # 🚀 4. TEST: Monthly Compensation Report (Testing at 3:18 PM Today)
-#     def trigger_monthly_report_TEST():
-#         # Machan, Testing kaga 'Last Day' condition ah REMOVE panniten.
-#         # Direct ah mail pogum.
-#         try:
-#             print("🚀 Triggering Test Monthly Report...")
-#             send_monthly_compensation_report()
-#         except Exception as e:
-#             print(f"Error sending monthly report: {e}")
-
-#     # Time set to 15:18 (3:18 PM IST)
-#     sched.add_job(trigger_monthly_report_TEST, CronTrigger(hour=15, minute=27, timezone=ist))
-
-#     sched.start()
-#     return sched
-# ── PRODUCTION SCHEDULER ────────────────────────────────────────────────
 def create_scheduler():
     ist = timezone("Asia/Kolkata")
     sched = BackgroundScheduler(timezone=ist)
@@ -665,12 +526,16 @@ def create_scheduler():
     sched.add_job(check_gaps_and_inactivity, 'interval', minutes=30, timezone=ist)
     
     # 3. Daily/Weekly Reports
+    # sched.add_job(check_missing_entries, CronTrigger(day_of_week='mon-sat', hour=13, minute=9, timezone=ist))
+    # sched.add_job(send_weekly_summary, CronTrigger(day_of_week='sat', hour=13, minute=6, timezone=ist))
+    # sched.add_job(weekly_progress_job, CronTrigger(day_of_week='sat', hour=13, minute=2, timezone=ist))
     sched.add_job(check_missing_entries, CronTrigger(day_of_week='mon-fri', hour=19, minute=0, timezone=ist))
     sched.add_job(send_weekly_summary, CronTrigger(day_of_week='fri', hour=19, minute=30, timezone=ist))
     sched.add_job(weekly_progress_job, CronTrigger(day_of_week='sat', hour=18, minute=0, timezone=ist))
 
     # 🚀 4. NEW: Monthly Compensation Report (Last Day of Month @ 6 PM)
     def trigger_monthly_report_if_last_day():
+        # Check if tomorrow is the 1st of the next month (implies today is the last day)
         tomorrow = date.today() + timedelta(days=1)
         if tomorrow.month != date.today().month:
             try:
@@ -678,11 +543,12 @@ def create_scheduler():
             except Exception as e:
                 print(f"Error sending monthly report: {e}")
 
+    # Runs every day at 6 PM, but executes logic only on the last day
     sched.add_job(trigger_monthly_report_if_last_day, CronTrigger(hour=18, minute=0, timezone=ist))
 
     sched.start()
     return sched
-# ── CONDITIONAL SCHEDULER START ─────────────────────────────────────────
+
 def maybe_start_scheduler():
     if not os.getenv("GAE_ENV"): 
         try:
@@ -693,77 +559,138 @@ def maybe_start_scheduler():
 @app.route("/")
 def landing():
     return render_template("landing.html")
-# ── HELPER: LOG USER ACTIONS ──────────────────────────────────────────────
-# ── HELPER: LOG USER ACTIONS ──────────────────────────────────────────────
-def log_user_action(action_type, target_id, details):
-    try:
-        # 1. Session la irunthu data edukrom
-        u_name = session.get("username", "System")
-        u_email = session.get("email", "Unknown")
-        u_role = session.get("role", "Unknown")
-        u_team = session.get("team", "Unknown")
+def calculate_dynamic_target(entries):
+    """
+    entries: List of dictionaries, e.g., [{'date': '2025-10-23', ...}, ...]
+    """
+    worked_days = set() # Set use panna duplicates irukathu
+    
+    # 1. First, entha days la entry vizhunthuruku nu edukrom
+    for entry in entries:
+        # Date string ah date object ah maathurou
+        # Unga DB la already date object ah iruntha 'strptime' theva illa
+        d_obj = datetime.strptime(entry['date'], "%Y-%m-%d").date()
+        worked_days.add(d_obj)
+    
+    total_target = 0
+    
+    # 2. Worked days ku mattum Target add pandrom
+    for day in worked_days:
+        week_day = day.weekday() # 0=Mon, 1=Tue, ... 5=Sat, 6=Sun
         
-        curr_date = datetime.now().date()
+        if 0 <= week_day <= 4: # Monday (0) to Friday (4)
+            total_target += 8.0
+        elif week_day == 5:    # Saturday (5)
+            total_target += 7.5
+        # Sunday or Leave days (entry illatha days) count aagaathu
+            
+    return total_target
+#____________________Local_DB____________________________
+# --- secrets & config from ENV (set in app.yaml) ---
+app.secret_key = os.getenv("SECRET_KEY", "dev-secret")
 
-        # 2. Save with simple column names
-        new_log = ActivityAuditLog(
-            name=u_name,           # Maps to 'name'
-            email=u_email,         # Maps to 'email'
-            role=u_role,           # Maps to 'role'
-            team=u_team,           # Maps to 'team'
-            action_type=action_type,
-            target_id=str(target_id),
-            details=details,
-            log_date=curr_date
-        )
-        
-        db.session.add(new_log)
-        db.session.commit()
+DB_HOST = os.getenv("DB_HOST", "34.93.75.171") 
+DB_PORT = int(os.getenv("DB_PORT", "3306"))
+DB_NAME = os.getenv("DB_NAME", "timesheet")
+DB_USER = os.getenv("DB_USER", "appsadmin")
+DB_PASS = os.getenv("DB_PASS", "appsadmin2025")
 
-        # 🔥 3. NEW: Alert Superadmin if Role is 'Unknown' 
-        # 🛑 EXCEPTION: Login Failed ஆக இருந்தால் அலர்ட் அனுப்பாதே!
-        if u_role == "Unknown" and action_type != "LOGIN_FAILED":
-            try:
-                # Find all Superadmins
-                supers = User.query.filter_by(role="superadmin").all()
-                
-                msg = (
-                    f"🚨 *Security Alert: Action by Unknown Role*\n"
-                    f"• *Action:* {action_type}\n"
-                    f"• *Actor:* {u_name} ({u_email})\n"
-                    f"• *Details:* {details}\n"
-                    f"• *Time:* {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
-                    f"Please check the audit logs immediately."
-                )
-                
-                for s in supers:
-                    if s.email:
-                        send_slack_alert(s.email, msg)
-                        
-            except Exception as slack_e:
-                print(f"⚠️ Unknown Role Alert Failed: {slack_e}")
+DB_URI = f"mysql+pymysql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+app.config["SQLALCHEMY_DATABASE_URI"] = DB_URI
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+db = SQLAlchemy(app)
 
-    except Exception as e:
-        print(f"⚠️ Log Error: {e}")
-        db.session.rollback()
-# ── MODELS ────────────────────────────────────────────────────────────────
+app.config["MYSQL_HOST"] = DB_HOST
+app.config["MYSQL_USER"] = DB_USER
+app.config["MYSQL_PASSWORD"] = DB_PASS
+app.config["MYSQL_DB"] = DB_NAME
+app.config["MYSQL_PORT"] = DB_PORT
+mysql = MySQL(app)
+
+engine = create_engine(DB_URI)
 maybe_start_scheduler()
+# # #__________________________App_dep_DB_rough_______________________________
 
-# ── NEW MODEL: AUDIT LOG (SIMPLIFIED) ──────────────────────────────────────
-class ActivityAuditLog(db.Model):
-    __tablename__ = "activity_audit_logs"
-    __table_args__ = {"extend_existing": True}
+# def refresh_data():
+#     print("Refreshing data @07:30 AM IST")
+#     # 👉 put your refresh logic here (DB update, cache clear, etc.)
 
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(150))        # Simple Name
-    email = db.Column(db.String(255))       # Simple Email
-    role = db.Column(db.String(50))         # Simple Role
-    team = db.Column(db.String(100))        # Simple Team
-    action_type = db.Column(db.String(50))
-    target_id = db.Column(db.String(50))
-    details = db.Column(db.Text)
-    log_date = db.Column(db.Date)
-    timestamp = db.Column(db.DateTime, default=datetime.now)
+# def create_scheduler():
+#     ist = timezone("Asia/Kolkata")
+#     sched = BackgroundScheduler(timezone=ist)
+    
+#     # 1. Refresh Data (Daily)
+#     sched.add_job(refresh_data, CronTrigger(hour=12, minute=22, timezone=ist))
+    
+#     # 2. Timer Checks (Intervals)
+#     sched.add_job(check_long_running_timers, 'interval', minutes=60, timezone=ist)
+#     sched.add_job(check_gaps_and_inactivity, 'interval', minutes=30, timezone=ist)
+    
+#     # 3. Daily/Weekly Reports
+#     sched.add_job(check_missing_entries, CronTrigger(day_of_week='mon-fri', hour=19, minute=0, timezone=ist))
+#     sched.add_job(send_weekly_summary, CronTrigger(day_of_week='fri', hour=19, minute=30, timezone=ist))
+#     sched.add_job(send_admin_daily_report, CronTrigger(day_of_week='mon-fri', hour=20, minute=0, timezone=ist))
+
+#     # 🚀 4. NEW: Monthly Compensation Report (Last Day of Month @ 6 PM)
+#     def trigger_monthly_report_if_last_day():
+#         # Check if tomorrow is the 1st of the next month (implies today is the last day)
+#         tomorrow = date.today() + timedelta(days=1)
+#         if tomorrow.month != date.today().month:
+#             try:
+#                 send_monthly_compensation_report()
+#             except Exception as e:
+#                 print(f"Error sending monthly report: {e}")
+
+#     # Runs every day at 6 PM, but executes logic only on the last day
+#     sched.add_job(trigger_monthly_report_if_last_day, CronTrigger(hour=18, minute=0, timezone=ist))
+
+#     sched.start()
+#     return sched
+# @app.route("/")
+# def landing():
+#     return render_template("landing.html")
+ #__________________________App_dep_DB_______________________________
+# app.secret_key = os.environ.get("SECRET_KEY", "dev-secret")
+
+# # ── DB CONFIG (Cloud SQL via Unix Socket) ───────────────────
+# DB_USER = os.environ.get("DB_USER", "appsadmin")
+# DB_PASS = os.environ.get("DB_PASS", "appsadmin2025")
+# DB_NAME = os.environ.get("DB_NAME", "timesheet")
+# INSTANCE_UNIX_SOCKET = os.environ.get(
+#     "INSTANCE_UNIX_SOCKET",
+#     "/cloudsql/theta-messenger-459613-p7:asia-south1:appsadmin"
+# )
+
+# # SQLAlchemy URI (pymysql + unix socket)
+# DB_URI = (
+#     f"mysql+pymysql://{DB_USER}:{DB_PASS}@/{DB_NAME}"
+#     f"?unix_socket={INSTANCE_UNIX_SOCKET}"
+# )
+
+# app.config["SQLALCHEMY_DATABASE_URI"] = DB_URI
+# app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+# db = SQLAlchemy(app)
+
+# # Flask-MySQLdb config (if you still use mysql.cursor())
+# app.config["MYSQL_USER"] = DB_USER
+# app.config["MYSQL_PASSWORD"] = DB_PASS
+# app.config["MYSQL_DB"] = DB_NAME
+# app.config["MYSQL_UNIX_SOCKET"] = INSTANCE_UNIX_SOCKET
+# mysql = MySQL(app)
+
+# # Raw engine (if you use create_engine anywhere)
+# engine = create_engine(DB_URI)
+# maybe_start_scheduler()
+# #__________________________App_dep_DB_______________________________
+
+SMTP_SERVER  = os.getenv("SMTP_SERVER", "smtp.datasolve-analytics.com")
+SMTP_PORT    = int(os.getenv("SMTP_PORT", "587"))
+WEBMAIL_USER = os.getenv("SMTP_USER", "apps.admin@datasolve-analytics.com")
+WEBMAIL_PASS = os.getenv("SMTP_PASS", "datasolve@2025")
+
+
+
+# ── MODELS ────────────────────────────────────────────────────────────────
 class UserNotification(db.Model):
     __tablename__ = "user_notifications"
     __table_args__ = {"extend_existing": True}
@@ -840,7 +767,7 @@ class UserProfile(db.Model):
     Image_URL = db.Column(db.Text)
     Designation  = db.Column(db.String(200))
     Team         = db.Column(db.String(100))
-
+# ── NEW MODEL: AUDIT LOG ──────────────────────────────────────────────────
 # ── NEW MODEL: AUDIT LOG ──────────────────────────────────────────────────
 class ProjectAuditLog(db.Model):
     __tablename__ = "project_audit_logs"
@@ -871,6 +798,7 @@ def log_audit_event(action, project_obj, admin_user, target_user=None, prev_stat
             assigned_by=admin_user.username,
             changed_date=datetime.now()
         )
+        # If this involves a specific user (Allocation)
         if target_user:
             log.affected_user_name = target_user.username
             log.affected_user_email = target_user.email
@@ -880,9 +808,9 @@ def log_audit_event(action, project_obj, admin_user, target_user=None, prev_stat
                 log.assignment_end_date = datetime.now().date()
         
         db.session.add(log)
+        # Note: We rely on the caller to perform db.session.commit()
     except Exception as e:
         print(f"Audit Log Error: {e}")
-
 #__________________________end________________________________________________
 with engine.begin() as conn:
     res = conn.execute(text("SHOW COLUMNS FROM desktop_userstable LIKE 'role'")).fetchone()
@@ -893,14 +821,14 @@ import hashlib
 def get_profile_for_email(email: str):
     if not email: return None, None, None
     rec = (db.session.query(UserProfile.Designation, UserProfile.Team, UserProfile.Image_URL)
-            .filter(UserProfile.Email_ID == email).first())
+           .filter(UserProfile.Email_ID == email).first())
     if not rec: return None, None, None
     return rec[0], rec[1], rec[2]
 
 def gravatar_url(email: str, size=64, default="identicon"):
     if not email: return ""
     h = hashlib.md5(email.strip().lower().encode("utf-8")).hexdigest()
-    return f"https://www.gravatar.com/avatar/{h}?s={size}&d={default}&r=g"
+    return f"[https://www.gravatar.com/avatar/](https://www.gravatar.com/avatar/){h}?s={size}&d={default}&r=g"
 
 @app.context_processor
 def inject_gravatar():
@@ -920,7 +848,7 @@ def inject_profile_image():
             email = u.email if u else None
         if email:
             rec = (db.session.query(UserProfile.Email_ID, UserProfile.Image_URL, UserProfile.Designation)
-                    .filter(UserProfile.Email_ID == email).first())
+                   .filter(UserProfile.Email_ID == email).first())
             if rec:
                 img_url = rec[1]
                 full_name = rec[2] or display_name 
@@ -999,63 +927,29 @@ def register():
         u = request.form["username"]
         e = request.form["email"]
         p = request.form["password"]
-        t = request.form["team"]
-        
-        # Default role for signup is usually 'user'
-        attempted_role = "user" 
+        t = request.form["team"] 
 
-        # 1. Check for Duplicate User
         if User.query.filter((User.username == u) | (User.email == e)).first():
-            client_ip = request.remote_addr
-            
-            # 🔥 LOG 1: Duplicate Try (Full Details)
-            log_details = f"Duplicate Signup Attempt. Name: {u} | Email: {e} | Team: {t} | Role: {attempted_role} | IP: {client_ip}"
-            log_user_action("SIGNUP_FAILED", "N/A", log_details)
-            
             err = "Username or email already exists"
             return render_template("register.html", err=err)
 
-        # 2. Prepare New User Object
         code = random.randint(100_000, 999_999)
         new_user = User(
             username=u, email=e, password=generate_password_hash(p),
-            verification_code=code, role=attempted_role, team=t
+            verification_code=code, role="user", team=t
         )
-        
-        try:
-            # 3. Try Sending OTP
-            send_otp(e, code)
-            
-            # 4. If Email Sent, Save to DB
-            db.session.add(new_user)
-            db.session.commit()
+        db.session.add(new_user)
+        db.session.commit()
 
-            # 🔥 LOG 2: Success (Full Details)
-            log_details = f"User Created Successfully. Name: {u} | Email: {e} | Team: {t} | Role: {attempted_role}"
-            log_user_action("SIGNUP_SUCCESS", new_user.id, log_details)
-            
-            # Notify Admins
-            notify_hierarchy(new_user, f"New User Registration\nName: {u}\nTeam: {t}")
+        # 🆕 NOTIFY ADMINS (HIERARCHY) - KEPT ENABLED FOR REGISTRATION
+        notify_hierarchy(new_user, f"New User Registration\nName: {u}\nTeam: {t}")
 
-            session["pending_email"] = e
-            return redirect("/verify")
-
-        except Exception as email_error:
-            # 5. If Email Fails -> Rollback & Log Details
-            db.session.rollback()
-            
-            error_msg = str(email_error)
-            print(f"SMTP Error: {error_msg}")
-            
-            # 🔥 LOG 3: SMTP Failure (Full Details of who tried)
-            log_details = f"SMTP Failed. Name: {u} | Email: {e} | Team: {t} | Role: {attempted_role} | Error: {error_msg}"
-            log_user_action("SIGNUP_FAILED", "System", log_details)
-            
-            err = "Registration Failed: Unable to send OTP email. Contact Admin."
-            flash(err, "error")
-            return render_template("register.html", err=err)
+        send_otp(e, code)
+        session["pending_email"] = e
+        return redirect("/verify")
 
     return render_template("register.html", err=err)
+
 @app.route("/verify", methods=["GET", "POST"])
 def verify():
     err = None
@@ -1107,7 +1001,6 @@ def reset_password():
             user.password = generate_password_hash(new_password)
             user.verification_code = None
             db.session.commit()
-            log_user_action("PASSWORD_RESET", user.email, "Password reset via OTP")
             session.pop("reset_email", None)
             ok = "Password reset successful. Please log in."
             return redirect("/signin")
@@ -1118,24 +1011,12 @@ def login():
     if request.method=="POST":
         e, p = request.form["email"], request.form["password"]
         user = User.query.filter_by(email=e, verified=True).first()
-        
         if user and check_password_hash(user.password,p):
-            session.permanent = False
             session["username"] = user.username 
             session["email"] = user.email 
             session["role"] = user.role
             session["team"] = user.team
-            
-            # ✅ SUCCESS LOG
-            log_user_action("USER_LOGIN", "N/A", "User logged in successfully")
             return redirect("/welcome")
-        
-        # ❌ FAILURE LOG (New Addition)
-        # Note: Session innum set aagala, so log la 'Name' -> 'System' nu vizhum.
-        # Aana 'Details' column la yaru try pannanga nu record aagidum.
-        client_ip = request.remote_addr
-        log_user_action("LOGIN_FAILED", "N/A", f"Failed login attempt for email: {e} | IP: {client_ip}")
-
         flash("Invalid creds / not verified")
         return redirect("/signin")
     return render_template("login.html")
@@ -1154,72 +1035,16 @@ def logout():
 @app.template_filter("todatetime")
 def todatetime(value, fmt="%Y-%m-%d"):
     return datetime.strptime(value, fmt)
-def calculate_leaves_for_range(username, start_date, end_date):
-    """
-    Common function to calculate leaves between ANY two dates.
-    Logic: Mon-Fri checks. If no entry in DB -> Leave.
-    """
-    # 1. அந்த ரேஞ்சில் வேலை பார்த்த நாட்களை எடுக்கிறோம்
-    cur = mysql.connection.cursor()
-    cur.execute("""
-        SELECT DISTINCT date 
-        FROM timesheetlogs 
-        WHERE name = %s 
-        AND date BETWEEN %s AND %s
-        AND duration IS NOT NULL
-        AND process NOT IN ('Breaks', 'Permission')
-    """, (username, start_date, end_date))
-    
-    # வேலை பார்த்த தேதிகள் (Set for fast lookup)
-    worked_dates = {row[0] for row in cur.fetchall()} 
-    cur.close()
 
-    leaves_count = 0
-    check_date = start_date
-    
-    # 2. Start Date முதல் End Date வரை லூப் பண்றோம்
-    while check_date <= end_date:
-        # Sunday (6) -> Ignore
-        if check_date.weekday() == 6:
-            pass
-        # Saturday (5) -> Ignore (வேலை பார்த்தா ஓகே, இல்லனா லீவ் இல்ல)
-        elif check_date.weekday() == 5:
-            pass
-        # Mon-Fri (0-4) -> Check Work
-        else:
-            if check_date not in worked_dates:
-                leaves_count += 1
-        
-        check_date += timedelta(days=1)
-        
-    return leaves_count
 # ── DASHBOARD ROUTE ─────────────────────────────────────────────
 @app.route("/home", methods=["GET"])
 @login_required
 def dashboard():
-    today = datetime.now().date() # Use date object for calc
+    today = datetime.now().strftime("%Y-%m-%d")
     user = User.query.filter_by(username=session["username"]).first()
     role = user.role
     
-    # --- 1. CALCULATE DATE RANGES ---
-    
-    # Current Month Range (1st to Today)
-    curr_month_start = today.replace(day=1)
-    curr_month_end = today
-    
-    # Last Month Range (1st to End of Last Month)
-    last_month_end_date = curr_month_start - timedelta(days=1) # e.g., Nov 30
-    last_month_start_date = last_month_end_date.replace(day=1) # e.g., Nov 1
-    
-    # --- 2. CALCULATE LEAVES (USING COMMON FUNCTION) ---
-    
-    # 🔥 Current Month Leaves
-    current_month_leaves = calculate_leaves_for_range(user.username, curr_month_start, curr_month_end)
-    
-    # 🔥 Last Month Leaves (Correct Logic)
-    last_month_leaves = calculate_leaves_for_range(user.username, last_month_start_date, last_month_end_date)
-
-    # --- 3. FETCH RECENT LOGS (Existing Code) ---
+    # 1. Fetch Recent Logs (Existing Logic)
     cur = mysql.connection.cursor()
     cur.execute("""
         SELECT name, date, day, project, project_type, team, process, sub_process,
@@ -1227,10 +1052,11 @@ def dashboard():
         FROM   timesheetlogs
         WHERE  name = %s
         ORDER  BY id DESC
-        LIMIT  200
+        LIMIT  30
     """, (user.username,))
     entries = cur.fetchall()
-    
+    cur.close() 
+
     processed_entries = []
     for row in entries:
         new_row = list(row) 
@@ -1243,68 +1069,80 @@ def dashboard():
                 minutes = (total_seconds % 3600) // 60
                 new_row[i] = f"{hours:02d}:{minutes:02d}"
         processed_entries.append(new_row)
-    
-    # ... (Team Map, Presets Logic as before) ...
+
+    # 2. Team & Process Mapping (Existing Logic)
     team_map = {}
     for row in ProcessTable.query.all():
         team_map.setdefault(row.team, {}).setdefault(row.process, set()).add(row.sub_process)
-    
-    team_json = {} 
-    for team, proc_dict in team_map.items():
-        team_json[team] = {proc: sorted(list(subs)) for proc, subs in proc_dict.items()}
 
+    team_json = {team: {proc: sorted(list(subs)) for proc, subs in proc_dict.items()} for team, proc_dict in team_map.items()}
     user_project_codes = get_visible_project_codes_for(user)
+    
     raw_presets = QuickTimerPreset.query.filter_by(user_id=user.id).all()
     quick_presets = [{"id": p.id, "name": p.name, "project": p.project, "process": p.process, "sub_process": p.sub_process} for p in raw_presets]
-
-    # --- 4. LAST MONTH STATS (Days, Avg, Comp) ---
-    # Note: Leaves already calculated above
+    
+    # 👇👇 3. Calculate Last Month Stats (Days, Avg, Comp) 👇👇
     last_month_days = 0
     last_month_avg_hours = 0
     last_month_comp_str = "0h 0m"
     last_month_comp_status = "neutral" 
 
     try:
-        # A. Days & Total Hours
+        # A. Calculate Date Range
+        current_date = datetime.now()
+        first_day_this_month = current_date.replace(day=1)
+        last_month_end = first_day_this_month - timedelta(days=1)
+        last_month_start = last_month_end.replace(day=1)
+        
+        cur = mysql.connection.cursor()
+        
+        # B. Get Basic Stats (Days & Total Hours)
         cur.execute("""
-            SELECT COUNT(DISTINCT date), SUM(total_hours)
+            SELECT 
+                COUNT(DISTINCT date), 
+                SUM(total_hours)
             FROM timesheetlogs 
             WHERE name = %s 
             AND date BETWEEN %s AND %s
             AND duration IS NOT NULL
-            AND NOT (process = 'Breaks' AND sub_process = 'Lunch Break') -- 🛑 Only Exclude Lunch Break
-        """, (user.username, last_month_start_date, last_month_end_date))
+        """, (user.username, last_month_start.strftime('%Y-%m-%d'), last_month_end.strftime('%Y-%m-%d')))
         
         row = cur.fetchone()
         last_month_days = row[0] or 0
         total_hours_lm = float(row[1] or 0)
 
+        # C. Calculate Average Hours
         if last_month_days > 0:
             last_month_avg_hours = round(total_hours_lm / last_month_days, 1)
 
-        # B. Compensation
+        # D. Calculate Compensation Balance
         cur.execute("""
             SELECT process, sub_process, duration, Work_Type
             FROM timesheetlogs 
             WHERE name = %s 
             AND date BETWEEN %s AND %s
-        """, (user.username, last_month_start_date, last_month_end_date))
+        """, (user.username, last_month_start.strftime('%Y-%m-%d'), last_month_end.strftime('%Y-%m-%d')))
         
         comp_rows = cur.fetchall()
+        
         lm_permission_secs = 0
         lm_compensation_secs = 0
         
         for r in comp_rows:
             proc, sub, dur_str, w_type = r
             if not dur_str: continue
+            
+            # Parse Duration
             try:
                 if ":" in str(dur_str):
                     parts = str(dur_str).split(':')
                     secs = int(parts[0])*3600 + int(parts[1])*60
                 else:
                     secs = int(float(dur_str) * 3600)
-            except: continue
+            except:
+                continue
             
+            # Logic: Payback vs Debt
             if w_type == 'Compensation':
                 lm_compensation_secs += secs
             else:
@@ -1312,79 +1150,83 @@ def dashboard():
                    (proc == 'Permission' and sub in ['Personal', 'Sick', 'Early Close']):
                     lm_permission_secs += secs
         
+        # Net Balance
         net_balance_secs = lm_permission_secs - lm_compensation_secs
-        h, m = divmod(abs(net_balance_secs), 3600)
+        
+        # Format to HH:MM
+        abs_secs = abs(net_balance_secs)
+        h, m = divmod(abs_secs, 3600)
         m = divmod(m, 60)[0]
         last_month_comp_str = f"{int(h)}h {int(m)}m"
         
-        if net_balance_secs > 0: last_month_comp_status = "pending"
-        elif net_balance_secs < 0: last_month_comp_status = "surplus"
+        if net_balance_secs > 0:
+            last_month_comp_status = "pending"
+        elif net_balance_secs < 0:
+            last_month_comp_status = "surplus"
             
         cur.close()
+
     except Exception as e:
         print(f"Last Month Stats Error: {e}")
 
-    # --- 5. WEEKLY STATS (Current Week) ---
+    # 👇👇 4. NEW: Current Week Dynamic Target Calculation (Mon-Sat Logic) 👇👇
     current_week_target = 0
-    current_week_hours = 0
     try:
-        # Week Logic
-        start_week = today - timedelta(days=today.weekday())
-        end_week = start_week + timedelta(days=6)
+        # A. Find start/end of current week
+        today_date = date.today()
+        start_week = today_date - timedelta(days=today_date.weekday()) # Monday
+        end_week = start_week + timedelta(days=6) # Sunday
         
         cur = mysql.connection.cursor()
-        
-        # Worked Hours (Lunch Break Excluded)
         cur.execute("""
-            SELECT SUM(total_hours) FROM timesheetlogs 
-            WHERE name = %s AND date BETWEEN %s AND %s
-            AND NOT (process = 'Breaks' AND sub_process = 'Lunch Break')
-        """, (user.username, start_week, end_week))
-        res = cur.fetchone()[0]
-        if res: current_week_hours = float(res)
-        
-        # Target
-        cur.execute("""
-            SELECT DISTINCT date FROM timesheetlogs 
-            WHERE name = %s AND date BETWEEN %s AND %s
-            AND duration IS NOT NULL 
-            AND NOT (process = 'Breaks' AND sub_process = 'Lunch Break')
+            SELECT DISTINCT date 
+            FROM timesheetlogs 
+            WHERE name = %s 
+            AND date BETWEEN %s AND %s
+            AND duration IS NOT NULL
+            AND process NOT IN ('Breaks', 'Permission') -- 👈 Itha kandipa add pannunga
         """, (user.username, start_week, end_week))
         
-        for r in cur.fetchall():
-            d_obj = r[0]
-            if isinstance(d_obj, str): d_obj = datetime.strptime(d_obj, '%Y-%m-%d').date()
-            if 0 <= d_obj.weekday() <= 4: current_week_target += 8.0
-            elif d_obj.weekday() == 5: current_week_target += 7.5
-            
+        rows = cur.fetchall()
         cur.close()
+        
+        # B. Calculate Target based on days worked
+        for r in rows:
+            # Handle date type (string vs date obj)
+            d_obj = r[0]
+            if isinstance(d_obj, str):
+                d_obj = datetime.strptime(d_obj, '%Y-%m-%d').date()
+            
+            w_day = d_obj.weekday() # 0=Mon, 6=Sun
+            
+            if 0 <= w_day <= 4: # Mon-Fri
+                current_week_target += 8.0
+            elif w_day == 5:    # Sat
+                current_week_target += 7.5
+                
     except Exception as e:
-        print(f"Weekly Stats Error: {e}")
+        print(f"Weekly Target Error: {e}")
+        # Default to 0 or keep calculated value
 
-    # --- 6. RENDER ---
+    # 👆👆 END NEW LOGIC 👆👆
+
     return render_template("dashboard.html", 
                            username=user.username, 
                            role=role, 
                            entries=processed_entries, 
                            user_email=user.email, 
-                           today=today.strftime("%Y-%m-%d"), 
+                           today=today, 
                            team_json=team_json, 
                            user_project_codes=user_project_codes, 
                            user_team=user.team, 
                            quick_presets=quick_presets,
-                           
-                           # Data for Current Month
-                           current_month_leaves=current_month_leaves,
-                           
-                           # Data for Last Month
-                           last_month_leaves=last_month_leaves,
+                           # Last Month Stats
                            last_month_days=last_month_days,
                            last_month_avg_hours=last_month_avg_hours,
                            last_month_comp_str=last_month_comp_str,
                            last_month_comp_status=last_month_comp_status,
-                           
-                           weekly_target=current_week_target,
-                           weekly_hours_worked=current_week_hours
+                           # 🆕 New Dynamic Target
+                           weekly_target=current_week_target
                            )
 def promote_first_user():
     with app.app_context():
@@ -1409,18 +1251,13 @@ def manage_users():
         new_team  = request.form["team"]
         target = User.query.get(uid)
         if target:
-            old_role = target.role 
+            old_role = target.role # 🆕 Capture old role
             target.role = new_role
             target.team = new_team
             db.session.commit()
-            if old_role != new_role:
-                log_user_action(
-                    "ROLE_CHANGE", 
-                    target.id, 
-                    f"Changed role of {target.username} from {old_role} to {new_role}"
-                )
             flash(f"{target.username}'s role updated", "success")
             
+            # 🆕 SLACK NOTIFICATION: Notify User about Role Change
             if old_role != new_role:
                 msg = f"Role Update Notification\nYour role has been updated to {new_role.upper()} (Team: {new_team})."
                 send_slack_alert(target.email, msg)
@@ -1447,8 +1284,6 @@ def manage_process():
         if team and process and sub_proc:
             db.session.add(ProcessTable(team=team, process=process, sub_process=sub_proc))
             db.session.commit()
-            # In manage_process()
-            log_user_action("PROCESS_ADD", "Master", f"Added Process: {process} -> {sub_proc} for {team}")
             flash("Row added", "ok")
         else:
             flash("Required fields missing", "error")
@@ -1478,8 +1313,6 @@ def delete_process_row():
     if me.role != "superadmin" and row.team != me.team: return jsonify(success=False, error="Permission denied")
     db.session.delete(row)
     db.session.commit()
-    # In delete_process_row()
-    log_user_action("PROCESS_DELETE", row.id, f"Deleted Process: {row.team} -> {row.process} -> {row.sub_process}")
     return jsonify(success=True)
 
 @app.route('/update_process_row', methods=['POST'])
@@ -1514,8 +1347,10 @@ def admin_project_codes():
         today = date.today()
         
         if existing:
+            # 👇 1. Capture Old Status
             prev_status = existing.status
             
+            # Update fields
             existing.status = status
             if not existing.team and team: existing.team = team
             if status == "WIP" and not existing.start_date: existing.start_date = today
@@ -1523,9 +1358,11 @@ def admin_project_codes():
             if status == "Hold" and not existing.hold_on: existing.hold_on = today
             if prev_status == "Hold" and status != "Hold": existing.hold_on = None
             
+            # 👇 2. Log Audit Event (Update)
             if prev_status != status:
                 log_audit_event("STATUS_CHANGE", existing, me, prev_status=prev_status)
                 
+                # 👇 3. Send Slack Notification (Optional - remove if too noisy)
                 assignments = UserProjectAssignment.query.filter_by(project_id=existing.id, is_active=True).all()
                 for assign in assignments:
                     u_notify = User.query.get(assign.user_id)
@@ -1537,20 +1374,24 @@ def admin_project_codes():
             flash("Code updated", "success")
             
         else:
+            # Create New Project
             pc = ProjectCode(code=code, status=status, team=team)
             if status == "WIP": pc.start_date = today
             elif status == "Closed": pc.end_date = today
             elif status == "Hold": pc.hold_on = today
             
             db.session.add(pc)
+            # Commit first to get the ID (needed for logging sometimes, though object ref is enough usually)
             db.session.commit() 
             
+            # 👇 4. Log Audit Event (Creation)
             log_audit_event("CREATED", pc, me, prev_status="NEW")
             
             flash("Code created", "success")
             
         return redirect(url_for("admin_project_codes"))
     
+    # GET Request Logic
     if me.role == "superadmin": q = ProjectCode.query
     else: q = ProjectCode.query.filter_by(team=me.team) if me.team else ProjectCode.query
     rows = q.order_by(ProjectCode.code.asc()).all()
@@ -1574,6 +1415,7 @@ def assign_projects():
         project_obj = ProjectCode.query.get(int(pid))
         project_name = project_obj.code if project_obj else "Unknown Project"
 
+        # ── BULK ACTIONS ──────────────────────────────────────────────────
         if action in ("bulk_assign", "bulk_end"):
             user_ids = request.form.getlist("user_ids")
             if not user_ids:
@@ -1593,10 +1435,12 @@ def assign_projects():
                     if exists: continue
                     db.session.add(UserProjectAssignment(user_id=target_user.id, project_id=int(pid), assigned_by_id=me.id, start_date=datetime.utcnow().date(), is_active=True))
                     
+                    # 👇👇 🆕 AUDIT LOG: ASSIGNED 👇👇
                     log_audit_event("ASSIGNED", project_obj, me, target_user=target_user)
 
                     assigned_count += 1
                     
+                    # 🆕 SLACK: Direct DM + Hierarchy
                     send_slack_alert(target_user.email, f"Project Assignment Notification\nYou have been assigned to project {project_name} by {me.username}.")
                     notify_hierarchy(target_user, f"User {target_user.username} was assigned to project {project_name} by {me.username}.")
 
@@ -1606,10 +1450,12 @@ def assign_projects():
                         exists.is_active = False
                         exists.end_date  = datetime.utcnow().date()
                         
+                        # 👇👇 🆕 AUDIT LOG: REMOVED 👇👇
                         log_audit_event("REMOVED", project_obj, me, target_user=target_user)
 
                         ended_count += 1
                         
+                        # 🆕 SLACK: Direct DM + Hierarchy
                         send_slack_alert(target_user.email, f"Project Assignment Ended\nYour assignment for project {project_name} has been ended by {me.username}.")
                         notify_hierarchy(target_user, f"User {target_user.username} was removed from project {project_name} by {me.username}.")
 
@@ -1618,6 +1464,7 @@ def assign_projects():
             else: flash(f"Ended for {ended_count} user(s).", "success")
             return redirect(url_for("assign_projects"))
 
+        # ── SINGLE USER ACTIONS ──────────────────────────────────────────
         user_id  = request.form.get("user_id")
         code_id  = request.form.get("project_id")
         action   = request.form.get("action", "assign")
@@ -1638,11 +1485,13 @@ def assign_projects():
                 else:
                     db.session.add(UserProjectAssignment(user_id=target_user.id, project_id=code.id, assigned_by_id=me.id, start_date=datetime.utcnow().date(), is_active=True))
                     
+                    # 👇👇 🆕 AUDIT LOG: ASSIGNED 👇👇
                     log_audit_event("ASSIGNED", code, me, target_user=target_user)
 
                     db.session.commit()
                     flash(f"Assigned {code.code} to {target_user.username}", "success")
                     
+                    # 🆕 SLACK
                     send_slack_alert(target_user.email, f"Project Assignment Notification\nYou have been assigned to project {code.code} by {me.username}.")
                     notify_hierarchy(target_user, f"User {target_user.username} was assigned to project {code.code} by {me.username}.")
 
@@ -1653,11 +1502,13 @@ def assign_projects():
                     existing.is_active = False
                     existing.end_date  = datetime.utcnow().date()
                     
+                    # 👇👇 🆕 AUDIT LOG: REMOVED 👇👇
                     log_audit_event("REMOVED", code, me, target_user=target_user)
 
                     db.session.commit()
                     flash(f"Ended {code.code} for {target_user.username}", "success")
                     
+                    # 🆕 SLACK
                     send_slack_alert(target_user.email, f"Project Assignment Ended\nYour assignment for project {code.code} has been ended by {me.username}.")
                     notify_hierarchy(target_user, f"User {target_user.username} was removed from project {code.code} by {me.username}.")
 
@@ -1691,7 +1542,7 @@ def start():
     project = request.form["project"]
     process = request.form["process"]
     sub_proc = request.form["sub_process"]
-    work_type = request.form.get("work_type", "Regular") 
+    work_type = request.form.get("work_type", "Regular") # 🆕 Added this line
     start_time = request.form["start_time"]
     end_time = request.form["end_time"]
 
@@ -1699,14 +1550,12 @@ def start():
     proj_type_db = pc.status if pc else "WIP"
     current_user = User.query.filter_by(username=name).first()
     allowed = {p["code"] for p in get_visible_project_codes_for(current_user)}
-    
     if project not in allowed:
         flash("Selected project is not assigned to you or not WIP.", "error")
         return redirect("/home")
 
     day = datetime.strptime(date_str, "%Y-%m-%d").strftime("%A")
     cur = mysql.connection.cursor()
-    
     try:
         cur.execute("""SELECT COUNT(*) FROM timesheetlogs WHERE name = %s AND date = %s AND start_time <= %s AND end_time >= %s""", (name, date_str, end_time, start_time))
         if cur.fetchone()[0] > 0:
@@ -1741,23 +1590,10 @@ def start():
             INSERT INTO timesheetlogs (name, date, day, team, project, project_type, process, sub_process, start_time, end_time, duration, total_hours, project_code, project_type_mc, disease, country, Work_Type)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """, (name, date_str, day, team, project, proj_type_db, process, sub_proc, start_time, end_time, duration_str, total_h, proj_code, proj_type_mc, disease, country, work_type))
-        
-        # Capture the ID of the new row for logging
-        new_entry_id = cur.lastrowid
         mysql.connection.commit()
         
-        # 🔥 LOGGING ACTION 1: Manual Entry Created
-        log_details = f"Manual Entry Created. Project: {project}, Date: {date_str}, Duration: {duration_str}, WorkType: {work_type}"
-        log_user_action("MANUAL_ENTRY", new_entry_id, log_details)
-
-        # 🔥 LOGGING ACTION 2: Check for Backdated Entry (> 7 Days)
-        try:
-            entry_date_obj = datetime.strptime(date_str, "%Y-%m-%d").date()
-            today_date = date.today()
-            if (today_date - entry_date_obj).days > 7:
-                log_user_action("BACKDATED_ENTRY", new_entry_id, f"User logged time for old date: {date_str} (Late Entry)")
-        except Exception as e:
-            print(f"Date check error: {e}")
+        # 🆕 NOTIFY HIERARCHY - DISABLED FOR EVERY EDIT
+        # notify_hierarchy(current_user, f"Manual Time Entry Created\nUser: {name}\nProject: {project}\nProcess: {process}\nTime: {start_time} - {end_time}")
 
     except Exception as e:
         mysql.connection.rollback()
@@ -1765,8 +1601,8 @@ def start():
         flash(f"Database error: {e}", "error")
     finally:
         cur.close()
-        
     return redirect("/home")
+
 def format_time_for_input(val):
     if val is None: return ""
     if isinstance(val, time): return f"{val.hour:02d}:{val.minute:02d}"
@@ -1801,7 +1637,7 @@ def update_entry():
     start_time = (request.form.get("start_time") or "").strip()
     end_time = (request.form.get("end_time") or "").strip()
     ptmc_manual = (request.form.get("project_type_mc") or "").strip()
-    work_type = request.form.get("work_type", "Regular") 
+    work_type = request.form.get("work_type", "Regular") # 🆕 Added this
     next_url = (request.form.get("next") or request.referrer or url_for("view_team_logs"))
 
     current_user = User.query.filter_by(username=session.get("username")).first()
@@ -1867,17 +1703,19 @@ def update_entry():
         return redirect(url_for("view_team_logs", editing_id=entry_id))
 
     try:
+        # 💡 FIX: Removed AND team=%s check to allow Admin editing even if team string mismatches or is NULL.
+        # Permission was already checked above via Python logic.
         where_clause = "WHERE id=%s"
         where_params = (entry_id,)
         
+        # 🆕 Added work_type to params and SQL
         params = [project, process, sub_proc, start_time, end_time, duration_hhmm, total_hours, proj_code, proj_type_mc, disease, country, work_type] + list(where_params)
         cur.execute(f"""UPDATE timesheetlogs SET project=%s, process=%s, sub_process=%s, start_time=%s, end_time=%s, duration=%s, total_hours=%s, project_code=%s, project_type_mc=%s, disease=%s, country=%s, Work_Type=%s {where_clause}""", tuple(params))
         mysql.connection.commit()
-        log_user_action(
-            "EDIT_ENTRY", 
-            entry_id, 
-            f"Updated entry. Project: {project}, Hours: {total_hours}, WorkType: {work_type}"
-        )
+        
+        # 🆕 NOTIFY HIERARCHY (Log Update) - DISABLED FOR EVERY EDIT
+        # notify_hierarchy(current_user, f"Log Entry Updated\nEditor: {current_user.username}\nProject: {project}")
+
     except Exception as e:
         mysql.connection.rollback()
         flash(f"DB error: {e}", "error")
@@ -1889,6 +1727,8 @@ def update_entry():
     flash("Entry updated successfully!", "success")
     return redirect(next_url)
 
+# ... (Previous imports and code remain same) ...
+
 @app.route("/team-logs", methods=["GET", "POST"])
 @role_required("superadmin", "admin")
 def view_team_logs():
@@ -1899,20 +1739,15 @@ def view_team_logs():
     
     is_post = (request.method == "POST")
     
-    # 1. Capture Filters (Checking both POST form and GET args)
-    # 💡 FIX: Look in request.form if POST, else request.args
+    # 1. Capture Filters
     filter_user = (request.form.get("username") if is_post else request.args.get("username")) or None
     filter_team = (request.form.get("team") if is_post else request.args.get("team")) or default_team
     filter_project = (request.form.get("project") if is_post else request.args.get("project")) or None
     filter_process = (request.form.get("process") if is_post else request.args.get("process")) or None
     filter_sub_process = (request.form.get("sub_process") if is_post else request.args.get("sub_process")) or None
+    filter_date = (request.form.get("date") if is_post else request.args.get("date")) or None
     
-    # 💡 FIX: Date Range Handling (Matching HTML inputs)
-    start_date = (request.form.get("start_date") if is_post else request.args.get("start_date")) or None
-    end_date = (request.form.get("end_date") if is_post else request.args.get("end_date")) or None
-    
-    # 💡 FIX: Edit ID Handling (Must check form data for POST)
-    editing_id = (request.form.get("editing_id") if is_post else request.args.get("editing_id")) or None
+    editing_id = request.args.get("editing_id")
 
     # Pagination setup
     def _to_int(x, d): 
@@ -1938,14 +1773,7 @@ def view_team_logs():
     if filter_project: where_sql.append("project = %s"); values.append(filter_project)
     if filter_process: where_sql.append("process = %s"); values.append(filter_process)
     if filter_sub_process: where_sql.append("sub_process = %s"); values.append(filter_sub_process)
-    
-    # 💡 FIX: Date Range SQL
-    if start_date: 
-        where_sql.append("date >= %s")
-        values.append(start_date)
-    if end_date: 
-        where_sql.append("date <= %s")
-        values.append(end_date)
+    if filter_date: where_sql.append("date = %s"); values.append(filter_date)
 
     where_clause = ""
     if where_sql: where_clause = "WHERE " + " AND ".join(where_sql)
@@ -1961,22 +1789,21 @@ def view_team_logs():
     offset = (page - 1) * per_page
 
     # Fetch Logs
-    # 💡 FIX: Added 'Work_Type' at the end (Index 12)
-    select_q = f"""SELECT name, date, day, project, team, process, sub_process, start_time, end_time, duration, total_hours, id, Work_Type 
+    select_q = f"""SELECT name, date, day, project, team, process, sub_process, start_time, end_time, duration, total_hours, id 
                    FROM timesheetlogs {where_clause} 
                    ORDER BY date DESC, start_time DESC 
                    LIMIT %s OFFSET %s"""
-    
     cur.execute(select_q, tuple(values + [per_page, offset]))
     raw_logs = cur.fetchall()
 
     # 3. Dynamic Dropdown Data
+    # Fetch Teams (Only for Superadmin)
     teams = []
     if current_user.role == 'superadmin':
         cur.execute("SELECT DISTINCT team FROM desktop_userstable WHERE team IS NOT NULL AND team != ''")
         teams = sorted([r[0] for r in cur.fetchall() if r[0]])
 
-    # Users Query
+    # Fetch Users (CRITICAL FIX: Filter users based on selected team)
     users_query = User.query
     if filter_team:
         users_query = users_query.filter_by(team=filter_team)
@@ -1985,7 +1812,8 @@ def view_team_logs():
         
     users = users_query.order_by(User.username).all()
 
-    # Filter Dropdowns
+    # Fetch Projects/Processes based on scope
+    # (Simple approach: Fetch all distinct from logs to ensure available options are valid)
     if filter_team:
         cur.execute("SELECT DISTINCT project FROM timesheetlogs WHERE team = %s", (filter_team,))
     else:
@@ -2022,7 +1850,10 @@ def view_team_logs():
                            per_page=per_page, 
                            total_pages=total_pages, 
                            total_rows=total_rows,
-                           selected_team=filter_team)
+                           selected_team=filter_team) # Pass selected team back to UI
+
+# ... (Rest of app.py remains same) ...
+
 @app.route("/admin/delete-log/<int:log_id>", methods=["POST"])
 @role_required("superadmin")
 def delete_log(log_id):
@@ -2034,9 +1865,9 @@ def delete_log(log_id):
         cur = mysql.connection.cursor()
         cur.execute("DELETE FROM timesheetlogs WHERE id = %s", (log_id,))
         mysql.connection.commit()
-        log_user_action("DELETE_ENTRY", log_id, f"Deleted timesheet log ID: {log_id}")
         cur.close()
         flash("Log deleted.", "success")
+        # notify_hierarchy(current_user, f"Log Entry Deleted\nID: {log_id}\nDeleted by Superadmin {current_user.username}.")
     except Exception as e:
         flash(f"Error: {str(e)}", "error")
     return redirect(url_for('view_team_logs'))
@@ -2061,7 +1892,7 @@ def update_project_status():
             return jsonify(ok=False, message="Forbidden"), 403
             
     today = date.today()
-    prev_status = rec.status 
+    prev_status = rec.status # 🆕 Capture old status
     
     # Apply changes
     rec.status = new_status
@@ -2077,12 +1908,6 @@ def update_project_status():
         log_audit_event("STATUS_CHANGE", rec, me, prev_status=prev_status)
 
     db.session.commit()
-    if prev_status != new_status:
-        log_user_action(
-            "PROJECT_STATUS", 
-            rec.code, 
-            f"Status changed from {prev_status} to {new_status}"
-        )
 
     # 🆕 SLACK NOTIFICATION: Notify assigned users if status changes
     if prev_status != new_status:
@@ -2127,6 +1952,7 @@ def user_access():
                 if not already:
                     db.session.add(UserProjectAssignment(user_id=selected_user.id, project_id=cid, assigned_by_id=me.id, start_date=datetime.utcnow().date(), is_active=True))
                     
+                    # 👇👇 🆕 LOGGING ADDED HERE 👇👇
                     pc = ProjectCode.query.get(cid)
                     log_audit_event("ASSIGNED", pc, me, target_user=selected_user)
                     
@@ -2144,6 +1970,7 @@ def user_access():
                 r.is_active = False
                 r.end_date = datetime.utcnow().date()
                 
+                # 👇👇 🆕 LOGGING ADDED HERE 👇👇
                 log_audit_event("REMOVED", r.project, me, target_user=selected_user)
                 
                 removed += 1
@@ -2359,52 +2186,20 @@ def _sec_to_hm(total_seconds: int) -> str:
 def api_my_7day_hours():
     end_dt, start_dt = date.today(), date.today() - timedelta(days=6)
     user = User.query.filter_by(username=session["username"]).first()
-    
-    if not user: 
-        return jsonify({"error": "User not found"}), 404
-    
+    if not user: return jsonify({"error": "User not found"}), 404
     cur = mysql.connection.cursor()
-    
-    # 🛠️ UPDATED QUERY: 
-    # இப்போ 'Breaks' + 'Lunch Break' மட்டும் தான் Exclude ஆகும்.
-    q = """
-        SELECT date, 
-        SUM(CASE 
-            WHEN duration IS NOT NULL AND duration <> '' THEN TIME_TO_SEC(duration) 
-            WHEN total_hours IS NOT NULL THEN ROUND(total_hours * 3600) 
-            ELSE 0 
-        END) AS total_secs 
-        FROM timesheetlogs 
-        WHERE name = %s 
-        AND date BETWEEN %s AND %s 
-        AND NOT (process = 'Breaks' AND sub_process = 'Lunch Break') -- 🔥 Changed Logic Here
-        GROUP BY date 
-        ORDER BY date ASC
-    """
-    
+    q = """SELECT date, SUM(CASE WHEN duration IS NOT NULL AND duration <> '' THEN TIME_TO_SEC(duration) WHEN total_hours IS NOT NULL THEN ROUND(total_hours * 3600) ELSE 0 END) AS total_secs FROM timesheetlogs WHERE name = %s AND date BETWEEN %s AND %s AND NOT (project = 'General' AND process = 'Breaks') GROUP BY date ORDER BY date ASC"""
     cur.execute(q, (user.username, start_dt, end_dt))
     by_date_secs = {str(r[0]): int(r[1] or 0) for r in cur.fetchall()}
     cur.close()
-    
     series, total_secs, d = [], 0, start_dt
     for _ in range(7):
         k = d.isoformat()
         s = by_date_secs.get(k, 0)
-        series.append({
-            "date": k, 
-            "hours_hms": _sec_to_hm(s), 
-            "hours_decimal": round(s/3600.0, 2)
-        })
+        series.append({"date": k, "hours_hms": _sec_to_hm(s), "hours_decimal": round(s/3600.0, 2)})
         total_secs += s
         d += timedelta(days=1)
-        
-    return jsonify({
-        "start_date": start_dt.isoformat(), 
-        "end_date": end_dt.isoformat(), 
-        "by_day": series, 
-        "total_hours_hms": _sec_to_hm(total_secs), 
-        "total_hours_decimal": round(total_secs/3600.0, 2)
-    })
+    return jsonify({"start_date": start_dt.isoformat(), "end_date": end_dt.isoformat(), "by_day": series, "total_hours_hms": _sec_to_hm(total_secs), "total_hours_decimal": round(total_secs/3600.0, 2)})
 
 def _get_monthly_hours(username: str, start_date: date, end_date: date) -> float:
     cur = mysql.connection.cursor()
@@ -2506,8 +2301,6 @@ def start_timer():
         
         new_entry_id = cur.lastrowid
         mysql.connection.commit()
-        # In start_timer()
-        log_user_action("TIMER_START", new_entry_id, f"Started Timer via Preset: {preset.project}")
         cur.close()
 
     except Exception as e:
@@ -2550,8 +2343,6 @@ def stop_timer():
         cur = mysql.connection.cursor()
         cur.execute("""UPDATE timesheetlogs SET end_time = %s, duration = %s, total_hours = %s WHERE id = %s""", (end_dt.strftime("%H:%M"), duration_str, total_h, entry_db_id))
         mysql.connection.commit()
-        # In stop_timer()
-        log_user_action("TIMER_STOP", entry_db_id, f"Stopped Timer. Project: {timer_data['project']}, Duration: {duration_str}")
         cur.close()
         
         # 🆕 NOTIFY HIERARCHY - DISABLED
@@ -2579,59 +2370,30 @@ def get_timer_status():
 @app.route("/api/manual/start", methods=["POST"])
 @login_required
 def start_manual_timer():
-    if session.get("active_timer"): 
-        return jsonify({"success": False, "message": "Timer running"}), 409
-    
+    if session.get("active_timer"): return jsonify({"success": False, "message": "Timer running"}), 409
     data = request.get_json()
     work_type = data.get("work_type", "Regular") # 🆕 Added this
-    
-    if not all([data.get("project"), data.get("process"), data.get("sub_process"), data.get("start_time"), data.get("date")]): 
-        return jsonify({"success": False, "message": "Missing fields"}), 400
-    
+    if not all([data.get("project"), data.get("process"), data.get("sub_process"), data.get("start_time"), data.get("date")]): return jsonify({"success": False, "message": "Missing fields"}), 400
     try:
         name = session["username"]
         user = User.query.filter_by(username=name).first()
         team = user.team
-        
         proj_code, proj_type_mc, disease, country = parse_project_fields(team, data.get("project"))
         pc = ProjectCode.query.filter_by(code=data.get("project")).first()
         proj_type_db = pc.status if pc else "WIP"
-        
         cur = mysql.connection.cursor()
-        cur.execute("""
-            INSERT INTO timesheetlogs 
-            (name, date, day, team, project, project_type, process, sub_process, start_time, end_time, duration, total_hours, project_code, project_type_mc, disease, country, Work_Type) 
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, NULL, NULL, NULL, %s, %s, %s, %s, %s)
-        """, (name, data.get("date"), datetime.strptime(data.get("date"), "%Y-%m-%d").strftime("%A"), team, data.get("project"), proj_type_db, data.get("process"), data.get("sub_process"), data.get("start_time"), proj_code, proj_type_mc, disease, country, work_type))
-        
+        cur.execute("""INSERT INTO timesheetlogs (name, date, day, team, project, project_type, process, sub_process, start_time, end_time, duration, total_hours, project_code, project_type_mc, disease, country, Work_Type) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, NULL, NULL, NULL, %s, %s, %s, %s, %s)""", (name, data.get("date"), datetime.strptime(data.get("date"), "%Y-%m-%d").strftime("%A"), team, data.get("project"), proj_type_db, data.get("process"), data.get("sub_process"), data.get("start_time"), proj_code, proj_type_mc, disease, country, work_type))
         new_entry_id = cur.lastrowid
         mysql.connection.commit()
         cur.close()
-
-        # 🔥 LOGGING ACTION: Manual Timer Start
-        log_details = f"Started Manual Timer. Project: {data.get('project')}, Time: {data.get('start_time')}, WorkType: {work_type}"
-        log_user_action("MANUAL_TIMER_START", new_entry_id, log_details)
-
-        # 🔥 LOGGING ACTION: Check for Backdated Entry (> 7 Days)
-        try:
-            entry_date_obj = datetime.strptime(data.get("date"), "%Y-%m-%d").date()
-            today_date = date.today()
-            if (today_date - entry_date_obj).days > 7:
-                log_user_action("BACKDATED_ENTRY", new_entry_id, f"User logged time for old date: {data.get('date')} (Late Entry)")
-        except Exception as e:
-            print(f"Date check error: {e}")
+        
+        # 🆕 NOTIFY HIERARCHY - DISABLED
+        # notify_hierarchy(user, f"Manual Time Entry Created\nUser: {name}\nProject: {data.get('project')}")
 
     except Exception as e:
         mysql.connection.rollback()
         return jsonify({"success": False, "message": str(e)}), 500
-    
-    session["active_timer"] = {
-        "db_id": new_entry_id, 
-        "name": f"Manual: {data.get('project')}", 
-        "start_time": datetime.now().isoformat(), 
-        "project": data.get("project"), 
-        "is_manual": True
-    }
+    session["active_timer"] = {"db_id": new_entry_id, "name": f"Manual: {data.get('project')}", "start_time": datetime.now().isoformat(), "project": data.get("project"), "is_manual": True}
     session.modified = True
     return jsonify({"success": True, "db_id": new_entry_id})
 
@@ -2682,6 +2444,7 @@ def cancel_manual_timer():
         return jsonify({"success": False, "message": str(e)}), 500
     return jsonify({"success": True})
 
+app.register_blueprint(dashboard_bp, url_prefix='/admin/dashboard')
 def send_monthly_compensation_report():
     """
     Runs on the last day of the month.
@@ -2798,34 +2561,7 @@ def send_email_report(to_email, subject, html_body):
             print(f"Report sent to {to_email}")
     except Exception as e:
         print(f"Email failed: {e}")
-# ... (mel irukkura code) ...
 
-app.register_blueprint(dashboard_bp, url_prefix='/admin/dashboard')
-
-# 👇👇 INGA PASTE PANNU 👇👇
-@app.errorhandler(500)
-def internal_error(error):
-    log_user_action("SYSTEM_ERROR", "500", f"Internal Server Error: {str(error)}")
-    return "500 Internal Server Error", 500
-
-@app.errorhandler(404)
-def not_found_error(error):
-    log_user_action("PAGE_NOT_FOUND", "404", f"Missing Page: {request.path}")
-    return "404 Not Found", 404
-# 👆👆 MUDINJATHU 👆👆
-# ── AUDIT LOG VIEWER (SUPERADMIN ONLY) ────────────────────────────────────
-@app.route("/admin/audit-logs", methods=["GET"])
-@role_required("superadmin")
-def view_audit_logs():
-    # 1. கடைசி 200 லாக்ஸ் மட்டும் எடுப்போம் (இல்லனா பேஜ் ஸ்லோ ஆகும்)
-    logs = ActivityAuditLog.query.order_by(ActivityAuditLog.timestamp.desc()).limit(200).all()
-    
-    current_user = User.query.filter_by(username=session["username"]).first()
-    
-    return render_template("audit_logs.html", 
-                           logs=logs, 
-                           username=current_user.username,
-                           role=current_user.role)
 if __name__ == "__main__":
     from os import environ
     port = int(environ.get("PORT", 7060))

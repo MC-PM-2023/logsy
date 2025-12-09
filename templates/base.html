@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <!-- This is the link for the Bootstrap Icons, which you already had -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
   <meta charset="UTF-8">
   <title>{% block title %}Logsy{% endblock %}</title>
@@ -271,7 +270,6 @@
 <body class="{% if no_sidebar %}no-sidebar{% endif %}">
 
   <header>
-    <!-- UPDATED: Wrapped Logo in <a> tag and removed id="logoToggle" -->
     <div class="logo" aria-label="Go to Home">
       <a href="{{ url_for('dashboard') }}" title="Go to Dashboard">
         <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo">
@@ -282,7 +280,6 @@
     <div class="userwrap" id="profileWrap">
       <span class="uname">{{ username }}</span>
 
-      <!-- TOP-RIGHT PROFILE PHOTO (TOGGLE) -->
       <img
         id="profileBtn"
         class="picon"
@@ -292,13 +289,11 @@
         aria-expanded="false"
         tabindex="0">
 
-      <!-- UPDATED: Wrapped GIF in <a> tag -->
       <a href="{{ url_for('dashboard') }}" class="gif-link" title="Go to Dashboard">
         <img class="gif" src="https://storage.googleapis.com/my-react-image-bucket-123/Logsy.gif" alt="App GIF">
       </a>
 
 
-      <!-- DROPDOWN -->
       <div id="profileDropdown" class="profile-dropdown" role="menu" aria-label="Profile menu">
         <div class="pd-card">
           <img class="pd-avatar"
@@ -323,9 +318,7 @@
             <span>Logout</span>
           </a>
         </div>
-      </div> <!-- End profileDropdown -->
-    </div> <!-- End userwrap -->
-    {% endif %}
+      </div> </div> {% endif %}
   </header>
 
   {% if username and not no_sidebar %}
@@ -336,7 +329,6 @@
         src="{{ profile_image_url or url_for('static', filename='img/avatar-default.png') }}"
         alt="{{ profile_name }}">
 
-      <!-- 👇 Show Name + Employee_ID -->
       <div class="name">
         {{ profile_name }}<br>
         <small>{{ employee_id }}</small>
@@ -344,12 +336,7 @@
     </div>
 
 
-    <!-- ===== VVVV: UPDATED NAVIGATION BLOCK VVVV ===== -->
     <nav>
-      <!-- 
-        This uses the 'active_page' variable from your Flask route.
-        Example: class="{{ 'active' if active_page == 'home' else '' }}"
-      -->
       <a href="{{ url_for('dashboard') }}" class="{{ 'active' if active_page == 'dashboard' else '' }}" title="Hii Home">
         <i class="bi bi-house-door-fill"></i>
         Home
@@ -359,6 +346,11 @@
         <a href="{{ url_for('manage_users') }}" class="{{ 'active' if active_page == 'manage_users' else '' }}" title="Manage Users">
           <i class="bi bi-person-fill-gear"></i>
           Administration
+        </a>
+        
+        <a href="{{ url_for('view_audit_logs') }}" class="{{ 'active' if active_page == 'audit_logs' else '' }}" title="System Audit Logs">
+          <i class="bi bi-shield-lock-fill"></i>
+          Audit Logs
         </a>
       {% endif %}
       
@@ -394,12 +386,9 @@
       {% endif %}
       
     </nav>
-    <!-- ===== ^^^^: END OF UPDATED NAVIGATION ^^^^ ===== -->
-
-  </aside>
+    </aside>
   {% endif %}
 
-  <!-- Arrow toggle -->
   <div id="edgeToggle" class="edge-toggle" role="button" aria-label="Collapse sidebar" aria-expanded="true">‹</div>
 
   <main>

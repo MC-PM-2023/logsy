@@ -2,7 +2,6 @@
 {% block title %}Team Timesheet Logs{% endblock %}
 
 {% block content %}
-<!-- Google Fonts: Inter for Professional Look -->
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
 <style>
@@ -22,25 +21,18 @@
     --success: #00cc66;
   }
 
-  /* 1. FIXED LAYOUT - Adjusted for Top Nav */
-  /* We do NOT hide body overflow here to avoid conflict with base.html */
-  /* But we restrict our wrapper to prevent inner scroll */
-  
-  /* Custom Scrollbar */
   ::-webkit-scrollbar { width: 6px; height: 6px; }
   ::-webkit-scrollbar-track { background: var(--bg); }
   ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; border: 1px solid var(--bg); }
   ::-webkit-scrollbar-thumb:hover { background: var(--gold); }
 
-  /* --- Main Container --- */
   .wrap { 
-    /* calc(100vh - 110px) accounts for the top navbar (~60-80px) + margins */
     height: calc(100vh - 110px); 
     width: 98%; 
     margin: 10px auto; 
     display: flex; 
     flex-direction: column;
-    overflow: hidden; /* Keep the scroll inside the card/table */
+    overflow: hidden; 
   }
   
   .card {
@@ -50,14 +42,11 @@
     box-shadow: 0 10px 30px rgba(0,0,0,0.5);
     display: flex; 
     flex-direction: column; 
-    height: 100%; /* Fill the wrap */
+    height: 100%; 
     overflow: hidden; 
   }
 
-  /* --- Header & Controls --- */
-  .head, .controls, .filter-bar, .pager {
-    flex-shrink: 0; 
-  }
+  .head, .controls, .filter-bar, .pager { flex-shrink: 0; }
 
   .head {
     padding: 8px 15px; 
@@ -65,9 +54,7 @@
     background: #111;
     display: flex; align-items: center; justify-content: space-between;
   }
-  .head h2 { 
-    margin: 0; color: var(--gold); font-weight: 700; font-size: 1rem; 
-  }
+  .head h2 { margin: 0; color: var(--gold); font-weight: 700; font-size: 1rem; }
 
   .controls {
     padding: 8px 15px; 
@@ -78,7 +65,6 @@
   .ctrl-grp { display: flex; flex-direction: column; gap: 4px; }
   .ctrl-grp label { font-size: 0.7rem; color: var(--text-muted); font-weight: 600; }
 
-  /* Inputs & Buttons */
   .c-input, .f-select {
     background: var(--input-bg); border: 1px solid var(--input-border); color: #fff;
     padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; height: 26px; outline: none;
@@ -101,29 +87,16 @@
   }
   .btn-outline:hover { background: var(--gold-dim); }
 
-  /* Filter Bar */
   .filter-bar {
     padding: 6px 15px; background: #161616; border-bottom: 1px solid var(--card-border);
     display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; align-items: center;
   }
   .f-select { width: 100%; min-width: 0; } 
 
-  /* --- Table Area (Scrollable) --- */
-  .table-wrap { 
-    flex: 1; /* Takes all remaining space */
-    overflow: auto; /* Internal scroll only */
-    position: relative; 
-    background: #0a0a0a; 
-  }
+  .table-wrap { flex: 1; overflow: auto; position: relative; background: #0a0a0a; }
 
-  table { 
-    width: 100%; 
-    border-collapse: separate; 
-    border-spacing: 0; 
-    table-layout: fixed; /* Standardize column widths */
-  }
+  table { width: 100%; border-collapse: separate; border-spacing: 0; table-layout: fixed; }
 
-  /* Header */
   thead th {
     position: sticky; top: 0; z-index: 30;
     background-color: var(--gold); color: #000; 
@@ -133,7 +106,6 @@
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
 
-  /* Sticky First Column */
   tbody td:first-child {
     position: sticky; left: 0; z-index: 20;
     background-color: #111; border-right: 1px solid #333;
@@ -141,7 +113,6 @@
   }
   thead th:first-child { z-index: 40; left: 0; border-right: 1px solid #000; }
 
-  /* Rows */
   tbody tr { background: #111; transition: background 0.15s; }
   tbody tr:nth-child(even) { background: #161616; }
   tbody tr:nth-child(even) td:first-child { background: #161616; }
@@ -149,20 +120,12 @@
   tbody tr:hover td:first-child { background: #1f1f1f; }
 
   tbody td {
-    padding: 4px 10px; /* Reduced Padding */
-    border-bottom: 1px solid #222;
+    padding: 4px 10px; border-bottom: 1px solid #222;
     font-size: 0.8rem; color: #ccc; vertical-align: middle;
   }
 
-  /* TRUNCATE TEXT & HOVER */
-  .truncate {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    display: block;
-  }
+  .truncate { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
 
-  /* Edit Mode Styles */
   tr.editing td { background: #262626 !important; border-bottom: 1px solid var(--gold); }
   tr.editing td:first-child { background: #262626 !important; border-right: 1px solid var(--gold); }
   
@@ -172,7 +135,6 @@
   }
   .t-input:focus, .t-select:focus { border-color: var(--gold); }
 
-  /* Buttons in Table */
   .badge-btn {
     display: inline-block; padding: 2px 8px; border-radius: 12px;
     font-size: 0.7rem; font-weight: 600; text-decoration: none; cursor: pointer;
@@ -183,12 +145,10 @@
   .badge-del:hover { border-color: #f44; color: #fff; background: #822; }
 
   .action-group { display: flex; gap: 4px; justify-content: center; }
-  
   .btn-save-sm { background: var(--gold); color: #000; border: none; padding: 2px 8px; border-radius: 4px; font-weight: 700; cursor: pointer; font-size: 0.75rem; }
   .btn-cancel-sm { border: 1px solid #555; color: #aaa; background: transparent; padding: 2px 8px; border-radius: 4px; cursor: pointer; font-size: 0.75rem; }
   .btn-cancel-sm:hover { color: #fff; border-color: #fff; }
 
-  /* --- Footer (Always Visible) --- */
   .pager {
     padding: 8px 15px; background: #0f0f0f; border-top: 1px solid #333;
     display: flex; justify-content: space-between; align-items: center; 
@@ -200,7 +160,6 @@
   }
   .pager-btns button:hover:not(:disabled) { border-color: var(--gold); color: var(--gold); }
 
-  /* Flash Messages */
   .flash-container { position: fixed; top: 60px; left: 50%; transform: translateX(-50%); z-index: 2000; display: flex; flex-direction: column; gap: 10px; width: 300px; }
   .flash { padding: 8px 12px; border-radius: 6px; font-weight: 600; box-shadow: 0 4px 15px rgba(0,0,0,0.6); text-align: center; font-size: 0.85rem; }
   .flash-success { background: var(--success); color: #000; }
@@ -219,15 +178,15 @@
   </div>
 
   <div class="card">
-    <!-- 1. HEADER -->
     <div class="head">
       <h2>Team Logsy Logs</h2>
     </div>
 
-    <!-- 2. CONTROL PANEL -->
     <form method="POST" id="filterForm">
       <input type="hidden" name="page" id="pageInput" value="{{ page|default(1) }}">
       
+      <input type="hidden" name="editing_id" id="editingIdInput" value="{{ editing_id or '' }}">
+
       <div class="controls">
         <div class="ctrl-grp">
           <label>Start Date</label>
@@ -253,7 +212,6 @@
         </div>
       </div>
 
-      <!-- 3. FILTER BAR -->
       <div class="filter-bar">
         {% if role == 'superadmin' %}
           <select name="team" class="f-select" onchange="this.form.submit()">
@@ -294,7 +252,6 @@
       </div>
     </form>
 
-    <!-- 4. TABLE AREA -->
     <div class="table-wrap">
       
       {% if editing_id %}
@@ -305,26 +262,15 @@
       {% endif %}
 
       <table>
-        <!-- COLGROUP: Defines Standard Widths -->
         <colgroup>
-          <col style="width: 140px;"> <!-- Name -->
-          <col style="width: 80px;">  <!-- Team -->
-          <col style="width: 90px;">  <!-- Date -->
-          <col style="width: 200px;"> <!-- Project (Wider) -->
-          <col style="width: 130px;"> <!-- Process -->
-          <col style="width: 130px;"> <!-- Sub-Process -->
-          <col style="width: 60px;">  <!-- Start -->
-          <col style="width: 60px;">  <!-- End -->
-          <col style="width: 50px;">  <!-- Dur -->
-          <col style="width: 100px;"> <!-- Action -->
-        </colgroup>
+          <col style="width: 140px;"> <col style="width: 80px;">  <col style="width: 90px;">  <col style="width: 120px;"> <col style="width: 180px;"> <col style="width: 130px;"> <col style="width: 130px;"> <col style="width: 60px;">  <col style="width: 60px;">  <col style="width: 50px;">  <col style="width: 100px;"> </colgroup>
 
         <thead>
           <tr>
             <th>Name</th>
             <th>Team</th>
             <th>Date</th>
-            <th>Project</th>
+            <th>Work Type</th> <th>Project</th>
             <th>Process</th>
             <th>Sub-Process</th>
             <th>Start</th>
@@ -336,20 +282,29 @@
         <tbody>
           {% for row in logs %}
             {% set row_id = row[11] %}
+            {% set work_type = row[12] %}
+            
             {% set is_edit = (editing_id == row_id|string) %}
             
             {% if is_edit %}
-              <!-- EDIT ROW -->
               <tr class="editing">
                 <td style="font-weight: 700;">{{ row[0] }}</td>
                 <td>{{ row[4] }}</td>
                 <td>{{ row[1] }}</td>
                 
                 <td>
+                    <select name="work_type" form="editRowForm" class="t-select">
+                        <option value="Regular" {% if work_type == 'Regular' %}selected{% endif %}>Regular</option>
+                        <option value="Additional Hours" {% if work_type == 'Additional Hours' %}selected{% endif %}>Additional Hours</option>
+                        <option value="Compensation" {% if work_type == 'Compensation' %}selected{% endif %}>Compensation</option>
+                    </select>
+                </td>
+
+                <td>
                   <select name="project" form="editRowForm" class="t-select" required>
                     <option value="{{ row[3] }}" selected>{{ row[3] }}</option>
                     {% for p in projects %}
-                       {% if p != row[3] %}<option value="{{ p }}">{{ p }}</option>{% endif %}
+                        {% if p != row[3] %}<option value="{{ p }}">{{ p }}</option>{% endif %}
                     {% endfor %}
                   </select>
                 </td>
@@ -358,7 +313,7 @@
                   <select name="process" form="editRowForm" class="t-select" required>
                     <option value="{{ row[5] }}" selected>{{ row[5] }}</option>
                     {% for pr in processes %}
-                       {% if pr != row[5] %}<option value="{{ pr }}">{{ pr }}</option>{% endif %}
+                        {% if pr != row[5] %}<option value="{{ pr }}">{{ pr }}</option>{% endif %}
                     {% endfor %}
                   </select>
                 </td>
@@ -367,7 +322,7 @@
                   <select name="sub_process" form="editRowForm" class="t-select" required>
                     <option value="{{ row[6] }}" selected>{{ row[6] }}</option>
                     {% for sp in sub_processes %}
-                       {% if sp != row[6] %}<option value="{{ sp }}">{{ sp }}</option>{% endif %}
+                        {% if sp != row[6] %}<option value="{{ sp }}">{{ sp }}</option>{% endif %}
                     {% endfor %}
                   </select>
                 </td>
@@ -384,13 +339,23 @@
                 </td>
               </tr>
             {% else %}
-              <!-- VIEW ROW -->
               <tr>
                 <td title="{{ row[0] }}">{{ row[0] }}</td>
                 <td title="{{ row[4] }}" style="color: #999;">{{ row[4] }}</td>
                 <td title="{{ row[1] }}">{{ row[1] }}</td>
                 
-                <!-- Truncated Columns with Hover Title -->
+                <td>
+                    {% if work_type == 'Regular' or not work_type %}
+                        <span style="color: var(--gold); font-size: 0.75rem;">REG</span>
+                    {% elif work_type == 'Additional Hours' %}
+                        <span style="color: var(--success); font-size: 0.75rem;">ADD+</span>
+                    {% elif work_type == 'Compensation' %}
+                        <span style="color: #3b82f6; font-size: 0.75rem;">COMP</span>
+                    {% else %}
+                        {{ work_type }}
+                    {% endif %}
+                </td>
+
                 <td title="{{ row[3] }}">
                   <span class="truncate" style="color: #fff; font-weight: 500;">{{ row[3] }}</span>
                 </td>
@@ -419,13 +384,12 @@
           {% endfor %}
           
           {% if logs|length == 0 %}
-             <tr><td colspan="10" style="text-align:center; padding: 60px; color: #555;">No records found matching your filters.</td></tr>
+             <tr><td colspan="11" style="text-align:center; padding: 60px; color: #555;">No records found matching your filters.</td></tr>
           {% endif %}
         </tbody>
       </table>
     </div>
 
-    <!-- 5. Footer (Sticky) -->
     <div class="pager">
        <div>Showing page <strong>{{ page }}</strong> of <strong>{{ total_pages }}</strong> ({{ total_rows }} total entries)</div>
        <div>© Datasolve Analytics Pvt Ltd 2025.</div>
@@ -441,6 +405,7 @@
   // Pagination
   const filterForm = document.getElementById('filterForm');
   const pageInput = document.getElementById('pageInput');
+  const editingIdInput = document.getElementById('editingIdInput');
   const totalPages = {{ total_pages }};
 
   document.getElementById('prevBtn')?.addEventListener('click', () => {
@@ -453,24 +418,29 @@
     if(p < totalPages) { pageInput.value = p + 1; filterForm.submit(); }
   });
 
-  // Edit Handlers
+  // 🚀 FIX: Edit Handlers now SUBMIT the filter form
+  // This preserves the selected Date, Team, User, etc.
   function triggerEdit(id) {
-    const url = new URL(window.location.href);
-    url.searchParams.set('editing_id', id);
-    window.location.href = url.toString();
+    editingIdInput.value = id; // Set the hidden ID field
+    filterForm.submit();       // Submit the main form (POST)
   }
 
   function cancelEdit() {
-    const url = new URL(window.location.href);
-    url.searchParams.delete('editing_id');
-    window.location.href = url.toString();
+    editingIdInput.value = ''; // Clear the hidden ID
+    filterForm.submit();       // Submit to reload list without edit mode
   }
 
+  // Handle "Save" redirection to keep filters (optional, but good UX)
   const editForm = document.getElementById('editRowForm');
   if(editForm){
+     // Note: Since saving is a separate POST action, we can't easily preserve filters 
+     // unless we pass them all to the update endpoint. 
+     // For now, we redirect to base URL on save, which is standard behavior.
+     // If you want to keep filters after save, backend needs to handle redirection params.
+     // Current 'next' input logic handles basic return.
      const url = new URL(window.location.href);
-     url.searchParams.delete('editing_id'); 
-     editForm.querySelector('input[name="next"]').value = url.pathname + '?' + url.searchParams.toString();
+     // We remove editing_id so it doesn't reopen edit mode after save
+     editForm.querySelector('input[name="next"]').value = url.pathname; 
   }
 
   setTimeout(() => {

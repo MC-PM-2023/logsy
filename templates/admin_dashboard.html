@@ -1,382 +1,685 @@
-{% extends "base.html" %}
-{% block title %}Logsy - Admin Dashboard{% endblock %}
-
-{% block content %}
-<style>
-    :root {
-        --brand: #ffd24d;
-        --bg: #0f151d;
-        --card-bg: #1c2530;
-        --highlight: #3498db;
-        --shadow-light: rgba(255, 255, 255, 0.05);
-    }
-    body {
-        background: var(--bg);
-        color: #fff;
-        font-family: 'Inter', sans-serif;
-    }
-    .dashboard-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); /* Tighter grid for more data */
-        gap: 20px;
-        margin-bottom: 30px;
-    }
-    .card {
-        background: var(--card-bg);
-        border-radius: 16px;
-        padding: 20px;
-        box-shadow: 0 4px 12px rgba(0,0,0,.3);
-        text-align: center;
-        transition: transform 0.2s, box-shadow 0.2s, border 0.2s;
-        cursor: pointer;
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-        border: 1px solid transparent;
-    }
-    .card:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 8px 20px rgba(0,0,0,.5), 0 0 0 1px var(--highlight);
-        border: 1px solid var(--highlight);
-    }
-    .card h2 {
-        font-size: 30px; /* Slightly smaller for better fit */
-        font-weight: 800;
-        margin-bottom: 5px;
-        color: var(--brand);
-    }
-    .card p {
-        font-size: 14px;
-        color: #ccc;
-        margin: 0;
-        font-weight: 500;
-    }
-    .chart-card {
-        min-height: 320px;
-        box-shadow: 0 4px 12px rgba(0,0,0,.3);
-        padding: 20px;
-    }
-    @media (min-width: 1024px) {
-        .wide-chart {
-            grid-column: span 2;
-        }
-    }
-    .filters-form {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 15px;
-        align-items: center;
-        background: var(--card-bg);
-        padding: 15px 20px;
-        border-radius: 12px;
-        margin-bottom: 30px;
-        box-shadow: 0 2px 8px rgba(0,0,0,.2);
-    }
-    .table-wrap {
-        background: var(--card-bg);
-        border-radius: 16px;
-        padding: 20px;
-        margin-top: 30px;
-        box-shadow: 0 4px 15px rgba(0,0,0,.3);
-    }
-    .table {
-        width: 100%; border-collapse: collapse; font-size: 14px;
-    }
-    .table th, .table td {
-        padding: 12px; border-bottom: 1px solid #2e3845; text-align: left; /* Darker line */
-    }
-    .table th {
-        background: linear-gradient(90deg, #ffd24d, #ffecae);
-        color: #111; font-weight: 700; text-transform: uppercase;
-    }
-    /* Modal styles */
-    .modal-overlay {
-        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-        background-color: rgba(0, 0, 0, 0.85); z-index: 1000;
-        display: none; justify-content: center; align-items: center;
-        backdrop-filter: blur(4px);
-    }
-    .modal-content {
-        background: var(--card-bg); color: #fff;
-        padding: 30px; border-radius: 16px; width: 90%; max-width: 900px; /* Wider modal */
-        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7);
-        animation: fadeIn 0.3s ease-out;
-    }
-    @keyframes fadeIn {
-        from { opacity: 0; transform: scale(0.95); }
-        to { opacity: 1; transform: scale(1); }
-    }
-    .modal-header {
-        display: flex; justify-content: space-between; align-items: center;
-        margin-bottom: 20px; border-bottom: 1px solid var(--highlight); padding-bottom: 10px;
-    }
-    .modal-close {
-        font-size: 24px; font-weight: bold; cursor: pointer; color: #ccc;
-        transition: color 0.2s;
-    }
-    .modal-close:hover { color: var(--brand); }
-</style>
-
-<div class="dashboard-grid">
-    <div class="card" data-title="Total Entries" data-body="Total entries for selected criteria.">
-        <h2>{{ total_entries }}</h2>
-        <p>Total Entries</p>
-    </div>
-    <div class="card" data-title="Active Users" data-body="Users who have logged time with the current filters.">
-        <h2>{{ total_users }}</h2>
-        <p>Active Users</p>
-    </div>
-    <div class="card" data-title="Total Work Hours" data-body="Total productive hours logged, excluding breaks. Decimal Value: {{ total_work_hours }}">
-        <h2>{{ total_work_hours | hm_format }}</h2>
-        <p>Total Work Hours</p>
-    </div>
-    <div class="card" data-title="Total Break Hours" data-body="Total time logged under the 'Breaks' process. Decimal Value: {{ total_break_hours }}">
-        <h2>{{ total_break_hours | hm_format }}</h2>
-        <p>Total Break Hours</p>
-    </div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard | Enterprise Analytics</title>
     
-    <!-- Active Projects Card (Now shows list in modal) -->
-    <div class="card" data-title="Active Project Codes" data-body="Projects with recorded entries in the current filter period.">
-        <h2>{{ active_project_codes|length }}</h2>
-        <p>Active Projects</p>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-        <div class="mt-4 text-xs text-left px-2 py-2 bg-background max-h-28 overflow-y-auto rounded-lg border border-gray-700 flex-grow">
-            <p class="font-semibold text-brand-green mb-1">Project Codes ({{ active_project_codes|length }})</p>
-            <ul id="project-list-summary" class="space-y-0.5 list-disc list-inside text-gray-400">
-                {% for code in active_project_codes %}
-                <li>{{ code }}</li>
-                {% else %}
-                <li>No projects found.</li>
-                {% endfor %}
-            </ul>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        .card-hover:hover { transform: translateY(-2px); transition: all 0.3s ease; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); }
+        .glass-header { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); }
+        /* Smooth Scrollbar for Table */
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        /* Modal Animation */
+        .modal-enter { opacity: 0; transform: scale(0.95); }
+        .modal-enter-active { opacity: 1; transform: scale(1); transition: all 0.2s ease-out; }
+        .modal-exit { opacity: 1; transform: scale(1); }
+        .modal-exit-active { opacity: 0; transform: scale(0.95); transition: all 0.2s ease-in; }
+    </style>
+</head>
+<body class="text-slate-800 relative">
+
+    <!-- Top Navigation -->
+    <nav class="glass-header fixed w-full z-20 border-b border-gray-200 h-16 flex items-center justify-between px-6 lg:px-10 shadow-sm">
+        <div class="flex items-center gap-3">
+            <div class="bg-indigo-600 text-white p-2 rounded-lg shadow-indigo-200 shadow-lg">
+                <i class="fas fa-chart-line text-lg"></i>
+            </div>
+            <span class="text-xl font-bold tracking-tight text-slate-800">Timesheet<span class="text-indigo-600">Admin</span></span>
         </div>
-    </div>
-    
-</div>
+        
+        <div class="flex items-center gap-4">
+            <div class="hidden md:flex flex-col items-end mr-2">
+                <span class="text-sm font-semibold text-slate-700">{{ current_user.username }}</span>
+                <span class="text-xs text-slate-500 capitalize bg-indigo-50 px-2 py-0.5 rounded-full text-indigo-700 font-medium">{{ current_user.role }}</span>
+            </div>
+            <div class="h-10 w-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold border-2 border-white shadow-md uppercase text-sm">
+                {{ current_user.username[:2] }}
+            </div>
+        </div>
+    </nav>
 
-<form method="POST" class="filters-form">
-    <!-- User Dropdown Filtering -->
-    <div class="flex items-center gap-2">
-        <label for="start_date" class="text-gray-300">Start Date:</label>
-        <input type="date" id="start_date" name="start_date" class="bg-background border border-gray-600 rounded-lg p-2 text-white text-sm focus:border-brand" value="{{ start_date if start_date }}">
-    </div>
-    <div class="flex items-center gap-2">
-        <label for="end_date" class="text-gray-300">End Date:</label>
-        <input type="date" id="end_date" name="end_date" class="bg-background border border-gray-600 rounded-lg p-2 text-white text-sm focus:border-brand" value="{{ end_date if end_date }}">
-    </div>
-    <div class="flex items-center gap-2">
-        <label for="user_select" class="text-gray-300">Select User:</label>
-        <select name="user_select" id="user_select" class="bg-background border border-gray-600 rounded-lg p-2 text-white text-sm focus:border-brand">
-            <!-- Superadmin will see this option. Admin will not, as Python filters the list. -->
-            {% if current_user.role == 'superadmin' %}
-            <option value="all" {% if selected_user == 'all' or selected_user == None %}selected{% endif %}>All Users (Superadmin)</option>
-            {% endif %}
+    <!-- Main Content -->
+    <main class="pt-24 px-4 lg:px-8 pb-10 max-w-[1920px] mx-auto">
+        
+        <!-- Header & Filters -->
+        <div class="flex flex-col xl:flex-row justify-between items-start xl:items-end gap-6 mb-8">
+            <div>
+                <h1 class="text-2xl font-bold text-slate-800">Dashboard Overview</h1>
+                <p class="text-slate-500 text-sm mt-1">
+                    Team: <span class="font-semibold text-indigo-600 bg-indigo-50 px-2 py-1 rounded">{{ current_user.team }}</span>
+                </p>
+            </div>
             
-            {% for user in users %}
-            <option value="{{ user }}" {% if selected_user == user %}selected{% endif %}>{{ user }}</option>
-            {% endfor %}
-        </select>
-    </div>
-    <button type="submit" class="bg-highlight text-white px-4 py-2 rounded-lg hover:bg-opacity-80 transition duration-150">Apply Filters</button>
-</form>
-
-<div class="dashboard-grid mt-8">
-    <!-- Charts Grid (Adjusted layout) -->
-
-    <div class="card chart-card wide-chart"><canvas id="dailyWorkBreakChart"></canvas></div>
-    <div class="card chart-card wide-chart"><canvas id="userHoursChart"></canvas></div>
-
-    <div class="card chart-card"><canvas id="processChart"></canvas></div>
-    <div class="card chart-card"><canvas id="subProcessChart"></canvas></div>
-    <div class="card chart-card wide-chart"><canvas id="projectHoursChart"></canvas></div>
-</div>
-
-<div class="table-wrap">
-    <h3 class="text-xl font-semibold mb-4 text-gray-200">Recent Logs ({{ table_data|length }} entries)</h3>
-    <div class="overflow-x-auto rounded-lg">
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Name</th>
-                    <th>Date</th>
-                    <th>Project</th>
-                    <th>Process</th>
-                    <th>Sub-Process</th>
-                    <th>Duration (HH:MM)</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for row in table_data %}
-                <tr class="hover:bg-gray-700 transition duration-100">
-                    <td>{{ row[0] }}</td>
-                    <td>{{ row[1] }}</td>
-                    <td>{{ row[2] }}</td>
-                    <td>{{ row[3] }}</td>
-                    <td>{{ row[4] }}</td>
-                    <td>{{ row[5] | hm_format }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-</div>
-
-<!-- Modal Overlay -->
-<div id="infoModal" class="modal-overlay" onclick="closeModal()">
-    <div class="modal-content" onclick="event.stopPropagation()">
-        <div class="modal-header">
-            <h3 id="modalTitle" class="text-2xl font-bold text-brand"></h3>
-            <span class="modal-close" onclick="closeModal()">&times;</span>
+            <!-- Filter Form -->
+            <form method="POST" action="/admin/admin/dashboard" class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex flex-wrap gap-4 items-end w-full xl:w-auto">
+                <div class="flex-grow min-w-[200px]">
+                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">User</label>
+                    <div class="relative">
+                        <i class="fas fa-user absolute left-3 top-3 text-gray-400"></i>
+                        <select name="user_select" class="w-full pl-9 bg-gray-50 border border-gray-200 text-sm rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 block p-2.5 outline-none transition-all">
+                            <option value="all">All Users</option>
+                            {% for user in users %}
+                                <option value="{{ user }}" {% if selected_user == user %}selected{% endif %}>{{ user }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Start Date</label>
+                    <input type="date" name="start_date" value="{{ start_date if start_date else '' }}" class="bg-gray-50 border border-gray-200 text-slate-900 text-sm rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5 outline-none transition-all">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">End Date</label>
+                    <input type="date" name="end_date" value="{{ end_date if end_date else '' }}" class="bg-gray-50 border border-gray-200 text-slate-900 text-sm rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5 outline-none transition-all">
+                </div>
+                <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg text-sm px-6 py-2.5 transition-all shadow-md shadow-indigo-200 flex items-center gap-2 h-[42px]">
+                    <i class="fas fa-filter"></i> Apply
+                </button>
+            </form>
         </div>
-        <p id="modalBody" class="text-gray-300"></p>
-        <div id="modalDetails" class="mt-4 text-sm text-gray-400 border-t border-gray-700 pt-3"></div>
+
+        <!-- KPI Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 mb-8">
+            <!-- KPI 1 -->
+            <div class="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm card-hover relative overflow-hidden group">
+                <div class="absolute right-0 top-0 h-full w-1 bg-indigo-500"></div>
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Work</p>
+                        <h3 class="text-3xl font-bold text-slate-800 mt-2 format-time">{{ total_work_hours }}</h3>
+                    </div>
+                    <div class="p-3 bg-indigo-50 rounded-xl text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                        <i class="fas fa-briefcase text-xl"></i>
+                    </div>
+                </div>
+            </div>
+            <!-- KPI 2 -->
+            <div class="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm card-hover relative overflow-hidden group">
+                <div class="absolute right-0 top-0 h-full w-1 bg-amber-400"></div>
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Break</p>
+                        <h3 class="text-3xl font-bold text-slate-800 mt-2 format-time">{{ total_break_hours }}</h3>
+                    </div>
+                    <div class="p-3 bg-amber-50 rounded-xl text-amber-500 group-hover:bg-amber-500 group-hover:text-white transition-colors">
+                        <i class="fas fa-pause text-xl"></i>
+                    </div>
+                </div>
+            </div>
+            <!-- KPI 3 -->
+            <div class="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm card-hover relative overflow-hidden group">
+                <div class="absolute right-0 top-0 h-full w-1 bg-cyan-500"></div>
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Avg Hrs / User</p>
+                        <h3 class="text-3xl font-bold text-slate-800 mt-2 format-time">{{ avg_hours_per_user }}</h3>
+                    </div>
+                    <div class="p-3 bg-cyan-50 rounded-xl text-cyan-500 group-hover:bg-cyan-500 group-hover:text-white transition-colors">
+                        <i class="fas fa-tachometer-alt text-xl"></i>
+                    </div>
+                </div>
+            </div>
+            <!-- KPI 4 -->
+            <div class="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm card-hover relative overflow-hidden group">
+                <div class="absolute right-0 top-0 h-full w-1 bg-emerald-500"></div>
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Log Entries</p>
+                        <h3 class="text-3xl font-bold text-slate-800 mt-2">{{ total_entries }}</h3>
+                    </div>
+                    <div class="p-3 bg-emerald-50 rounded-xl text-emerald-500 group-hover:bg-emerald-500 group-hover:text-white transition-colors">
+                        <i class="fas fa-list text-xl"></i>
+                    </div>
+                </div>
+            </div>
+            <!-- KPI 5: Active Users (CLICKABLE NOW) -->
+            <div onclick="openUserHub()" class="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm card-hover relative overflow-hidden group cursor-pointer hover:bg-purple-50 transition-colors">
+                <div class="absolute right-0 top-0 h-full w-1 bg-purple-500"></div>
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-xs font-bold text-slate-400 uppercase tracking-wider group-hover:text-purple-600">Active Users</p>
+                        <h3 class="text-3xl font-bold text-slate-800 mt-2">{{ total_users }}</h3>
+                        <p class="text-xs text-purple-600 mt-2 font-semibold">
+                            <i class="fas fa-external-link-alt mr-1"></i> View Directory
+                        </p>
+                    </div>
+                    <div class="p-3 bg-purple-50 rounded-xl text-purple-500 group-hover:bg-purple-600 group-hover:text-white transition-colors">
+                        <i class="fas fa-users text-xl"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Row 1 -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+            <!-- Main Trend Chart -->
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 lg:col-span-2">
+                <div class="flex justify-between items-center mb-6">
+                    <div>
+                        <h3 class="font-bold text-slate-800 text-lg">Work vs Break Trend</h3>
+                        <p class="text-xs text-slate-400">Click bars to see details</p>
+                    </div>
+                    <span class="bg-gray-100 text-gray-500 text-xs font-medium px-2.5 py-1 rounded-lg border border-gray-200">Last 7 Days</span>
+                </div>
+                <div class="relative h-80 w-full">
+                    <canvas id="trendChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Process Distribution -->
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                <h3 class="font-bold text-slate-800 text-lg mb-2">Process Distribution</h3>
+                <p class="text-xs text-slate-400 mb-6">Click slices to filter logs</p>
+                <div class="relative h-72 w-full flex justify-center">
+                    <canvas id="processChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Row 2 -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <!-- Top Projects -->
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                <h3 class="font-bold text-slate-800 text-lg mb-4">Top Projects <span class="text-sm font-normal text-slate-400">(Click to view logs)</span></h3>
+                <div class="relative h-80 w-full">
+                    <canvas id="projectChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Top Users -->
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                <h3 class="font-bold text-slate-800 text-lg mb-4">Top Contributors <span class="text-sm font-normal text-slate-400">(Click to view logs)</span></h3>
+                <div class="relative h-80 w-full">
+                    <canvas id="userChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Data Table -->
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-12">
+            <div class="p-6 border-b border-gray-100 flex flex-col md:flex-row justify-between items-center gap-4">
+                <div>
+                    <h3 class="font-bold text-slate-800 text-lg">Recent Log Entries</h3>
+                </div>
+                <button class="bg-white border border-gray-300 hover:bg-gray-50 text-slate-700 text-sm font-medium py-2 px-4 rounded-lg shadow-sm transition-all flex items-center">
+                    <i class="fas fa-download mr-2 text-slate-400"></i> Export CSV
+                </button>
+            </div>
+            <div class="overflow-x-auto custom-scrollbar">
+                <table class="w-full text-sm text-left text-gray-500">
+                    <thead class="text-xs text-gray-700 uppercase bg-gray-50/50 sticky top-0">
+                        <tr>
+                            <th class="px-6 py-4 font-bold text-slate-600">Name</th>
+                            <th class="px-6 py-4 font-bold text-slate-600">Date</th>
+                            <th class="px-6 py-4 font-bold text-slate-600">Project</th>
+                            <th class="px-6 py-4 font-bold text-slate-600">Process</th>
+                            <th class="px-6 py-4 font-bold text-slate-600">Duration</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100" id="tableBody">
+                        {% for row in table_data %}
+                        <tr class="bg-white hover:bg-gray-50 transition-colors">
+                            <td class="px-6 py-4 font-medium text-gray-900">{{ row[0] }}</td>
+                            <td class="px-6 py-4 text-slate-500">{{ row[1] }}</td>
+                            <td class="px-6 py-4"><span class="bg-slate-100 px-2 py-1 rounded text-xs">{{ row[2] }}</span></td>
+                            <td class="px-6 py-4">{{ row[3] }}</td>
+                            <td class="px-6 py-4 font-mono text-indigo-600 font-bold"><span class="format-time">{{ row[5] }}</span></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- DRILL DOWN MODAL (Existing) -->
+    <div id="detailsModal" class="fixed inset-0 z-50 hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+        <div class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm transition-opacity" onclick="closeModal()"></div>
+        <div class="fixed inset-0 z-10 overflow-y-auto">
+            <div class="flex min-h-full items-center justify-center p-4 text-center sm:p-0">
+                <div class="relative transform overflow-hidden rounded-2xl bg-white text-left shadow-2xl transition-all sm:my-8 sm:w-full sm:max-w-4xl border border-gray-100">
+                    <!-- Modal Header -->
+                    <div class="bg-white px-4 pb-4 pt-5 sm:p-6 sm:pb-4 border-b border-gray-100 flex justify-between items-center">
+                        <div class="flex items-center gap-3">
+                            <div class="h-10 w-10 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-600">
+                                <i class="fas fa-list-alt text-lg"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-lg font-bold leading-6 text-gray-900" id="modalTitle">Drill Down Details</h3>
+                                <p class="text-xs text-gray-500 mt-0.5">Viewing filtered records</p>
+                            </div>
+                        </div>
+                        <button type="button" class="text-gray-400 hover:text-gray-600 transition-colors" onclick="closeModal()">
+                            <i class="fas fa-times text-xl"></i>
+                        </button>
+                    </div>
+                    <!-- Modal Body (Table) -->
+                    <div class="bg-gray-50/50 px-4 py-4 sm:p-6 max-h-[60vh] overflow-y-auto custom-scrollbar">
+                        <table class="w-full text-sm text-left text-gray-500 shadow-sm rounded-lg overflow-hidden border border-gray-200 bg-white">
+                            <thead class="text-xs text-gray-700 uppercase bg-gray-50 sticky top-0">
+                                <tr>
+                                    <th class="px-6 py-3">Name</th>
+                                    <th class="px-6 py-3">Date</th>
+                                    <th class="px-6 py-3">Project</th>
+                                    <th class="px-6 py-3">Process</th>
+                                    <th class="px-6 py-3">Sub Process</th>
+                                    <th class="px-6 py-3 text-right">Duration</th>
+                                </tr>
+                            </thead>
+                            <tbody id="modalTableBody" class="divide-y divide-gray-100"></tbody>
+                        </table>
+                        <div id="noDataMessage" class="hidden text-center py-10 text-gray-400">
+                            <i class="fas fa-inbox text-3xl mb-2"></i>
+                            <p>No matching records found in recent logs.</p>
+                        </div>
+                    </div>
+                    <!-- Modal Footer -->
+                    <div class="bg-white px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6 border-t border-gray-100">
+                        <button type="button" class="mt-3 inline-flex w-full justify-center rounded-lg bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto transition-all" onclick="closeModal()">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
-</div>
 
+    <!-- USER HUB MODAL (NEW SUPER FEATURE) -->
+    <div id="userHubModal" class="fixed inset-0 z-50 hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+        <div class="fixed inset-0 bg-gray-900/60 backdrop-blur-md transition-opacity" onclick="closeUserHub()"></div>
+        <div class="fixed inset-0 z-10 overflow-y-auto">
+            <div class="flex min-h-full items-center justify-center p-4 text-center sm:p-0">
+                <div class="relative transform overflow-hidden rounded-2xl bg-white text-left shadow-2xl transition-all sm:my-8 sm:w-full sm:max-w-5xl border border-gray-100">
+                    
+                    <!-- Header -->
+                    <div class="bg-white px-6 py-5 border-b border-gray-100 flex flex-col md:flex-row justify-between items-center gap-4">
+                        <div class="flex items-center gap-4">
+                            <div class="h-12 w-12 bg-purple-100 rounded-xl flex items-center justify-center text-purple-600 shadow-sm">
+                                <i class="fas fa-users-cog text-2xl"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-xl font-bold leading-6 text-gray-900">Contributors Intelligence Hub</h3>
+                                <p class="text-sm text-gray-500 mt-1">Advanced analytics per user</p>
+                            </div>
+                        </div>
+                        <div class="flex gap-3 w-full md:w-auto">
+                             <div class="relative flex-grow md:flex-grow-0">
+                                <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
+                                <input type="text" id="userHubSearch" placeholder="Search user..." class="pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 outline-none w-full" onkeyup="filterUserHub()">
+                            </div>
+                            <button type="button" class="text-gray-400 hover:text-gray-600 transition-colors p-2" onclick="closeUserHub()">
+                                <i class="fas fa-times text-xl"></i>
+                            </button>
+                        </div>
+                    </div>
 
-<!-- Chart.js Scripts -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
-    document.addEventListener('DOMContentLoaded', () => {
-        // Attach click listener to cards
-        document.querySelectorAll('.card').forEach(card => {
-            if (card.hasAttribute('data-title')) {
-                card.addEventListener('click', () => {
-                    const title = card.getAttribute('data-title');
-                    const body = card.getAttribute('data-body');
-                    openModal(title, body);
+                    <!-- Hub Body -->
+                    <div class="bg-gray-50 px-6 py-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
+                        <div id="userCardsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                            <!-- Cards Injected via JS -->
+                        </div>
+                    </div>
+
+                    <!-- Footer -->
+                    <div class="bg-white px-6 py-4 border-t border-gray-100 flex justify-between items-center">
+                        <span class="text-xs text-gray-400" id="userHubCount">Loading users...</span>
+                        <button type="button" class="rounded-lg bg-gray-100 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-200 transition-all" onclick="closeUserHub()">Close Directory</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        //  1. HELPERS & FORMATTERS
+        // ==========================================
+        function decimalToHHMM(decimal) {
+            if (!decimal && decimal !== 0) return "00:00";
+            if (decimal > 1000) decimal = decimal / 3600;
+            const hrs = Math.floor(decimal);
+            const mins = Math.round((decimal - hrs) * 60);
+            if (mins === 60) return `${hrs + 1}:00`;
+            return `${hrs}:${mins.toString().padStart(2, '0')}`;
+        }
+
+        // Apply formatting on load
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('.format-time').forEach(el => {
+                const text = el.innerText.trim();
+                if (text.includes(':')) {
+                    const parts = text.split(':');
+                    if (parts.length >= 2) { el.innerText = `${parseInt(parts[0])}:${parts[1]}`; return; }
+                }
+                const val = parseFloat(text);
+                if (!isNaN(val)) el.innerText = decimalToHHMM(val);
+            });
+        });
+
+        // ==========================================
+        //  2. DRILL-DOWN LOGIC (INTERACTIVITY)
+        // ==========================================
+        const allLogs = {{ table_data | tojson }};
+
+        const modal = document.getElementById('detailsModal');
+        const modalTitle = document.getElementById('modalTitle');
+        const modalTableBody = document.getElementById('modalTableBody');
+        const noDataMessage = document.getElementById('noDataMessage');
+
+        function openModal(title, filterFn) {
+            modalTitle.innerText = title;
+            modalTableBody.innerHTML = ''; 
+            const filteredLogs = allLogs.filter(filterFn);
+
+            if (filteredLogs.length === 0) {
+                noDataMessage.classList.remove('hidden');
+            } else {
+                noDataMessage.classList.add('hidden');
+                filteredLogs.forEach(row => {
+                    const tr = document.createElement('tr');
+                    tr.className = "hover:bg-gray-50 transition-colors";
+                    let processColor = row[3] === 'Breaks' ? 'text-amber-600' : 'text-emerald-600';
+                    let processIcon = row[3] === 'Breaks' ? '<i class="fas fa-mug-hot text-xs mr-1"></i>' : '<i class="fas fa-check-circle text-xs mr-1"></i>';
+
+                    tr.innerHTML = `
+                        <td class="px-6 py-3 font-medium text-gray-900">${row[0]}</td>
+                        <td class="px-6 py-3 text-slate-500">${row[1]}</td>
+                        <td class="px-6 py-3"><span class="bg-slate-100 border border-slate-200 px-2 py-0.5 rounded text-xs text-slate-600 font-semibold">${row[2]}</span></td>
+                        <td class="px-6 py-3 font-semibold ${processColor}">${processIcon} ${row[3]}</td>
+                        <td class="px-6 py-3 text-slate-500">${row[4] || '-'}</td>
+                        <td class="px-6 py-3 text-right font-mono text-indigo-600 font-bold">${decimalToHHMM(row[5])}</td>
+                    `;
+                    modalTableBody.appendChild(tr);
                 });
             }
-        });
-    });
-
-    // Utility function for Modal
-    function openModal(title, body) {
-        document.getElementById('modalTitle').textContent = title;
-        document.getElementById('modalBody').textContent = body;
-        document.getElementById('modalDetails').innerHTML = ''; // Clear previous details
-
-        if (title.includes('Active Projects')) {
-            const listHtml = document.getElementById('project-list-summary').innerHTML;
-            document.getElementById('modalDetails').innerHTML = `
-                <p class="font-semibold text-white mb-2 mt-2">All {{ active_project_codes|length }} Project Codes:</p>
-                <div class="bg-background p-3 rounded-lg max-h-60 overflow-y-auto">
-                    ${listHtml}
-                </div>
-            `;
+            modal.classList.remove('hidden');
         }
+
+        function closeModal() {
+            modal.classList.add('hidden');
+        }
+
+        // ==========================================
+        //  3. USER INTELLIGENCE HUB (NEW)
+        // ==========================================
+        const userHubModal = document.getElementById('userHubModal');
+        const userCardsGrid = document.getElementById('userCardsGrid');
+        let userStats = [];
+
+        function generateUserStats() {
+            const stats = {};
+            // Aggregate data from allLogs
+            allLogs.forEach(row => {
+                const name = row[0];
+                const project = row[2];
+                // Handle different duration formats if necessary, here assumed float
+                const duration = typeof row[5] === 'string' && row[5].includes(':') 
+                    ? parseFloat(row[5].split(':')[0]) + parseFloat(row[5].split(':')[1])/60 
+                    : parseFloat(row[5]);
+
+                if (!stats[name]) {
+                    stats[name] = { 
+                        name: name, 
+                        totalHours: 0, 
+                        projects: {}, 
+                        entries: 0,
+                        lastActive: row[1]
+                    };
+                }
+                stats[name].totalHours += (isNaN(duration) ? 0 : duration);
+                stats[name].entries += 1;
+                stats[name].projects[project] = (stats[name].projects[project] || 0) + 1;
+                // Simple date compare for last active
+                if (row[1] > stats[name].lastActive) stats[name].lastActive = row[1];
+            });
+
+            // Convert to array and find top project
+            return Object.values(stats).map(u => {
+                // Find Top Project
+                let topProj = 'N/A';
+                let maxCount = 0;
+                for (const [proj, count] of Object.entries(u.projects)) {
+                    if (count > maxCount) { maxCount = count; topProj = proj; }
+                }
+                u.topProject = topProj;
+                return u;
+            }).sort((a, b) => b.totalHours - a.totalHours); // Sort by hours desc
+        }
+
+        function openUserHub() {
+            userStats = generateUserStats();
+            renderUserCards(userStats);
+            userHubModal.classList.remove('hidden');
+        }
+
+        function closeUserHub() {
+            userHubModal.classList.add('hidden');
+        }
+
+        function renderUserCards(data) {
+            userCardsGrid.innerHTML = '';
+            document.getElementById('userHubCount').innerText = `${data.length} Active Contributors`;
+
+            if (data.length === 0) {
+                userCardsGrid.innerHTML = `<div class="col-span-full text-center text-gray-400 py-10">No users found.</div>`;
+                return;
+            }
+
+            // Find Max hours for Progress Bar
+            const maxHours = Math.max(...data.map(u => u.totalHours)) || 1;
+
+            data.forEach(user => {
+                const percentage = Math.round((user.totalHours / maxHours) * 100);
+                const initials = user.name.slice(0, 2).toUpperCase();
+                
+                // Card HTML
+                const card = document.createElement('div');
+                card.className = "bg-white rounded-xl p-5 border border-gray-200 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden";
+                card.innerHTML = `
+                    <div class="flex items-center gap-4 mb-4">
+                        <div class="h-12 w-12 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 text-white flex items-center justify-center font-bold text-lg shadow-md border-2 border-white">
+                            ${initials}
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-gray-800 text-lg leading-tight">${user.name}</h4>
+                            <p class="text-xs text-gray-500 mt-0.5"><i class="fas fa-clock mr-1"></i>Last Active: ${user.lastActive}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-center text-sm">
+                            <span class="text-gray-500">Focus Area</span>
+                            <span class="font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded text-xs truncate max-w-[120px]">${user.topProject}</span>
+                        </div>
+                        <div class="flex justify-between items-center text-sm">
+                            <span class="text-gray-500">Total Output</span>
+                            <span class="font-bold text-gray-800">${decimalToHHMM(user.totalHours)} <span class="text-xs font-normal text-gray-400">/ ${user.entries} logs</span></span>
+                        </div>
+                        
+                        <!-- Efficiency Bar -->
+                        <div class="w-full bg-gray-100 rounded-full h-1.5 mt-2">
+                            <div class="bg-purple-500 h-1.5 rounded-full" style="width: ${percentage}%"></div>
+                        </div>
+                    </div>
+
+                    <button onclick="closeUserHub(); openModal('Logs for ${user.name}', (row) => row[0] == '${user.name}')" class="w-full mt-5 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 font-medium py-2 rounded-lg text-sm transition-colors shadow-sm">
+                        View Activity Log
+                    </button>
+                `;
+                userCardsGrid.appendChild(card);
+            });
+        }
+
+        function filterUserHub() {
+            const query = document.getElementById('userHubSearch').value.toLowerCase();
+            const filtered = userStats.filter(u => 
+                u.name.toLowerCase().includes(query) || 
+                u.topProject.toLowerCase().includes(query)
+            );
+            renderUserCards(filtered);
+        }
+
+        // ==========================================
+        //  4. CHART CONFIGURATIONS
+        // ==========================================
         
-        document.getElementById('infoModal').style.display = 'flex';
-    }
+        const rawTrendData = {{ daily_work_break_data | tojson }};
+        rawTrendData.reverse(); 
+        const dailyLabels = rawTrendData.map(d => d[0]);
+        const dailyWork = rawTrendData.map(d => d[1]);
+        const dailyBreak = rawTrendData.map(d => d[2]);
 
-    function closeModal() {
-        document.getElementById('infoModal').style.display = 'none';
-    }
+        const rawProcessData = {{ process_data | tojson }};
+        const processLabels = rawProcessData.map(d => d[0]);
+        const processData = rawProcessData.map(d => d[1]);
 
-    // --- Chart Data Initialization ---
-    
-    // Process Chart
-    const processChart = new Chart(document.getElementById("processChart"), {
-        type: "bar",
-        data: {
-            labels: {{ process_data|map(attribute=0)|list|tojson }},
-            datasets: [{
-                label: "Entries Count",
-                data: {{ process_data|map(attribute=1)|list|tojson }},
-                backgroundColor: "var(--brand)"
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                title: { display: true, text: 'Process Breakdown (Entries)', color: '#ccc' },
-                legend: { display: false }
-            }
-        }
-    });
-    
-    // Daily Work Break Chart
-    const dailyWorkBreakChart = new Chart(document.getElementById("dailyWorkBreakChart"), {
-        type: "line",
-        data: {
-            labels: {{ daily_work_break_data|map(attribute=0)|list|tojson }},
-            datasets: [{
-                label: "Work Hours",
-                data: {{ daily_work_break_data|map(attribute=1)|list|tojson }},
-                borderColor: "#2ecc71",
-                fill: false, tension: 0.3
-            }, {
-                label: "Break Hours",
-                data: {{ daily_work_break_data|map(attribute=2)|list|tojson }},
-                borderColor: "#e74c3c",
-                fill: false, tension: 0.3
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                title: { display: true, text: 'Daily Work vs. Break Hours', color: '#ccc' }
-            }
-        }
-    });
+        const rawProjectData = {{ project_hours_data | tojson }};
+        const projectLabels = rawProjectData.map(d => d[0]);
+        const projectData = rawProjectData.map(d => d[1]);
 
-    // Top User Hours Chart
-    const userHoursChart = new Chart(document.getElementById("userHoursChart"), {
-        type: "bar",
-        data: {
-            labels: {{ user_hours|map(attribute=0)|list|tojson }},
-            datasets: [{
-                label: "Hours",
-                data: {{ user_hours|map(attribute=1)|list|tojson }},
-                backgroundColor: "var(--highlight)"
-            }]
-        },
-        options: {
-            indexAxis: 'y', // Horizontal bars
-            responsive: true,
-            plugins: {
-                title: { display: true, text: 'Top User Hours', color: '#ccc' },
-                legend: { display: false }
-            }
-        }
-    });
-    
-    // Sub-Process Chart
-    const subProcessChart = new Chart(document.getElementById("subProcessChart"), {
-        type: "pie",
-        data: {
-            labels: {{ sub_process_data|map(attribute=0)|list|tojson }},
-            datasets: [{
-                data: {{ sub_process_data|map(attribute=1)|list|tojson }},
-                backgroundColor: ["#3498db", "#ffd24d", "#9b59b6", "#1abc9c", "#f39c12"]
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                title: { display: true, text: 'Sub-Process Distribution', color: '#ccc' }
-            }
-        }
-    });
+        const rawUserData = {{ user_hours | tojson }};
+        const userLabels = rawUserData.map(d => d[0]);
+        const userData = rawUserData.map(d => d[1]);
 
-    // Project Hours Chart
-    const projectHoursChart = new Chart(document.getElementById("projectHoursChart"), {
-        type: "bar",
-        data: {
-            labels: {{ project_hours_data|map(attribute=0)|list|tojson }},
-            datasets: [{
-                label: "Total Hours",
-                data: {{ project_hours_data|map(attribute=1)|list|tojson }},
-                backgroundColor: "#2ecc71"
-            }]
-        },
-        options: {
-            indexAxis: 'y', // Horizontal bars
-            responsive: true,
-            plugins: {
-                title: { display: true, text: 'Project-wise Hours', color: '#ccc' }
+        Chart.defaults.font.family = "'Inter', sans-serif";
+        Chart.defaults.color = '#64748b';
+        
+        const commonTooltipOptions = {
+            backgroundColor: 'rgba(15, 23, 42, 0.9)',
+            titleColor: '#f8fafc',
+            bodyColor: '#e2e8f0',
+            padding: 12,
+            cornerRadius: 8,
+            displayColors: true,
+            callbacks: {
+                label: function(context) {
+                    let label = context.dataset.label || context.label || '';
+                    if (label) label += ': ';
+                    if (context.parsed.y !== null && context.chart.config.type !== 'doughnut' && (context.chart.config.type !== 'bar' || context.chart.config.options.indexAxis !== 'y')) {
+                         label += decimalToHHMM(context.parsed.y);
+                    } else if (context.parsed.x !== null && context.chart.config.type !== 'doughnut') { 
+                         label += decimalToHHMM(context.parsed.x);
+                    } else if (context.raw !== null) {
+                        label += decimalToHHMM(context.raw);
+                    }
+                    return label;
+                }
             }
-        }
-    });
-</script>
-{% endblock %}
+        };
+
+        // --- 1. Trend Chart (Clickable) ---
+        new Chart(document.getElementById('trendChart'), {
+            type: 'bar',
+            data: {
+                labels: dailyLabels,
+                datasets: [
+                    { label: 'Work', data: dailyWork, backgroundColor: '#6366f1', borderRadius: 6 },
+                    { label: 'Break', data: dailyBreak, backgroundColor: '#fbbf24', borderRadius: 6 }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: { x: { stacked: true, grid: { display: false } }, y: { stacked: true, grid: { borderDash: [4, 4] }, ticks: { callback: v => decimalToHHMM(v) } } },
+                plugins: { legend: { position: 'top', align: 'end' }, tooltip: commonTooltipOptions },
+                onClick: (e, activeEls, chart) => {
+                    if (activeEls.length > 0) {
+                        const index = activeEls[0].index;
+                        const dateClicked = chart.data.labels[index];
+                        openModal(`Logs for ${dateClicked}`, (row) => row[1] == dateClicked);
+                    }
+                }
+            }
+        });
+
+        // --- 2. Process Chart (Clickable) ---
+        new Chart(document.getElementById('processChart'), {
+            type: 'doughnut',
+            data: {
+                labels: processLabels,
+                datasets: [{
+                    data: processData,
+                    backgroundColor: ['#6366f1', '#10b981', '#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899'],
+                    borderWidth: 0,
+                    hoverOffset: 10
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '75%',
+                plugins: { legend: { position: 'right' }, tooltip: commonTooltipOptions },
+                onClick: (e, activeEls, chart) => {
+                    if (activeEls.length > 0) {
+                        const index = activeEls[0].index;
+                        const processClicked = chart.data.labels[index];
+                        openModal(`Logs: ${processClicked}`, (row) => row[3] == processClicked);
+                    }
+                }
+            }
+        });
+
+        // --- 3. Project Chart (Clickable) ---
+        new Chart(document.getElementById('projectChart'), {
+            type: 'bar',
+            indexAxis: 'y',
+            data: {
+                labels: projectLabels,
+                datasets: [{ label: 'Hours', data: projectData, backgroundColor: '#3b82f6', borderRadius: 4 }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false }, tooltip: commonTooltipOptions },
+                scales: { x: { grid: { borderDash: [4, 4] }, ticks: { callback: v => decimalToHHMM(v) } }, y: { grid: { display: false } } },
+                onClick: (e, activeEls, chart) => {
+                    if (activeEls.length > 0) {
+                        const index = activeEls[0].index;
+                        const projectClicked = chart.data.labels[index];
+                        openModal(`Logs for ${projectClicked}`, (row) => row[2] == projectClicked);
+                    }
+                }
+            }
+        });
+
+        // --- 4. User Chart (Clickable) ---
+        new Chart(document.getElementById('userChart'), {
+            type: 'bar',
+            data: {
+                labels: userLabels,
+                datasets: [{ label: 'Hours', data: userData, backgroundColor: '#10b981', borderRadius: 6 }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false }, tooltip: commonTooltipOptions },
+                scales: { y: { grid: { borderDash: [4, 4] }, ticks: { callback: v => decimalToHHMM(v) } }, x: { grid: { display: false } } },
+                onClick: (e, activeEls, chart) => {
+                    if (activeEls.length > 0) {
+                        const index = activeEls[0].index;
+                        const userClicked = chart.data.labels[index];
+                        openModal(`Logs for ${userClicked}`, (row) => row[0] == userClicked);
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
