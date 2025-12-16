@@ -1128,7 +1128,7 @@ def login():
             
             # ✅ SUCCESS LOG
             log_user_action("USER_LOGIN", "N/A", "User logged in successfully")
-            return redirect("/welcome")
+            return redirect("/welcome?new_session=true")
         
         # ❌ FAILURE LOG (New Addition)
         # Note: Session innum set aagala, so log la 'Name' -> 'System' nu vizhum.
@@ -1562,7 +1562,7 @@ def admin_project_codes():
 def assign_projects():
     me = User.query.filter_by(username=session["username"]).first()
     users = User.query.filter_by(team=me.team).all() if me.team else User.query.all()
-    codes = ProjectCode.query.filter_by(team=me.team).all() if me.team else ProjectCode.query.all()
+    codes = ProjectCode.query.filter_by(team=me.team).order_by(ProjectCode.id.desc()).all() if me.team else ProjectCode.query.order_by(ProjectCode.id.desc()).all()
 
     if request.method == "POST":
         action = request.form.get("action", "")
@@ -2803,16 +2803,199 @@ def send_email_report(to_email, subject, html_body):
 app.register_blueprint(dashboard_bp, url_prefix='/admin/dashboard')
 
 # 👇👇 INGA PASTE PANNU 👇👇
-@app.errorhandler(500)
-def internal_error(error):
-    log_user_action("SYSTEM_ERROR", "500", f"Internal Server Error: {str(error)}")
-    return "500 Internal Server Error", 500
+# @app.errorhandler(500)
+# def internal_error(error):
+#     log_user_action("SYSTEM_ERROR", "500", f"Internal Server Error: {str(error)}")
+#     return "500 Internal Server Error", 500
 
-@app.errorhandler(404)
-def not_found_error(error):
-    log_user_action("PAGE_NOT_FOUND", "404", f"Missing Page: {request.path}")
-    return "404 Not Found", 404
+# @app.errorhandler(404)
+# def not_found_error(error):
+#     log_user_action("PAGE_NOT_FOUND", "404", f"Missing Page: {request.path}")
+#     return "404 Not Found", 404
 # 👆👆 MUDINJATHU 👆👆
+# ── ADMIN USER DASHBOARD API ─────────────────────────────────────────────
+# ── ADMIN: GET USER DASHBOARD STATS (7 DAYS HH:MM FORMAT FIXED) ───────────
+# ── ADMIN: GET USER DASHBOARD STATS (FULL FINAL FIX) ──────────────────────
+@app.route("/api/admin/get-user-dashboard-stats", methods=["POST"])
+@role_required("superadmin", "admin")
+def get_user_dashboard_stats():
+    data = request.get_json()
+    target_username = data.get("username")
+    
+    # 1. Permission Check
+    me = User.query.filter_by(username=session["username"]).first()
+    target_user = User.query.filter_by(username=target_username).first()
+    
+    if not target_user:
+        return jsonify({"error": "User not found"}), 404
+    if me.role != "superadmin" and me.team != target_user.team:
+        return jsonify({"error": "Permission denied"}), 403
+
+    # 2. Date Setup
+    today = date.today()
+    start_week = today - timedelta(days=today.weekday()) 
+    curr_month_start = today.replace(day=1)
+    
+    last_month_end = curr_month_start - timedelta(days=1)
+    last_month_start = last_month_end.replace(day=1)
+    
+    start_7_days = today - timedelta(days=6)
+
+    cur = mysql.connection.cursor()
+
+    # --- HELPER FUNCTIONS ---
+    def get_float(val):
+        return float(val) if val else 0.0
+
+    def seconds_to_hm(seconds):
+        """Returns '8h 20m' format"""
+        if not seconds: return "0h 0m"
+        seconds = int(round(float(seconds))) 
+        m, s = divmod(abs(seconds), 60)
+        h, m = divmod(m, 60)
+        return f"{h}h {m}m"
+
+    # 🔥 FILTER: Exclude 'Lunch Break' only (Productive Hours)
+    dashboard_filter = "AND NOT (process = 'Breaks' AND sub_process = 'Lunch Break')"
+
+    # ==============================================================================
+    # 1. CURRENT MONTH TOTAL (Lunch Excluded, Accurate Minutes)
+    # ==============================================================================
+    cur.execute(f"""
+        SELECT SUM(TIME_TO_SEC(duration)) FROM timesheetlogs 
+        WHERE name = %s AND date BETWEEN %s AND %s
+        {dashboard_filter}
+    """, (target_username, curr_month_start, today))
+    month_secs = get_float(cur.fetchone()[0])
+    
+    month_leaves = calculate_leaves_for_range(target_username, curr_month_start, today)
+    
+    cur.execute(f"""
+        SELECT COUNT(DISTINCT date) FROM timesheetlogs 
+        WHERE name = %s AND date BETWEEN %s AND %s AND duration IS NOT NULL
+        {dashboard_filter}
+    """, (target_username, curr_month_start, today))
+    month_days_worked = cur.fetchone()[0] or 0
+
+    # ==============================================================================
+    # 2. WEEKLY PROGRESS (Lunch Excluded, Accurate Minutes)
+    # ==============================================================================
+    cur.execute(f"""
+        SELECT SUM(TIME_TO_SEC(duration)) FROM timesheetlogs 
+        WHERE name = %s AND date BETWEEN %s AND %s
+        {dashboard_filter}
+    """, (target_username, start_week, today))
+    week_secs = get_float(cur.fetchone()[0])
+    
+    # Weekly Target Logic
+    week_target_hours = 0
+    check_d = start_week
+    while check_d <= today:
+        if check_d.weekday() <= 4: week_target_hours += 8.0 
+        elif check_d.weekday() == 5: week_target_hours += 7.5 
+        check_d += timedelta(days=1)
+    week_target_secs = week_target_hours * 3600
+
+    # ==============================================================================
+    # 3. LAST MONTH SNAPSHOT
+    # ==============================================================================
+    lm_leaves = calculate_leaves_for_range(target_username, last_month_start, last_month_end)
+    
+    cur.execute(f"""
+        SELECT COUNT(DISTINCT date), SUM(TIME_TO_SEC(duration))
+        FROM timesheetlogs 
+        WHERE name = %s AND date BETWEEN %s AND %s
+        AND duration IS NOT NULL
+        {dashboard_filter}
+    """, (target_username, last_month_start, last_month_end))
+    lm_row = cur.fetchone()
+    lm_days = lm_row[0] or 0
+    lm_total_secs = get_float(lm_row[1])
+    
+    lm_avg = 0
+    if lm_days > 0:
+        lm_avg = round((lm_total_secs / 3600) / lm_days, 1)
+
+    # Last Month Comp (Display)
+    cur.execute("""
+        SELECT SUM(CASE WHEN Work_Type = 'Compensation' THEN TIME_TO_SEC(duration) ELSE 0 END) -
+               SUM(CASE WHEN (process='Breaks' AND sub_process='Personal') OR 
+                             (process='Permission') 
+                        THEN TIME_TO_SEC(duration) ELSE 0 END)
+        FROM timesheetlogs WHERE name=%s AND date BETWEEN %s AND %s
+    """, (target_username, last_month_start, last_month_end))
+    lm_comp_secs = get_float(cur.fetchone()[0])
+
+    # ==============================================================================
+    # 4. COMP BALANCE (Standard Logic - Not affected by Dashboard Filter)
+    # ==============================================================================
+    cur.execute("""
+        SELECT 
+            SUM(CASE WHEN Work_Type = 'Compensation' THEN TIME_TO_SEC(duration) ELSE 0 END) as comp_done,
+            SUM(CASE WHEN (process='Breaks' AND sub_process='Personal') OR 
+                          (process='Permission' AND sub_process IN ('Personal', 'Sick', 'Early Close')) 
+                     THEN TIME_TO_SEC(duration) ELSE 0 END) as permission_taken
+        FROM timesheetlogs 
+        WHERE name=%s AND MONTH(date)=%s AND YEAR(date)=%s
+    """, (target_username, today.month, today.year))
+    
+    cb_row = cur.fetchone()
+    comp_secs = get_float(cb_row[0]) 
+    perm_secs = get_float(cb_row[1]) 
+    balance_secs = perm_secs - comp_secs
+
+    # ==============================================================================
+    # 5. LAST 7 DAYS CHART ( HH:MM FORMAT FIX )
+    # ==============================================================================
+    cur.execute(f"""
+        SELECT date, SUM(TIME_TO_SEC(duration)) FROM timesheetlogs 
+        WHERE name=%s AND date BETWEEN %s AND %s
+        {dashboard_filter}
+        GROUP BY date ORDER BY date
+    """, (target_username, start_7_days, today))
+    chart_rows = cur.fetchall()
+    chart_map = {str(r[0]): get_float(r[1]) for r in chart_rows}
+    
+    formatted_chart = []
+    d = start_7_days
+    while d <= today:
+        d_str = d.strftime("%Y-%m-%d")
+        secs = chart_map.get(d_str, 0)
+        
+        # 🔥 FIX: Convert Seconds to HH:MM format (e.g., 8:23) string
+        if secs > 0:
+            h = int(secs // 3600)
+            m = int((secs % 3600) // 60)
+            hours_display = f"{h}:{m:02d}" # Returns "8:23"
+        else:
+            hours_display = "0:00"
+
+        formatted_chart.append({
+            "day": d.strftime("%a"),
+            "date": d.strftime("%d/%m"),
+            "hours": hours_display 
+        })
+        d += timedelta(days=1)
+
+    cur.close()
+
+    return jsonify({
+        "month_total": seconds_to_hm(month_secs),
+        "month_leaves": month_leaves,
+        "month_days": month_days_worked,
+        "week_total": seconds_to_hm(week_secs),
+        "week_target": week_target_hours,
+        "week_pct": int((week_secs/week_target_secs)*100) if week_target_secs > 0 else 0,
+        "lm_days": lm_days,
+        "lm_leaves": lm_leaves,
+        "lm_avg": lm_avg,
+        "lm_comp": seconds_to_hm(lm_comp_secs),
+        "comp_perm": seconds_to_hm(perm_secs),
+        "comp_done": seconds_to_hm(comp_secs),
+        "comp_bal": seconds_to_hm(balance_secs),
+        "comp_status": "pending" if balance_secs > 0 else "surplus",
+        "chart_data": formatted_chart
+    })
 # ── AUDIT LOG VIEWER (SUPERADMIN ONLY) ────────────────────────────────────
 @app.route("/admin/audit-logs", methods=["GET"])
 @role_required("superadmin")

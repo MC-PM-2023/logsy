@@ -468,6 +468,24 @@
       window.addEventListener('keydown', (e)=>{ if(e.key === 'Escape'){ openDD(false); }});
     })();
   </script>
-  
+  <script>
+    (function() {
+      // 1. URL-ல new_session=true இருந்தா (Login-ல இருந்து வந்தா), Key-அ செட் பண்ணு
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('new_session') === 'true') {
+          sessionStorage.setItem("logsy_active", "yes");
+          // URL-ல இருக்கற ?new_session=true ஐ மறைக்க (Clean URL)
+          window.history.replaceState({}, document.title, window.location.pathname);
+      }
+
+      // 2. அந்த Key இல்லன்னா (Tab Close பண்ணிட்டு வந்தா), Logout பண்ணிடு
+      // குறிப்பு: sessionStorage Tab க்ளோஸ் பண்ணா அழிஞ்சிடும், ஆனா Refresh பண்ணா அழியாது.
+      if (!sessionStorage.getItem("logsy_active")) {
+          // Server-ல செஷன் இருந்தாலும், Tab க்ளோஸ் ஆனதால வெளிய அனுப்பு
+          window.location.href = "{{ url_for('logout') }}";
+      }
+    })();
+  </script>
+
 </body>
 </html>

@@ -24,19 +24,11 @@ body {
 
 /* Wrapper - The Magic Container */
 .wrap {
-  /* Height: Fill vertical space minus headers */
   height: calc(100vh - 90px);
-  
-  /* WIDTH: Auto fills available space */
   width: auto; 
-  
-  /* DEFAULT PADDING (Safe start) */
   padding: 15px 20px;
-  
   display: flex;
   flex-direction: column;
-  
-  /* Smooth animation when margin changes */
   transition: margin-left 0.3s ease-in-out;
 }
 
@@ -50,7 +42,7 @@ body {
   height: 100%; 
   overflow: hidden;
   padding: 0;
-  width: 100%; /* Force card to fill wrap */
+  width: 100%;
 }
 
 /* --- 2. Header Area --- */
@@ -95,8 +87,8 @@ table {
   border-collapse: separate; 
   border-spacing: 0; 
   font-size: 13px; 
-  table-layout: fixed; /* Important for standard columns */
-  min-width: 800px;    /* Prevent crushing on very small screens */
+  table-layout: fixed; 
+  min-width: 800px;    
 }
 
 /* Sticky Header */
@@ -161,14 +153,12 @@ button:hover { background: var(--primary-hover); }
 <div class="wrap" id="mainWrap">
   <div class="card">
     
-    <!-- Header -->
     <div class="card-head">
        <div style="display:flex; flex-direction:column; gap:4px;">
          <a href="/home" class="back">&larr; Back to Dashboard</a>
          <h1>User Management</h1>
        </div>
 
-       <!-- Flash Messages -->
        {% with messages = get_flashed_messages(with_categories=true) %}
          {% if messages %}
            <div class="flash-group">
@@ -180,22 +170,12 @@ button:hover { background: var(--primary-hover); }
        {% endwith %}
     </div>
 
-    <!-- Table -->
     <div class="table-wrap">
       <table>
-        <!-- Standard Widths (Percentages for fluidity) -->
         <colgroup>
-          <col style="width: 5%;">   <!-- ID -->
-          <col style="width: 20%;">  <!-- Username -->
-          <col style="width: 25%;">  <!-- Email -->
-          <col style="width: 10%;">  <!-- Status -->
-          <col style="width: 15%;">  <!-- Team -->
-          <col style="width: 15%;">  <!-- Role -->
-          <col style="width: 10%;">  <!-- Action -->
-        </colgroup>
+          <col style="width: 25%;">  <col style="width: 25%;">  <col style="width: 10%;">  <col style="width: 15%;">  <col style="width: 15%;">  <col style="width: 10%;">  </colgroup>
         <thead>
           <tr>
-            <th>ID</th>
             <th>Username</th>
             <th>Email</th>
             <th>Status</th>
@@ -207,7 +187,6 @@ button:hover { background: var(--primary-hover); }
         <tbody>
           {% for u in users %}
             <tr>
-              <td>{{ u.id }}</td>
               <td>
                 <div class="user-td">
                   <img class="user-ava" 
@@ -246,66 +225,44 @@ button:hover { background: var(--primary-hover); }
               </td>
             </tr>
           {% else %}
-            <tr><td colspan="7" style="padding:20px; color:#aaa; text-align:center;">No users found.</td></tr>
+            <tr><td colspan="6" style="padding:20px; color:#aaa; text-align:center;">No users found.</td></tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
 
-    <!-- Footer -->
     <div class="card-foot">
       © Datasolve Analytics Pvt Ltd 2025.
     </div>
   </div>
 </div>
 
-<!-- SMART LAYOUT ADJUSTER SCRIPT -->
 <script>
   function checkSidebarAndAdjust() {
     const wrap = document.getElementById('mainWrap');
-    
-    // 1. Try to detect sidebar element visually
-    // We look for any element on the left that is tall
-    // This is a heuristic since we don't know the sidebar ID
     let sidebarWidth = 0;
-    
-    // Common sidebar IDs/Classes to try
     const potentialSidebars = document.querySelectorAll('nav, aside, .sidebar, #sidebar, .sidenav');
     
     for (let el of potentialSidebars) {
       const rect = el.getBoundingClientRect();
-      // If element is on the left, visible, and tall
       if (rect.left === 0 && rect.width > 0 && rect.height > 500) {
         sidebarWidth = Math.max(sidebarWidth, rect.width);
       }
     }
 
-    // 2. Fallback Logic if script can't find element:
-    // If we can't find it, check if body has a left margin/padding
     const bodyStyle = window.getComputedStyle(document.body);
     const marginLeft = parseInt(bodyStyle.marginLeft);
     if (marginLeft > 0) sidebarWidth = Math.max(sidebarWidth, marginLeft);
 
-    // 3. Apply Margin
-    // If Sidebar is Open (>100px), push content. 
-    // If Closed (usually <80px or 0), push less.
-    
     if (sidebarWidth > 190) {
-       // Sidebar Open state
-       // Add a small buffer (20px) so it doesn't touch
        wrap.style.marginLeft = (sidebarWidth + 8) + 'px';
     } else {
-       // Sidebar Closed state (or mini icon state)
-       // Use a safe default if detected width is 0, otherwise use width
        const safeMargin = sidebarWidth > 0 ? sidebarWidth + 10 : 80; 
        wrap.style.marginLeft = safeMargin + 'px';
     }
   }
 
-  // Run continuously to catch animations
   setInterval(checkSidebarAndAdjust, 300);
-  
-  // Initial Run
   window.addEventListener('load', checkSidebarAndAdjust);
   window.addEventListener('resize', checkSidebarAndAdjust);
 </script>

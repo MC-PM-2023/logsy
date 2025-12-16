@@ -6,14 +6,12 @@
    <title>{% block title %}Logsy - Analytics{% endblock %}</title>
   <link rel="icon" href="https://storage.googleapis.com/my-react-image-bucket-123/DS_Logos/Logsy_Favicon.png" type="image/x-icon">
 
-  <!-- Tailwind -->
   <script>
     window.tailwind = window.tailwind || {};
     tailwind.config = { darkMode: false };
   </script>
   <script src="https://cdn.tailwindcss.com"></script>
 
-  <!-- Bootstrap Icons (for calendar/home icons) -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"/>
 
   <style>
@@ -104,21 +102,79 @@
     .cal-cell:hover{background:var(--accent-50)}
     .cal-cell.disabled{opacity:.35;pointer-events:none}
     .cal-actions{display:flex;gap:.5rem;padding:.5rem .75rem;border-top:1px solid var(--card-border)}
-    .truncate-cell {
-      overflow: hidden;
-      text-overflow: ellipsis;
-      /* whitespace-nowrap is already on the cell from JS */
-    }
+    .truncate-cell { overflow: hidden; text-overflow: ellipsis; }
     .truncate-name { max-width: 180px; }
     .truncate-project { max-width: 200px; }
     .truncate-process { max-width: 160px; }
     .truncate-sub_process { max-width: 160px; }
     .truncate-project_type { max-width: 120px; }
 
+    /* --- ✅ NEW: LIGHT THEME USER DASHBOARD STYLES --- */
+    .ud-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 15px; margin-top: 15px; }
+    
+    /* Card: White BG, Light Border, Shadow */
+    .ud-card { 
+        background: #ffffff; 
+        border-radius: 12px; 
+        padding: 15px; 
+        position: relative; 
+        overflow: hidden; 
+        border: 1px solid #e2e8f0; 
+        border-left-width: 4px; /* Colorful left border */
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05); 
+    }
+    
+    /* Left Border Colors (Same as image) */
+    .ud-card.yellow { border-left-color: #f59e0b; }
+    .ud-card.green { border-left-color: #10b981; }
+    .ud-card.purple { border-left-color: #8b5cf6; }
+    .ud-card.red { border-left-color: #ef4444; }
+
+    /* Titles: Darker Text for Light Theme */
+    .ud-title { 
+        font-size: 11px; 
+        text-transform: uppercase; 
+        font-weight: 700; 
+        display: flex; 
+        align-items: center; 
+        gap: 6px; 
+        margin-bottom: 5px; 
+    }
+    .ud-title.yellow { color: #d97706; }
+    .ud-title.green { color: #059669; }
+    .ud-title.purple { color: #7c3aed; }
+    .ud-title.blue { color: #2563eb; }
+    .ud-title.slate { color: #475569; }
+
+    /* Values: Dark Text */
+    .ud-value { font-size: 28px; font-weight: 800; color: #0f172a; line-height: 1.2; }
+    
+    .ud-sub { font-size: 11px; color: #64748b; margin-top: 4px; display: flex; justify-content: space-between; }
+
+    /* Badges */
+    .ud-badge { padding: 3px 8px; border-radius: 6px; font-size: 10px; font-weight: bold; text-align: center; border: 1px solid; }
+    .ud-badge.red { background: #fef2f2; border-color: #fee2e2; color: #ef4444; }
+    .ud-badge.green { background: #ecfdf5; border-color: #d1fae5; color: #10b981; }
+    .ud-badge span { color: #1e293b; font-size: 13px; display: block; margin-top: 1px; }
+
+    /* 7-Day Chips */
+    .ud-chart-strip { display: flex; gap: 8px; margin-top: 15px; overflow-x: auto; padding-bottom: 5px; }
+    .ud-day-chip { 
+        background: #f8fafc; 
+        min-width: 60px; 
+        padding: 8px; 
+        border-radius: 8px; 
+        text-align: center; 
+        border: 1px solid #e2e8f0; 
+    }
+    .ud-day-chip span { display: block; font-size: 10px; color: #64748b; }
+    .ud-day-chip strong { display: block; font-size: 12px; color: #0f172a; margin-top: 2px; }
+    
+    /* Highlighted Chip (Blue Border) */
+    .ud-day-chip.active { border-color: #3b82f6; background: #eff6ff; }
   </style>
 </head>
 <body class="text-slate-900">
-  <!-- LOADING -->
   <div id="loading-overlay">
     <div class="flex items-center gap-4">
       <svg class="animate-spin h-8 w-8" style="color:var(--accent-600)" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg>
@@ -129,7 +185,6 @@
     </div>
   </div>
 
-  <!-- MODAL -->
   <div id="expanded-modal" class="modal">
     <div class="mx-auto w-full max-w-7xl max-h-[95vh] card overflow-hidden">
       <div class="flex items-center justify-between px-6 py-3 border-b" style="background:var(--table-head);border-color:var(--card-border)">
@@ -140,7 +195,94 @@
     </div>
   </div>
 
-  <!-- HEADER -->
+  <div id="user-dashboard-modal" class="modal">
+    <div class="mx-auto w-full max-w-4xl card overflow-hidden" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px;">
+        
+        <div class="flex items-center justify-between px-6 py-4 border-b bg-white" style="border-color:#e2e8f0;">
+            <div class="flex items-center gap-4">
+                <h3 class="text-lg font-bold text-slate-800 flex items-center">
+                    <i class="bi bi-person-circle text-blue-600 mr-2"></i> User Dashboard
+                </h3>
+                <select id="ud-user-select" class="compact-field rounded-lg border text-slate-700" 
+                        style="background:#f1f5f9; border-color:#cbd5e1; min-width: 200px;">
+                    <option value="">Select User...</option>
+                </select>
+            </div>
+            <button id="btn-ud-close" class="btn btn--sm btn-ghost text-slate-500 hover:bg-slate-200">✕</button>
+        </div>
+
+        <div id="ud-loading" class="p-10 text-center text-slate-500 hidden">
+            <i class="bi bi-arrow-repeat animate-spin text-2xl"></i> Loading stats...
+        </div>
+
+        <div id="ud-content" class="p-6 overflow-y-auto max-h-[80vh] hidden">
+            <div class="ud-grid">
+                <div class="ud-card yellow">
+                    <div class="flex justify-between items-start">
+                        <div class="ud-title yellow"><i class="bi bi-pie-chart"></i> TOTAL (MONTH)</div>
+                        <div class="flex gap-2">
+                            <div class="ud-badge red">LEAVES <br> <span id="ud-leaves">0</span></div>
+                            <div class="ud-badge green">DAYS <br> <span id="ud-days">0</span></div>
+                        </div>
+                    </div>
+                    <div id="ud-month-total" class="ud-value mt-2">00:00</div>
+                </div>
+
+                <div class="ud-card green">
+                    <div class="ud-title green"><i class="bi bi-calendar-week"></i> WEEKLY PROGRESS</div>
+                    <div id="ud-week-total" class="ud-value">00:00</div>
+                    <div class="w-full bg-slate-200 h-2 rounded-full mt-2 overflow-hidden">
+                        <div id="ud-week-bar" class="bg-emerald-500 h-full" style="width: 0%"></div>
+                    </div>
+                    <div class="ud-sub">
+                        <span id="ud-week-pct" class="font-bold text-emerald-600">0%</span>
+                        <span id="ud-week-target" class="text-slate-500">Target: 0h</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="ud-card purple mt-4">
+                <div class="ud-title purple"><i class="bi bi-clock-history"></i> LAST MONTH SNAPSHOT</div>
+                <div class="grid grid-cols-4 gap-2 mt-2 text-center">
+                    <div class="bg-violet-50 p-2 rounded border border-violet-200">
+                        <span class="text-xs text-violet-600 block font-bold">DAYS</span>
+                        <span id="ud-lm-days" class="font-bold text-slate-800 text-lg">0</span>
+                    </div>
+                    <div class="bg-red-50 p-2 rounded border border-red-200">
+                        <span class="text-xs text-red-600 block font-bold">LEAVES</span>
+                        <span id="ud-lm-leaves" class="font-bold text-slate-800 text-lg">0</span>
+                    </div>
+                    <div class="bg-blue-50 p-2 rounded border border-blue-200">
+                        <span class="text-xs text-blue-600 block font-bold">AVG HRS</span>
+                        <span id="ud-lm-avg" class="font-bold text-slate-800 text-lg">0</span>
+                    </div>
+                    <div class="bg-emerald-50 p-2 rounded border border-emerald-200">
+                        <span class="text-xs text-emerald-600 block font-bold">COMP</span>
+                        <span id="ud-lm-comp" class="font-bold text-slate-800 text-sm mt-1">0h 0m</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                <div id="ud-comp-card" class="ud-card">
+                    <div class="ud-title slate"><i class="bi bi-bank"></i> COMP BALANCE</div>
+                    <div id="ud-comp-bal" class="ud-value text-3xl my-2">0h 0m</div>
+                    <div class="border-t border-slate-200 pt-2 space-y-1">
+                        <div class="flex justify-between text-xs text-slate-500"><span>Permission:</span> <span id="ud-comp-perm" class="text-slate-800 font-bold">0h 0m</span></div>
+                        <div class="flex justify-between text-xs text-slate-500"><span>Compensated:</span> <span id="ud-comp-done" class="text-slate-800 font-bold">0h 0m</span></div>
+                    </div>
+                    <div id="ud-comp-status" class="text-center text-xs mt-2 pt-2 border-t border-slate-100 italic text-slate-400"></div>
+                </div>
+
+                <div class="ud-card" style="border-left-color: #3b82f6;">
+                    <div class="ud-title blue"><i class="bi bi-bar-chart"></i> LAST 7 DAYS</div>
+                    <div id="ud-chart-strip" class="ud-chart-strip custom-scroll"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+  </div>
+
   <header class="border-b surface">
     <div class="mx-auto max-w-7xl px-4 md:px-8 py-3">
       <div class="flex flex-wrap items-center justify-between gap-3">
@@ -152,12 +294,16 @@
         </div>
 
         <div class="flex items-center gap-2">
+          <button id="btn-user-dashboard" class="btn btn--md btn-ghost" title="View User Dashboard">
+            <i class="bi bi-speedometer2 text-slate-900" style="font-size:1rem"></i>
+            <span class="ml-2 hidden md:inline">User View</span>
+          </button>
+
           <a href="{{ url_for('dashboard') }}" class="btn btn--md btn-ghost" title="Home">
             <i class="bi bi-house-door" style="font-size:1rem"></i>
             <span class="ml-2">Home</span>
           </a>
 
-          <!-- Team dropdown -->
           <div class="relative">
             <label for="choose-team" class="sr-only">Choose Team</label>
             <select id="choose-team" class="compact-field rounded-lg border"
@@ -173,17 +319,14 @@
             <img src="https://storage.googleapis.com/my-react-image-bucket-123/Logsy.gif"
                  alt="Logsy Demo" class="h-10 w-auto rounded"/>
           </a>
-        
         </div>
       </div>
     </div>
   </header>
 
-  <!-- TOOLBAR -->
   <section class="border-b" style="background:var(--card-bg);border-color:var(--card-border)">
     <div class="mx-auto max-w-7xl px-4 md:px-8 py-4">
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-end">
-        <!-- Dates -->
         <div class="lg:col-span-5 card compact-card-pad relative">
           <div class="grid grid-cols-[1fr_auto_1fr_auto_auto] items-end compact-gap">
             <label class="block">
@@ -200,7 +343,6 @@
                      style="background:var(--card-bg);border-color:var(--card-border);color:var(--text)"/>
             </label>
 
-            <!-- Calendar trigger -->
             <button id="btn-open-cal" class="btn btn--sm btn-ghost self-end" title="Calendar">
               <i class="bi bi-calendar3"></i>
             </button>
@@ -214,14 +356,12 @@
             <button id="btn-quick-7" class="btn btn--sm btn-ghost" data-qfilter="7">Last 7d</button>
             <button id="btn-quick-30" class="btn btn--sm btn-ghost" data-qfilter="30">Last 30d</button>
             <button id="btn-quick-mtd" class="btn btn--sm btn-ghost" data-qfilter="mtd">MTD</button>
-            <!-- ✅ New Yesterday button -->
             <button id="btn-quick-yesterday" class="btn btn--sm btn-ghost" title="Set both dates to yesterday" data-qfilter="yesterday">Yesterday</button>
             <button id="btn-browser-refresh" class="btn btn--sm btn-ghost" title="Refresh & clear dates" aria-label="Refresh">
               <i class="bi bi-arrow-clockwise" style="font-size:1rem"></i>
             </button>
           </div>
 
-          <!-- Calendar Popover -->
           <div id="calendar-pop" class="cal-pop">
             <div class="cal-head">
               <button id="cal-prev" class="btn btn--sm btn-ghost" title="Prev month"><i class="bi bi-chevron-left"></i></button>
@@ -236,7 +376,6 @@
           </div>
         </div>
 
-        <!-- Filters -->
         <div class="lg:col-span-7 card compact-card-pad">
           <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 compact-gap">
             <div id="filter-select-project"     class="filter-shell shell-project"></div>
@@ -253,7 +392,6 @@
     </div>
   </section>
 
-  <!-- MAIN -->
   <main class="mx-auto max-w-7xl px-4 md:px-8 py-6 space-y-6">
     <section class="space-y-3">
       <div class="flex items-center justify-between flex-wrap gap-2">
@@ -350,18 +488,14 @@
     const toLocalYMD = (d)=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 
     // Helper: Ensure we have YYYY-MM-DD for input[type=date]
-    // Handles various input formats gracefully
     function ensureYMD(val) {
         if (!val) return '';
-        // If already YYYY-MM-DD
         if (/^\d{4}-\d{2}-\d{2}$/.test(val)) return val;
-        
         const d = new Date(val);
         if (isNaN(d.getTime())) return val; // Fallback
         return toLocalYMD(d);
     }
     
-    // Helper: Safely set date inputs
     function setDateInputs(start, end) {
         const s = ensureYMD(start);
         const e = ensureYMD(end);
@@ -415,14 +549,12 @@
           const o=document.createElement('option'); 
           o.value=v; 
           o.textContent=v;
-          // Maintain selection state if rebuilding
           if(activeFilters[key] === v) o.selected = true; 
           sel.appendChild(o); 
       });
       sel.onchange = (e)=> onFilterChange(key, e.target.value);
     }
 
-    // 🔑 Role-aware team dropdown (in header)
     function rebuildAllFiltersUI(){
       const scoped = rowsByTeam(allData);
       allFilters = computeFilters(scoped);
@@ -448,11 +580,8 @@
       buildSelect('filter-select-sub_process','sub_process','Sub Process');
     }
 
-    // Render Chips for Multiple Filters
     function renderChips(){
       const box = $('#active-chips'); box.innerHTML='';
-      
-      // Team Chip
       if(selectedTeam){
         const { base, light, dark } = themeFor('team');
         const chip = document.createElement('div');
@@ -468,8 +597,6 @@
         }
         box.appendChild(chip);
       }
-
-      // Loop through Active Filters (Project, Name, etc.)
       Object.entries(activeFilters).forEach(([key, value]) => {
           if (value) {
             const {base, light, dark} = themeFor(key);
@@ -480,25 +607,20 @@
             chip.style.color = dark;
             chip.innerHTML = `<strong class="font-semibold">${key.replace('_',' ')}</strong><span>${value}</span>`;
             const x = document.createElement('button'); x.className='ml-1 rounded-full p-1'; x.style.background='transparent'; x.innerHTML='✕';
-            
-            // On Click X: clear specific filter, reset dropdown, re-render
             x.onclick = ()=> { 
-                onFilterChange(key, ""); // Set to empty string
+                onFilterChange(key, ""); 
                 const sel = document.querySelector(`select[data-filter-key="${key}"]`);
                 if(sel) sel.value = "";
             };
-            
             chip.appendChild(x);
             box.appendChild(chip);
           }
       });
-
       const hasActiveFilters = Object.values(activeFilters).some(v => v);
       box.classList.toggle('hidden', !selectedTeam && !hasActiveFilters);
     }
 
     function resetPrimaryFilter(){
-      // Reset logic: clear state, reset dropdowns
       activeFilters = { project: null, name: null, process: null, sub_process: null };
       $$('select[data-filter-key]').forEach(s=> s.value='');
       renderAll();
@@ -539,29 +661,17 @@
    function renderBreakdowns(){
       const host = $('#breakdown-row'); host.innerHTML='';
       if(!isDataLoaded || allData.length===0) return;
-
-      // Start with team scope
       let data = rowsByTeam(allData);
-      
-      // APPLY ALL ACTIVE FILTERS (Intersection/AND logic)
       Object.entries(activeFilters).forEach(([key, val]) => {
-          if(val) {
-             data = data.filter(it => it[key] === val); 
-          }
+          if(val) { data = data.filter(it => it[key] === val); }
       });
-      
-      // --- MTD Logic (Current Month Only) ---
       const now = new Date();
       const currentMonthPrefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
       data = data.filter(it => it.date && it.date.startsWith(currentMonthPrefix));
-      // -------------------------------------------------------
-
-      // If no data, show message
       if(data.length === 0) {
           host.innerHTML = `<div class="col-span-5 text-center text-muted text-sm py-4">No data available for this selection.</div>`;
           return;
       }
-
       BREAKDOWN_KEYS.forEach(key=>{
         const map = {}; data.forEach(it=>{ const k=it[key]||'N/A'; map[k]=(map[k]||0)+(it.duration_seconds||0); });
         const entries = Object.entries(map).map(([k,sec])=>({k,sec})).sort((a,b)=>b.sec-a.sec);
@@ -573,18 +683,13 @@
     const fmtTimeStr = (t) => {
       if (!t || typeof t !== 'string') return t || '';
       let timeStr = t.replace(/^0 days /, ''); 
-      if (timeStr.endsWith(':00')) {
-        timeStr = timeStr.substring(0, timeStr.length - 3); 
-      }
+      if (timeStr.endsWith(':00')) { timeStr = timeStr.substring(0, timeStr.length - 3); }
       return timeStr;
     };
 
     function renderTable(rows){
       const tb = $('#logs-body'); tb.innerHTML='';
-      
-      // Check if any filters are active
       const hasActiveFilters = Object.values(activeFilters).some(v => v);
-
       if(!rows || rows.length===0){
         tb.innerHTML = `<tr><td colspan="10" class="p-8 text-center text-muted">${!hasActiveFilters? 'Select a primary filter above to view records here.' : 'No records found for these filters.'}</td></tr>`;
         $('#record-count').textContent='Showing 0 records';
@@ -595,26 +700,19 @@
         tr.style.background = i%2? 'color-mix(in oklab, var(--card-bg) 92%, black 0%)' : 'var(--card-bg)';
         tr.onmouseenter = ()=> tr.style.background = 'var(--accent-50)';
         tr.onmouseleave = ()=> tr.style.background = i%2? 'color-mix(in oklab, var(--card-bg) 92%, black 0%)' : 'var(--card-bg)';
-       COLUMNS.forEach(k=>{
-        const td=document.createElement('td');
-        const left=['name','project','process','sub_process','project_type'].includes(k);
-        
-        let baseClasses = `px-4 py-2 whitespace-nowrap ${left?'text-left':'text-center'}`;
-        const longTextCols = ['name', 'project', 'process', 'sub_process', 'project_type'];
-        
-        if (longTextCols.includes(k)) {
-          baseClasses += ` truncate-cell truncate-${k}`; 
-          td.title = it[k] || ''; 
-        }
-        
-        td.className = baseClasses; 
-        
-        if(['name','project','duration_hhmmss'].includes(k)) td.style.fontWeight='600';
-        
-        let val = it[k];
-          if (k === 'start_time' || k === 'end_time' || k === 'duration_hhmmss') {
-            val = fmtTimeStr(val);
+        COLUMNS.forEach(k=>{
+          const td=document.createElement('td');
+          const left=['name','project','process','sub_process','project_type'].includes(k);
+          let baseClasses = `px-4 py-2 whitespace-nowrap ${left?'text-left':'text-center'}`;
+          const longTextCols = ['name', 'project', 'process', 'sub_process', 'project_type'];
+          if (longTextCols.includes(k)) {
+            baseClasses += ` truncate-cell truncate-${k}`; 
+            td.title = it[k] || ''; 
           }
+          td.className = baseClasses; 
+          if(['name','project','duration_hhmmss'].includes(k)) td.style.fontWeight='600';
+          let val = it[k];
+          if (k === 'start_time' || k === 'end_time' || k === 'duration_hhmmss') { val = fmtTimeStr(val); }
           td.textContent = val;
           tr.appendChild(td);
         });
@@ -624,23 +722,16 @@
     }
 
     function renderAll(){
-      // Start with Team Scoped Data
       let data = rowsByTeam(allData);
-      
-      // Filter by ALL active filters (Project AND Name AND Process...)
       Object.entries(activeFilters).forEach(([key, val]) => {
-          if(val) {
-             data = data.filter(it => it[key] === val); 
-          }
+          if(val) { data = data.filter(it => it[key] === val); }
       });
-
       const hasActiveFilters = Object.values(activeFilters).some(v => v);
       renderTable(hasActiveFilters ? data : []);
       renderChips();
       renderBreakdowns();
     }
 
-    // ===== Modal helpers =====
     function getUnique(rows, key){
       const s = new Set();
       rows.forEach(r=>{ if(r[key]) s.add(r[key]); });
@@ -686,7 +777,6 @@
           </label>
         `);
       });
-
       return `
         <div class="card compact-card-pad mb-3">
           <div class="grid grid-cols-2 md:grid-cols-6 gap-3 items-end">
@@ -706,11 +796,9 @@
     function renderModalContent(){
       const rowsFiltered = filterModalRows();
       const { count, hhmm } = modalTotals(rowsFiltered);
-
       let html = '';
       html += `<p class="text-xs text-muted mb-3">Total: <strong style="color:var(--accent-700)">${hhmm}</strong> • Records: <strong id="modal-records">${count}</strong></p>`;
       html += buildModalFiltersHTML(modalState.baseRows, modalState.key);
-
       html += `<div class="border rounded-xl overflow-hidden" style="border-color:var(--card-border)">
         <div class="max-h-[70vh] custom-scroll overflow-auto">
           <table class="min-w-full text-xs">
@@ -720,7 +808,7 @@
                 <th class="px-3 py-2 text-left font-semibold">Name</th>
                 <th class="px-3 py-2 text-left font-semibold">Project</th>
                 <th class="px-3 py-2 text-left font-semibold">Process</th>
-                <th class class="px-3 py-2 text-left font-semibold">Sub Process</th>
+                <th class="px-3 py-2 text-left font-semibold">Sub Process</th>
                 <th class="px-3 py-2 text-left font-semibold">Type</th>
                 <th class="px-3 py-2 text-left font-semibold">Date</th>
                 <th class="px-3 py-2 text-left font-semibold">Start Time</th>
@@ -729,7 +817,6 @@
               </tr>
             </thead>
             <tbody id="modal-tbody">`;
-
       if(rowsFiltered.length===0){
         html += `<tr><td colspan="10" class="px-3 py-6 text-center text-muted">No rows for current filters.</td></tr>`;
       } else {
@@ -749,9 +836,7 @@
         });
       }
       html += `</tbody></table></div></div>`;
-
       $('#modal-content').innerHTML = html;
-
       $$('[data-modal-filter]').forEach(el=>{
         el.oninput = el.onchange = ()=>{
           const k = el.getAttribute('data-modal-filter');
@@ -759,7 +844,6 @@
           updateModalTableAndStats();
         };
       });
-
       $('#btn-modal-clear').onclick = ()=>{
         modalState.filters = { project:'', name:'', process:'', sub_process:'', team: (selectedTeam || ''), q:'' };
         renderModalContent();
@@ -794,73 +878,47 @@
     }
     function openModal(key, value){
       let base = rowsByTeam(allData);
-      // Filter base by all active filters (except the clicked one if needed, but usually we drill down)
       Object.entries(activeFilters).forEach(([k, val]) => {
           if(val) base = base.filter(it => it[k] === val); 
       });
-
       const rows = base.filter(it=> it[key]===value);
-
       modalState.key = key;
       modalState.value = value;
       modalState.baseRows = rows.slice();
       modalState.filters = { project:'', name:'', process:'', sub_process:'', team:(selectedTeam||''), q:'' };
-      if(['project','name','process','sub_process','team'].includes(key)){
-        modalState.filters[key] = value;
-      }
-
+      if(['project','name','process','sub_process','team'].includes(key)){ modalState.filters[key] = value; }
       $('#modal-title').textContent = `Detailed Logs for ${key.replace('_',' ')}: ${value}`;
       renderModalContent();
       $('#expanded-modal').classList.add('active');
     }
     function closeModal(){ $('#expanded-modal').classList.remove('active'); }
 
-    // Modified Filter Change Handler
     function onFilterChange(key, value){
-      // 1. Update the state
       activeFilters[key] = value || null;
-
-      // 2. Do NOT clear other dropdowns. 
-      // (The user requested multi-select capability)
-      
-      currentFilterKey = value? key : null;
-      currentFilterValue = value || null;
       renderAll();
     }
-
-    function resetFilters(){
-      resetPrimaryFilter();
-    }
-    
-    // Highlight Active Quick Filter Button
+    function resetFilters(){ resetPrimaryFilter(); }
     function highlightActiveFilter(activeId) {
-        // Remove active class from all quick filters
         $$('[data-qfilter]').forEach(btn => btn.classList.remove('btn-active-filter'));
-        // Add to active if provided
         if(activeId) {
             const btn = document.querySelector(`[data-qfilter="${activeId}"]`);
             if(btn) btn.classList.add('btn-active-filter');
         }
     }
-
     function refreshAndClearDates(){
       const today = new Date();
       const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-      
       const s = toLocalYMD(startOfMonth);
       const e = toLocalYMD(today);
-
       setDateInputs(s, e);
       resetFilters();
-      highlightActiveFilter('mtd'); // Highlight MTD as default
+      highlightActiveFilter('mtd'); 
       fetchData(s, e);
     }
-
     function quickRange(days){
       const end = new Date(), start = new Date(); start.setDate(end.getDate()-(days-1));
       const s = toLocalYMD(start);
       const e = toLocalYMD(end);
-      
       setDateInputs(s, e);
       highlightActiveFilter(days.toString());
       applyDates();
@@ -871,10 +929,8 @@
       resetFilters();
       fetchData(s,e);
     }
-
     async function fetchData(start, end){
       setLoading(true);
-      
       try{
         const r = await fetch(`/admin/dashboard/api/data?start=${start}&end=${end}`); 
         const j = await r.json();
@@ -882,12 +938,7 @@
         allData = j.details||[];
         overallTotals = j.overall_totals||{};
         isDataLoaded=true;
-
-        // lock team immediately for admin
-        if (FLASK_USER_ROLE === 'admin') {
-          selectedTeam = FLASK_USER_TEAM || '';
-        }
-
+        if (FLASK_USER_ROLE === 'admin') { selectedTeam = FLASK_USER_TEAM || ''; }
         rebuildAllFiltersUI();
         renderAll();
       }catch(err){
@@ -897,17 +948,11 @@
       finally{ setLoading(false); }
     }
 
-    /* ===== Mini Calendar ===== */
     const cal = { cur: new Date() };
-
     function openCalendar(){
-      const pop = $('#calendar-pop');
-      pop.classList.add('active');
-      renderCalendar();
+      const pop = $('#calendar-pop'); pop.classList.add('active'); renderCalendar();
       setTimeout(()=>{
-        const handler = (e)=>{
-          if(!pop.contains(e.target) && e.target.id !== 'btn-open-cal'){ pop.classList.remove('active'); document.removeEventListener('click', handler); }
-        };
+        const handler = (e)=>{ if(!pop.contains(e.target) && e.target.id !== 'btn-open-cal'){ pop.classList.remove('active'); document.removeEventListener('click', handler); } };
         document.addEventListener('click', handler);
       },0);
     }
@@ -917,100 +962,141 @@
       const first = new Date(y,m,1);
       const startWeekday = (first.getDay()+6)%7; 
       const daysInMonth = new Date(y,m+1,0).getDate();
-
       $('#cal-grid').innerHTML = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(d=>`<div class="cal-day">${d}</div>`).join('');
       const cells = [];
       for(let i=0;i<startWeekday;i++) cells.push('<div></div>');
-      for(let d=1; d<=daysInMonth; d++){
-        cells.push(`<div class="cal-cell" data-day="${d}">${d}</div>`);
-      }
+      for(let d=1; d<=daysInMonth; d++){ cells.push(`<div class="cal-cell" data-day="${d}">${d}</div>`); }
       $('#cal-grid').insertAdjacentHTML('beforeend', cells.join(''));
-
       $$('#cal-grid .cal-cell').forEach(el=>{
         el.onclick = ()=>{
           const day = Number(el.getAttribute('data-day'));
           const chosen = new Date(y,m,day);
-          
           const chosenYMD = toLocalYMD(chosen); 
-
           setDateInputs(chosenYMD, chosenYMD);
-          
           $('#calendar-pop').classList.remove('active');
           applyDates();
         };
       });
     }
 
+    // --- DOM READY ---
     document.addEventListener('DOMContentLoaded', ()=>{
-      // initial team lock before first fetch
       if (FLASK_USER_ROLE === 'admin') {
         selectedTeam = FLASK_USER_TEAM || '';
         $('#choose-team').setAttribute('disabled','disabled');
       }
-
       document.getElementById('btn-condense').onclick = ()=>{ document.getElementById('logs-body').classList.toggle('text-xs'); };
-      document.getElementById('btn-apply-dates').onclick = () => {
-          highlightActiveFilter(null); // Custom date range
-          applyDates();
-      };
-      document.getElementById('btn-quick-7').onclick    = ()=> quickRange(7);
-      document.getElementById('btn-quick-30').onclick   = ()=> quickRange(30);
+      document.getElementById('btn-apply-dates').onclick = () => { highlightActiveFilter(null); applyDates(); };
+      document.getElementById('btn-quick-7').onclick = ()=> quickRange(7);
+      document.getElementById('btn-quick-30').onclick = ()=> quickRange(30);
       document.getElementById('btn-quick-mtd').onclick = ()=>{
         const today=new Date(); const start=new Date(today.getFullYear(), today.getMonth(), 1);
-        const s = toLocalYMD(start);
-        const e = toLocalYMD(today);
-        setDateInputs(s, e);
-        highlightActiveFilter('mtd');
-        applyDates();
+        const s = toLocalYMD(start); const e = toLocalYMD(today);
+        setDateInputs(s, e); highlightActiveFilter('mtd'); applyDates();
       };
-      // Yesterday handler
       document.getElementById('btn-quick-yesterday').onclick = ()=>{
         const y = new Date(); y.setDate(y.getDate()-1);
         const yStr = toLocalYMD(new Date(y.getFullYear(), y.getMonth(), y.getDate()));
-        setDateInputs(yStr, yStr);
-        highlightActiveFilter('yesterday');
-        applyDates();
+        setDateInputs(yStr, yStr); highlightActiveFilter('yesterday'); applyDates();
       };
       document.getElementById('btn-browser-refresh').onclick = ()=> refreshAndClearDates();
-
-      // calendar controls calendar controlss
       document.getElementById('btn-open-cal').onclick = (e)=>{ e.stopPropagation(); openCalendar(); };
       document.getElementById('cal-prev').onclick = (e)=>{ e.stopPropagation(); cal.cur.setMonth(cal.cur.getMonth()-1); renderCalendar(); };
       document.getElementById('cal-next').onclick = (e)=>{ e.stopPropagation(); cal.cur.setMonth(cal.cur.getMonth()+1); renderCalendar(); };
       document.getElementById('cal-close').onclick = ()=> $('#calendar-pop').classList.remove('active');
       document.getElementById('cal-last3').onclick = ()=>{
-        const end = new Date();
-        const start = new Date(); start.setMonth(start.getMonth()-3); start.setDate(start.getDate()+1);
+        const end = new Date(); const start = new Date(); start.setMonth(start.getMonth()-3); start.setDate(start.getDate()+1);
         setDateInputs(toLocalYMD(start), toLocalYMD(end));
-        $('#calendar-pop').classList.remove('active');
-        highlightActiveFilter(null);
-        applyDates();
+        $('#calendar-pop').classList.remove('active'); highlightActiveFilter(null); applyDates();
       };
-
-      document.getElementById('choose-team').onchange = (e)=>{
-        selectedTeam = e.target.value || '';
-        resetPrimaryFilter();
-        rebuildAllFiltersUI();
-        renderAll();
-      };
-
+      document.getElementById('choose-team').onchange = (e)=>{ selectedTeam = e.target.value || ''; resetPrimaryFilter(); rebuildAllFiltersUI(); renderAll(); };
       document.getElementById('btn-modal-close').onclick = closeModal;
       document.getElementById('expanded-modal').addEventListener('click',e=>{ if(e.target.id==='expanded-modal') closeModal(); });
 
-      // Set default dates explicitly to MTD (Month-To-Date)
+      // Init load
       const today = new Date();
       const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-      const s = toLocalYMD(startOfMonth);
-      const e = toLocalYMD(today);
+      const s = toLocalYMD(startOfMonth); const e = toLocalYMD(today);
+      setDateInputs(s, e); highlightActiveFilter('mtd'); fetchData(s, e);
 
-      setDateInputs(s, e);
-      highlightActiveFilter('mtd'); // Highlight MTD on load
+      // --- ✅ NEW: USER DASHBOARD LOGIC ---
+      const btnUserDash = document.getElementById('btn-user-dashboard');
+      const udModal = document.getElementById('user-dashboard-modal');
+      const btnUdClose = document.getElementById('btn-ud-close');
+      const udSelect = document.getElementById('ud-user-select');
       
-      // Fetch data using calculated MTD dates instead of Flask defaults
-      fetchData(s, e);
-    });
+      btnUserDash.onclick = () => {
+          udModal.classList.add('active');
+          // Populate Users if needed (from existing filters)
+          if (udSelect.options.length <= 1 && allFilters.name) {
+              allFilters.name.forEach(u => {
+                  const opt = document.createElement('option');
+                  opt.value = u; opt.textContent = u;
+                  udSelect.appendChild(opt);
+              });
+          }
+      };
+      btnUdClose.onclick = () => udModal.classList.remove('active');
+      udSelect.onchange = async (e) => {
+          const username = e.target.value;
+          if (!username) return;
+          $('#ud-loading').classList.remove('hidden');
+          $('#ud-content').classList.add('hidden');
+          try {
+              const res = await fetch('/api/admin/get-user-dashboard-stats', {
+                  method: 'POST', headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ username: username })
+              });
+              const data = await res.json();
+              if (data.error) { alert(data.error); return; }
 
-     
+              // Update DOM
+              $('#ud-month-total').textContent = data.month_total;
+              $('#ud-leaves').textContent = data.month_leaves;
+              $('#ud-days').textContent = data.month_days;
+              $('#ud-week-total').textContent = data.week_total;
+              $('#ud-week-bar').style.width = data.week_pct + '%';
+              $('#ud-week-pct').textContent = data.week_pct + '%';
+              $('#ud-week-target').textContent = 'Target: ' + data.week_target + 'h';
+              $('#ud-lm-days').textContent = data.lm_days;
+              $('#ud-lm-leaves').textContent = data.lm_leaves;
+              $('#ud-lm-avg').textContent = data.lm_avg;
+              $('#ud-lm-comp').textContent = data.lm_comp;
+              $('#ud-comp-bal').textContent = data.comp_bal;
+              $('#ud-comp-perm').textContent = data.comp_perm;
+              $('#ud-comp-done').textContent = data.comp_done;
+
+              const compCard = $('#ud-comp-card'); const compMsg = $('#ud-comp-status');
+              // Logic for color coding Comp Balance
+              if (data.comp_status === 'pending') {
+                  $('#ud-comp-bal').style.color = '#ef4444';
+                  compCard.style.borderLeftColor = '#ef4444';
+                  compMsg.textContent = 'Compensation Pending'; compMsg.style.color = '#ef4444';
+              } else {
+                  $('#ud-comp-bal').style.color = '#10b981';
+                  compCard.style.borderLeftColor = '#10b981';
+                  compMsg.textContent = 'Surplus Hours'; compMsg.style.color = '#10b981';
+              }
+
+              const chartBox = $('#ud-chart-strip'); chartBox.innerHTML = '';
+              if (data.chart_data.length === 0) {
+                  chartBox.innerHTML = '<div class="text-xs text-slate-500 p-2">No logs recently.</div>';
+              } else {
+                  data.chart_data.forEach(d => {
+                      const div = document.createElement('div');
+                      div.className = 'ud-day-chip';
+                      // Highlight worked days
+                      const isWorked = d.hours > 0;
+                      if (isWorked) div.classList.add('active');
+                      div.innerHTML = `<span>${d.day}</span><strong style="color:${isWorked ? '#0f172a' : '#64748b'}">${d.hours}h</strong>`;
+                      chartBox.appendChild(div);
+                  });
+              }
+              $('#ud-loading').classList.add('hidden');
+              $('#ud-content').classList.remove('hidden');
+          } catch (err) { console.error(err); alert("Error loading stats."); }
+      };
+    });
   </script>
 </body>
 </html>
